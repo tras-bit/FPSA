@@ -70,6 +70,13 @@ rail spur → breach the yard gate → sabotage two fuel lines → recover intel
 hold the kiln hall for 45 s → reach the extraction pad → hold it until the
 transport boards and leaves.
 
+### Basic training
+
+Main menu → **BASIC TRAINING** walks the 13 steps of the tutorial script with your
+own current bindings, and can drop you straight into practice. The prep screen
+also offers three ready-made kits (assault, breacher, marksman) and a control
+profile switch; every weapon and plate in them is available from the first match.
+
 ### Practice
 
 **PRACTICE (OFFLINE, NO BOTS)** runs the same Free-for-All rules locally against
