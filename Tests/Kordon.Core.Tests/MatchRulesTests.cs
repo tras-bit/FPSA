@@ -100,14 +100,15 @@ namespace Kordon.Core.Tests
             for (int i = 1; i <= KillTarget; i++)
             {
                 clock += 3f;
+                match.Tick(clock);
                 // Keep the victim alive and available for the next elimination.
                 if (!match.GetPlayer(victim).IsAlive)
                 {
                     match.GetPlayer(victim).RespawnAvailableAt = clock;
-                    Assert.True(match.RequestRespawn(victim, 1, clock + 0.01f).IsAccepted);
+                    Assert.True(match.RequestRespawn(victim, 1, clock).IsAccepted);
                     // Firing ends spawn protection - the victim shoots back instead of
                     // standing in the open, which is what the test is modelling.
-                    match.NotifyShotFired(victim, clock + 0.02f);
+                    match.NotifyShotFired(victim, clock);
                 }
 
                 // The server caps kills per minute, so the score has to be earned at a
@@ -147,12 +148,13 @@ namespace Kordon.Core.Tests
             for (int i = 0; i < KillTarget - 1; i++)
             {
                 clock += 3f;
+                match.Tick(clock);
                 PlayerMatchState victim = match.GetPlayer(ids[1]);
                 if (!victim.IsAlive)
                 {
                     victim.RespawnAvailableAt = clock;
-                    match.RequestRespawn(ids[1], 1, clock + 0.01f);
-                    match.NotifyShotFired(ids[1], clock + 0.02f);
+                    match.RequestRespawn(ids[1], 1, clock);
+                    match.NotifyShotFired(ids[1], clock);
                 }
 
                 match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, clock);
@@ -307,12 +309,13 @@ namespace Kordon.Core.Tests
             for (int i = 0; i < KillTarget; i++)
             {
                 clock += 3f;
+                match.Tick(clock);
                 PlayerMatchState victim = match.GetPlayer(ids[1]);
                 if (!victim.IsAlive)
                 {
                     victim.RespawnAvailableAt = clock;
-                    match.RequestRespawn(ids[1], 1, clock + 0.01f);
-                    match.NotifyShotFired(ids[1], clock + 0.02f);
+                    match.RequestRespawn(ids[1], 1, clock);
+                    match.NotifyShotFired(ids[1], clock);
                 }
 
                 match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, clock);

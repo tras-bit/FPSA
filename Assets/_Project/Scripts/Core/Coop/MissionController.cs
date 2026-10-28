@@ -386,10 +386,11 @@ namespace Kordon.Core.Coop
             if (definition.IsCritical)
             {
                 Fail(MissionFailReason.CriticalObjectiveFailed, now);
-                return true;
             }
 
-            return false;
+            // True means "the objective is now failed"; whether that also ends the
+            // operation depends on whether the objective was critical.
+            return true;
         }
 
         public ObjectiveDefinition FirstActiveObjective()
