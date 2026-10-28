@@ -57,7 +57,7 @@ namespace Kordon.Game.Weapons
         public event Action<AmmoEvent> AmmoEventRaised;
         public event Action<PlayerController, DamageResult> PlayerHit;
 
-        private readonly RecoilModel _recoil = new RecoilModel();
+        private readonly RecoilSolver _recoil = new RecoilSolver();
         private readonly SpreadModel _spread = new SpreadModel();
         private readonly List<AmmoEvent> _events = new List<AmmoEvent>();
 
