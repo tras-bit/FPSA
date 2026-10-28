@@ -64,12 +64,14 @@ namespace Kordon.Core.Settings
         public const int KeyCodeSpace = 32;
         public const int KeyCodeAlpha0 = 48;
         public const int KeyCodeA = 97;
+        // Unity KeyCode values (UnityEngine.KeyCode): 303 RightShift, 304 LeftShift,
+        // 305 RightControl, 306 LeftControl, 307 RightAlt, 308 LeftAlt.
+        public const int KeyCodeRightShift = 303;
         public const int KeyCodeLeftShift = 304;
-        public const int KeyCodeRightShift = 305;
+        public const int KeyCodeRightControl = 305;
         public const int KeyCodeLeftControl = 306;
-        public const int KeyCodeRightControl = 307;
-        public const int KeyCodeLeftAlt = 308;
         public const int KeyCodeRightAlt = 307;
+        public const int KeyCodeLeftAlt = 308;
         public const int KeyCodeMouse0 = 323;
         public const int KeyCodeMouse1 = 324;
         public const int KeyCodeMouse2 = 325;
