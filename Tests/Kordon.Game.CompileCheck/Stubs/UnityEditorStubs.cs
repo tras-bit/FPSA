@@ -66,9 +66,9 @@ namespace UnityEditor
         }
 
         public static bool CreateFolder(string parent, string name) => true;
-        public static T LoadAssetAtPath<T>(string path) where T : Object => null;
-        public static string GetAssetPath(Object asset) => "";
-        public static void CreateAsset(Object asset, string path)
+        public static T LoadAssetAtPath<T>(string path) where T : UnityEngine.Object => null;
+        public static string GetAssetPath(UnityEngine.Object asset) => "";
+        public static void CreateAsset(UnityEngine.Object asset, string path)
         {
         }
     }
@@ -80,7 +80,7 @@ namespace UnityEditor
 
     public static class EditorUtility
     {
-        public static void SetDirty(Object target)
+        public static void SetDirty(UnityEngine.Object target)
         {
         }
 
