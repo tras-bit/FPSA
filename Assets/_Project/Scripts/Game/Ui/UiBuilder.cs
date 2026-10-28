@@ -6,43 +6,35 @@ using UnityEngine.UI;
 namespace Kordon.Game.Ui
 {
     /// <summary>
-    /// Every screen in KORDON is built in code: no canvas prefabs, no scene UI,
-    /// nothing to drift from the rules.  These primitives are the whole toolkit -
-    /// panels, labels, buttons, rows - styled once, in one place, so the boot menu
-    /// and the scoreboard look like the same product.
+    /// Every screen and the HUD are built from these primitives in code: no canvas
+    /// prefabs, no scene UI to drift out of sync with the rules. One palette, one
+    /// font, one set of helpers, so the boot menu and the scoreboard belong to the
+    /// same product.
     /// </summary>
     public static class UiBuilder
     {
-        public static readonly Color Ink = new Color(0.05f, 0.06f, 0.07f, 0.82f);
-        public static readonly Color InkSolid = new Color(0.06f, 0.07f, 0.08f, 1f);
-        public static readonly Color Paper = new Color(0.86f, 0.88f, 0.86f, 1f);
-        public static readonly Color Accent = new Color(0.85f, 0.45f, 0.12f, 1f);
-        public static readonly Color Danger = new Color(0.78f, 0.16f, 0.14f, 1f);
-        public static readonly Color MagazineFull = new Color(0.92f, 0.92f, 0.90f, 1f);
-        public static readonly Color MagazinePartial = new Color(0.93f, 0.76f, 0.12f, 1f);
-        public static readonly Color MagazineEmpty = new Color(0.72f, 0.13f, 0.11f, 1f);
-
-        private static Font _font;
+        public static readonly Color Ink = new Color(0.05f, 0.06f, 0.07f, 0.86f);
+        public static readonly Color Paper = new Color(0.87f, 0.88f, 0.85f, 1f);
+        public static readonly Color Dim = new Color(0.62f, 0.65f, 0.63f, 1f);
+        public static readonly Color Accent = new Color(0.88f, 0.46f, 0.13f, 1f);
+        public static readonly Color Warning = new Color(0.85f, 0.66f, 0.16f, 1f);
+        public static readonly Color Danger = new Color(0.78f, 0.18f, 0.16f, 1f);
 
         public static Font Font
         {
             get
             {
-                if (_font == null)
-                {
-                    _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                }
-
-                return _font;
+                // Unity ships a default font; Arial.ttf is the documented builtin name.
+                return Resources.GetBuiltinResource<Font>("Arial.ttf");
             }
         }
 
-        public static Canvas CreateCanvas(string name, int sortOrder = 0)
+        public static Canvas CreateCanvas(string name, int sortingOrder)
         {
             GameObject go = new GameObject(name, typeof(RectTransform));
             Canvas canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = sortOrder;
+            canvas.sortingOrder = sortingOrder;
             CanvasScaler scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
@@ -53,7 +45,7 @@ namespace Kordon.Game.Ui
 
         public static void EnsureEventSystem()
         {
-            if (EventSystem.current != null || Object.FindObjectOfType<EventSystem>() != null)
+            if (Object.FindObjectOfType<EventSystem>() != null)
             {
                 return;
             }
@@ -63,27 +55,29 @@ namespace Kordon.Game.Ui
             go.AddComponent<StandaloneInputModule>();
         }
 
-        public static RectTransform Panel(Transform parent, string name, Color color,
-            Vector2 anchorMin, Vector2 anchorMax, Vector2 position, Vector2 size)
+        public static RectTransform Node(Transform parent, string name)
         {
             GameObject go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            RectTransform rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-            Image image = go.AddComponent<Image>();
-            image.color = color;
-            image.raycastTarget = true;
-            return rect;
+            return (RectTransform)go.transform;
         }
 
-        public static RectTransform Stretch(Transform parent, string name)
+        public static Image Panel(Transform parent, string name, Color color, Vector2 anchor,
+            Vector2 position, Vector2 size)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            RectTransform rect = go.GetComponent<RectTransform>();
+            RectTransform rect = Node(parent, name);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            return image;
+        }
+
+        public static RectTransform FullRect(Transform parent, string name)
+        {
+            RectTransform rect = Node(parent, name);
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
@@ -91,92 +85,162 @@ namespace Kordon.Game.Ui
             return rect;
         }
 
-        public static Text Label(Transform parent, string name, string content, int size,
-            TextAnchor anchor, Color color, FontStyle style = FontStyle.Normal)
+        public static Text Label(Transform parent, string name, string text, int size,
+            Color color, TextAnchor anchor = TextAnchor.MiddleLeft)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            Text text = go.AddComponent<Text>();
-            text.text = content;
-            text.font = Font;
-            text.fontSize = size;
-            text.alignment = anchor;
-            text.color = color;
-            text.fontStyle = style;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.raycastTarget = false;
-            return text;
+            RectTransform rect = Node(parent, name);
+            Text label = rect.gameObject.AddComponent<Text>();
+            label.text = text;
+            label.font = Font;
+            label.fontSize = size;
+            label.color = color;
+            label.alignment = anchor;
+            label.raycastTarget = false;
+            return label;
         }
 
-        public static Button Button(Transform parent, string name, string caption,
-            UnityAction onClick, int fontSize = 22)
+        public static Text LabelAt(Transform parent, string name, string text, int size,
+            Color color, Vector2 anchor, Vector2 position, Vector2 size2, TextAnchor align)
         {
-            RectTransform rect = Panel(parent, "Btn_" + name, Ink, new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 64f));
-            Text label = Label(rect, "Label", caption, fontSize, TextAnchor.MiddleCenter, Paper);
-            StretchLabel(label);
-            Button button = rect.gameObject.AddComponent<Button>();
-            if (onClick != null)
-            {
-                button.onClick.AddListener(onClick);
-            }
+            Text label = Label(parent, name, text, size, color, align);
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size2;
+            return label;
+        }
 
+        public static Button Button(Transform parent, string caption, UnityAction onClick,
+            Vector2 position, Vector2 size, int fontSize = 22)
+        {
+            Image background = Panel(parent, "Btn_" + caption, Ink, new Vector2(0.5f, 0.5f),
+                position, size);
+            Text label = Label(background.transform, "Label", caption, fontSize, Paper,
+                TextAnchor.MiddleCenter);
+            FullRect(label.transform, "LabelRect");
+            ((RectTransform)label.transform).offsetMin = Vector2.zero;
+            ((RectTransform)label.transform).offsetMax = Vector2.zero;
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            Button button = background.gameObject.AddComponent<Button>();
+            button.onClick.AddListener(onClick);
             return button;
         }
 
-        public static void StretchLabel(Text text)
+        public static void SetButtonText(Button button, string caption)
         {
-            RectTransform rect = text.rectTransform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.text = caption;
+            }
         }
 
-        public static RectTransform Row(Transform parent, string name, Vector2 size)
+        public static InputField Field(Transform parent, string placeholder, Vector2 position,
+            Vector2 size, string initial = "")
         {
-            GameObject go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            RectTransform rect = go.GetComponent<RectTransform>();
-            rect.sizeDelta = size;
-            LayoutElement element = go.AddComponent<LayoutElement>();
-            element.preferredHeight = size.y;
-            return rect;
+            Image background = Panel(parent, "Field", new Color(0.11f, 0.12f, 0.13f, 1f),
+                new Vector2(0.5f, 0.5f), position, size);
+            Text text = Label(background.transform, "Text", initial, 20, Paper,
+                TextAnchor.MiddleLeft);
+            text.rectTransform.anchorMin = new Vector2(0f, 0f);
+            text.rectTransform.anchorMax = new Vector2(1f, 1f);
+            text.rectTransform.offsetMin = new Vector2(12f, 0f);
+            text.rectTransform.offsetMax = new Vector2(-12f, 0f);
+            text.supportRichText = false;
+
+            InputField field = background.gameObject.AddComponent<InputField>();
+            field.textComponent = text;
+            field.text = initial;
+            field.characterLimit = 48;
+            return field;
+        }
+
+        public static Slider Slider(Transform parent, Vector2 position, Vector2 size,
+            float min, float max, float value, UnityAction<float> onChanged)
+        {
+            Image background = Panel(parent, "Slider", new Color(0.18f, 0.19f, 0.2f, 1f),
+                new Vector2(0.5f, 0.5f), position, size);
+            Image fill = Panel(background.transform, "Fill", Accent, new Vector2(0f, 0.5f),
+                new Vector2(0f, 0f), new Vector2(size.x * Mathf.InverseLerp(min, max, value),
+                    size.y));
+            fill.rectTransform.anchorMin = new Vector2(0f, 0f);
+            fill.rectTransform.anchorMax = new Vector2(0f, 1f);
+            fill.rectTransform.sizeDelta = new Vector2(0f, 0f);
+            fill.rectTransform.anchoredPosition = Vector2.zero;
+            Slider slider = background.gameObject.AddComponent<Slider>();
+            slider.minValue = min;
+            slider.maxValue = max;
+            slider.value = value;
+            if (onChanged != null)
+            {
+                slider.onValueChanged.AddListener(onChanged);
+            }
+
+            return slider;
         }
 
         public static VerticalLayoutGroup Column(Transform parent, string name, float spacing,
-            TextAnchor alignment = TextAnchor.UpperCenter)
+            Vector2 anchor, Vector2 position, Vector2 size, TextAnchor align = TextAnchor.UpperCenter)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            VerticalLayoutGroup group = go.AddComponent<VerticalLayoutGroup>();
+            RectTransform rect = Node(parent, name);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            VerticalLayoutGroup group = rect.gameObject.AddComponent<VerticalLayoutGroup>();
             group.spacing = spacing;
-            group.childAlignment = alignment;
+            group.childAlignment = align;
+            group.childControlWidth = false;
+            group.childControlHeight = false;
             group.childForceExpandWidth = false;
             group.childForceExpandHeight = false;
             return group;
         }
 
-        public static HorizontalLayoutGroup Line(Transform parent, string name, float spacing)
+        public static HorizontalLayoutGroup Row(Transform parent, string name, float spacing,
+            Vector2 size, TextAnchor align = TextAnchor.MiddleLeft)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            HorizontalLayoutGroup group = go.AddComponent<HorizontalLayoutGroup>();
+            RectTransform rect = Node(parent, name);
+            rect.sizeDelta = size;
+            LayoutElement element = rect.gameObject.AddComponent<LayoutElement>();
+            element.preferredHeight = size.y;
+            HorizontalLayoutGroup group = rect.gameObject.AddComponent<HorizontalLayoutGroup>();
             group.spacing = spacing;
+            group.childAlignment = align;
+            group.childControlWidth = false;
+            group.childControlHeight = false;
             group.childForceExpandWidth = false;
             group.childForceExpandHeight = false;
-            group.childAlignment = TextAnchor.MiddleCenter;
             return group;
+        }
+
+        public static Text Cell(Transform row, string name, string text, float width, int size,
+            Color color, TextAnchor align = TextAnchor.MiddleLeft)
+        {
+            Text cell = Label(row, name, text, size, color, align);
+            LayoutElement element = cell.gameObject.AddComponent<LayoutElement>();
+            element.preferredWidth = width;
+            element.preferredHeight = 26f;
+            return cell;
         }
 
         public static Color MagazineColor(string colorKey)
         {
             switch (colorKey)
             {
-                case "full": return MagazineFull;
-                case "partial": return MagazinePartial;
-                default: return MagazineEmpty;
+                case "full": return new Color(0.94f, 0.94f, 0.92f, 1f);
+                case "partial": return new Color(0.94f, 0.76f, 0.12f, 1f);
+                default: return new Color(0.74f, 0.14f, 0.12f, 1f);
+            }
+        }
+
+        public static void Clear(Transform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Object.Destroy(parent.GetChild(i).gameObject);
             }
         }
     }

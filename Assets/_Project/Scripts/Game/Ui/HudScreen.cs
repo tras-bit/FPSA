@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Kordon.Game.Ui
 {
-    /// <summary>One scoreboard row handed to the HUD by whoever owns the score.</summary>
+    /// <summary>One scoreboard row, fed by whoever owns the score (server or practice host).</summary>
     public struct ScoreRow
     {
         public string Name;
@@ -19,15 +19,16 @@ namespace Kordon.Game.Ui
     }
 
     /// <summary>
-    /// The in-match HUD, and only the HUD the rules allow: the magazine strip
-    /// (white full / yellow partial / red empty), the inspect readout that is the
-    /// only place an exact round count may appear, the reload/inspect hint, match
-    /// line, subtitles, objective line and the hold-Tab scoreboard.  No crosshair,
-    /// no permanent ammo counter - those do not exist in this codebase at all.
+    /// The in-match HUD and nothing more than the rules allow: the magazine strip
+    /// (white full / yellow partial / red empty), the inspect readout which is the
+    /// only place an exact round count may appear, the tap-R / hold-R hint, match
+    /// line, objective, subtitles, hit marker and the hold-Tab scoreboard.
+    /// There is no crosshair and no permanent ammo counter anywhere in this codebase.
     /// </summary>
-    public sealed class HudScreen : MonoBehaviour
+    public sealed class HudScreen : MonoBehaviour, IUiScreen
     {
         public WeaponController Weapons;
+        public bool ShowHints = true;
 
         private Canvas _canvas;
         private RectTransform _strip;
@@ -37,212 +38,193 @@ namespace Kordon.Game.Ui
         private Text _objective;
         private Text _subtitle;
         private Text _toast;
+        private Text _stateLine;
         private RectTransform _scoreboard;
         private RectTransform _scoreRows;
         private Image _hitMarker;
+        private Image _damageFlash;
+        private Image _lowHealthEdge;
 
         private readonly List<Image> _slotImages = new List<Image>();
         private readonly List<Text> _slotMarks = new List<Text>();
-        private float _hitMarkerTime = -10f;
-        private float _toastTime = -10f;
-        private string _lastSubtitle = "";
-        private string _lastObjective = "";
-        private string _lastMatchLine = "";
-        private List<ScoreRow> _lastScore;
+        private float _hitMarkerAt = -10f;
+        private float _toastAt = -10f;
+        private float _damageFlashAt = -10f;
+        private int _scoreRowCount = -1;
+        private string _lastCount = "";
+        private int _lastScoreVersion = -1;
+        private List<ScoreRow> _rows = new List<ScoreRow>();
+        private int _scoreVersion;
 
-        public bool Visible
-        {
-            get => _canvas != null && _canvas.gameObject.activeSelf;
-            set
-            {
-                if (_canvas != null)
-                {
-                    _canvas.gameObject.SetActive(value);
-                }
-            }
-        }
+        public string Name => "hud";
+        public RectTransform Root => (RectTransform)_canvas.transform;
 
         private void Awake()
         {
-            _canvas = UiBuilder.CreateCanvas("Hud", 10);
+            _canvas = UiBuilder.CreateCanvas("HUD", 10);
             Build();
         }
 
+        public void OnShow() => Root.gameObject.SetActive(true);
+        public void OnHide() => Root.gameObject.SetActive(false);
+
         private void Build()
         {
-            RectTransform root = _canvas.transform as RectTransform;
+            RectTransform root = Root;
 
-            // Magazine strip, bottom centre.
-            _strip = UiBuilder.Panel(root, "MagazineStrip", new Color(0f, 0f, 0f, 0f),
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 46f),
-                new Vector2(900f, 40f));
+            _damageFlash = UiBuilder.Panel(root, "DamageFlash", new Color(0.5f, 0.02f, 0.02f, 0f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
+            _damageFlash.raycastTarget = false;
+
+            _lowHealthEdge = UiBuilder.Panel(root, "LowHealth", new Color(0.35f, 0f, 0f, 0f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
+            _lowHealthEdge.raycastTarget = false;
+
+            _strip = UiBuilder.FullRect(root, "MagazineStrip");
             HorizontalLayoutGroup line = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            line.spacing = 6f;
-            line.childAlignment = TextAnchor.MiddleCenter;
+            line.spacing = 7f;
+            line.childAlignment = TextAnchor.LowerCenter;
+            line.childControlWidth = false;
+            line.childControlHeight = false;
             line.childForceExpandWidth = false;
+            line.childForceExpandHeight = false;
+            _strip.offsetMin = new Vector2(0f, 46f);
+            _strip.offsetMax = new Vector2(0f, -920f);
 
-            // Inspect readout above the strip: exact counts live here and nowhere else.
-            _inspect = UiBuilder.Label(root, "Inspect", "", 26, TextAnchor.MiddleCenter,
-                UiBuilder.Paper);
-            Place(_inspect.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 108f),
-                new Vector2(900f, 40f));
+            _inspect = UiBuilder.LabelAt(root, "Inspect", "", 26, UiBuilder.Paper,
+                new Vector2(0.5f, 0f), new Vector2(0f, 104f), new Vector2(1000f, 36f),
+                TextAnchor.MiddleCenter);
 
-            _hint = UiBuilder.Label(root, "Hint", "Tap R - reload      Hold R - inspect magazine",
-                18, TextAnchor.MiddleCenter, new Color(0.75f, 0.78f, 0.76f, 0.75f));
-            Place(_hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 148f),
-                new Vector2(900f, 28f));
+            _hint = UiBuilder.LabelAt(root, "Hint",
+                "tap R  reload     hold R  inspect magazine", 18,
+                new Color(0.78f, 0.80f, 0.77f, 0.7f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 70f), new Vector2(1000f, 28f), TextAnchor.MiddleCenter);
 
-            _matchLine = UiBuilder.Label(root, "MatchLine", "", 22, TextAnchor.UpperLeft,
-                UiBuilder.Paper);
-            Place(_matchLine.rectTransform, new Vector2(0f, 1f), new Vector2(28f, -24f),
-                new Vector2(700f, 32f));
+            _stateLine = UiBuilder.LabelAt(root, "State", "", 20, UiBuilder.Warning,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(1200f, 30f),
+                TextAnchor.MiddleCenter);
 
-            _objective = UiBuilder.Label(root, "Objective", "", 20, TextAnchor.UpperCenter,
-                UiBuilder.Accent);
-            Place(_objective.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -26f),
-                new Vector2(1100f, 30f));
+            _matchLine = UiBuilder.LabelAt(root, "MatchLine", "", 24, UiBuilder.Paper,
+                new Vector2(0f, 1f), new Vector2(32f, -26f), new Vector2(900f, 34f),
+                TextAnchor.UpperLeft);
 
-            _subtitle = UiBuilder.Label(root, "Subtitle", "", 24, TextAnchor.LowerCenter,
-                new Color(0.95f, 0.95f, 0.92f, 0.95f));
-            Place(_subtitle.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 190f),
-                new Vector2(1400f, 34f));
+            _objective = UiBuilder.LabelAt(root, "Objective", "", 20, UiBuilder.Accent,
+                new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(1100f, 30f),
+                TextAnchor.UpperCenter);
 
-            _toast = UiBuilder.Label(root, "Toast", "", 26, TextAnchor.MiddleCenter,
-                UiBuilder.Danger, FontStyle.Bold);
-            Place(_toast.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 140f),
-                new Vector2(1200f, 40f));
+            _subtitle = UiBuilder.LabelAt(root, "Subtitle", "", 24,
+                new Color(0.96f, 0.96f, 0.93f, 0.96f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 138f), new Vector2(1500f, 34f), TextAnchor.MiddleCenter);
 
-            _hitMarker = UiBuilder.Panel(root, "HitMarker", new Color(1f, 1f, 1f, 0.9f),
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 0f),
-                new Vector2(6f, 6f)).GetComponent<Image>();
+            _toast = UiBuilder.LabelAt(root, "Toast", "", 30, UiBuilder.Danger,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 44f),
+                TextAnchor.MiddleCenter);
+
+            _hitMarker = UiBuilder.Panel(root, "HitMarker", new Color(1f, 1f, 1f, 0.85f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7f, 7f));
             _hitMarker.raycastTarget = false;
-            _hitMarker.gameObject.SetActive(false);
 
             BuildScoreboard(root);
         }
 
         private void BuildScoreboard(RectTransform root)
         {
-            _scoreboard = UiBuilder.Panel(root, "Scoreboard", UiBuilder.Ink,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(860f, 640f));
+            Image board = UiBuilder.Panel(root, "Scoreboard", UiBuilder.Ink,
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 660f));
+            _scoreboard = (RectTransform)board.transform;
+            Text title = UiBuilder.LabelAt(_scoreboard, "Title", "FREE FOR ALL - FIRST TO 50",
+                24, UiBuilder.Accent, new Vector2(0.5f, 1f), new Vector2(0f, -18f),
+                new Vector2(860f, 32f), TextAnchor.MiddleCenter);
+            title.fontStyle = FontStyle.Bold;
+            UiBuilder.Column(_scoreboard, "Rows", 3f, new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -14f), new Vector2(860f, 570f));
+            _scoreRows = (RectTransform)_scoreboard.Find("Rows");
             _scoreboard.gameObject.SetActive(false);
-
-            Text title = UiBuilder.Label(_scoreboard, "Title", "SCOREBOARD", 26,
-                TextAnchor.UpperCenter, UiBuilder.Accent, FontStyle.Bold);
-            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -18f),
-                new Vector2(800f, 34f));
-
-            _scoreRows = UiBuilder.Column(_scoreboard, "Rows", 4f);
-            RectTransform rowsRect = _scoreRows.rectTransform;
-            rowsRect.anchorMin = new Vector2(0f, 0f);
-            rowsRect.anchorMax = new Vector2(1f, 1f);
-            rowsRect.offsetMin = new Vector2(30f, 24f);
-            rowsRect.offsetMax = new Vector2(-30f, -60f);
-        }
-
-        private static void Place(RectTransform rect, Vector2 anchor, Vector2 position,
-            Vector2 size)
-        {
-            rect.anchorMin = anchor;
-            rect.anchorMax = anchor;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
         }
 
         // ------------------------------------------------------------------ feed
 
         public void SetMatchLine(string line)
         {
-            if (line == _lastMatchLine)
+            if (line != _lastCount)
             {
-                return;
+                _lastCount = line;
+                _matchLine.text = line;
             }
-
-            _lastMatchLine = line;
-            _matchLine.text = line;
         }
 
         public void SetObjective(string line)
         {
-            if (line == _lastObjective)
-            {
-                return;
-            }
-
-            _lastObjective = line;
             _objective.text = line;
             _objective.gameObject.SetActive(!string.IsNullOrEmpty(line));
         }
 
         public void SetSubtitle(string line)
         {
-            if (line == _lastSubtitle)
-            {
-                return;
-            }
-
-            _lastSubtitle = line;
             _subtitle.text = line;
             _subtitle.gameObject.SetActive(!string.IsNullOrEmpty(line));
         }
 
+        public void SetStateLine(string line) => _stateLine.text = line;
+
         public void Toast(string message)
         {
             _toast.text = message;
-            _toastTime = Time.time;
+            _toastAt = Time.time;
         }
 
-        public void HitMarker() => _hitMarkerTime = Time.time;
+        public void HitMarker() => _hitMarkerAt = Time.time;
 
-        public void SetScoreboard(List<ScoreRow> rows) => _lastScore = rows;
+        public void DamageFlash() => _damageFlashAt = Time.time;
+
+        public void SetScoreboard(List<ScoreRow> rows)
+        {
+            _rows = rows;
+            _scoreVersion++;
+        }
+
+        public void SetHealth(float health01)
+        {
+            float low = Mathf.Clamp01(1f - health01 / 0.35f);
+            _lowHealthEdge.color = new Color(0.32f, 0f, 0f, low * 0.35f);
+        }
 
         // ---------------------------------------------------------------- update
 
         private void Update()
         {
-            if (Weapons == null)
-            {
-                return;
-            }
+            float now = Time.time;
 
-            AmmoHudSnapshot snapshot = Weapons.Loadout != null
-                ? Weapons.Loadout.BuildHudSnapshot(Time.time)
-                : null;
-            if (snapshot != null)
+            if (Weapons != null && Weapons.Loadout != null)
             {
+                AmmoHudSnapshot snapshot = Weapons.Loadout.BuildHudSnapshot(now);
                 RefreshStrip(snapshot);
                 RefreshInspect(snapshot);
             }
 
-            bool showScore = KordonInput.Held(InputAction.Scoreboard);
-            if (showScore && _lastScore != null)
+            bool wantScoreboard = KordonInput.Held(InputAction.Scoreboard);
+            if (wantScoreboard && _scoreVersion != _lastScoreVersion)
             {
                 RefreshScoreboard();
+                _lastScoreVersion = _scoreVersion;
             }
 
-            _scoreboard.gameObject.SetActive(showScore && _lastScore != null);
+            _scoreboard.gameObject.SetActive(wantScoreboard && _rows.Count > 0);
+            if (wantScoreboard && _rows.Count == 0)
+            {
+                _scoreboard.gameObject.SetActive(false);
+            }
 
-            float now = Time.time;
-            _hitMarker.gameObject.SetActive(now - _hitMarkerTime < 0.09f);
-            _toast.gameObject.SetActive(now - _toastTime < 2.5f);
+            _hitMarker.gameObject.SetActive(now - _hitMarkerAt < 0.085f);
+            _toast.gameObject.SetActive(now - _toastAt < 2.4f);
+
+            float flash = Mathf.Clamp01(1f - (now - _damageFlashAt) / 0.45f);
+            _damageFlash.color = new Color(0.45f, 0.02f, 0.02f, flash * 0.32f);
         }
 
         private void RefreshStrip(AmmoHudSnapshot snapshot)
         {
-            while (_slotImages.Count < snapshot.Slots.Count)
-            {
-                int index = _slotImages.Count;
-                RectTransform slot = UiBuilder.Panel(_strip, "Slot" + index,
-                    UiBuilder.MagazineEmpty, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    Vector2.zero, new Vector2(46f, 16f));
-                LayoutElement element = slot.gameObject.AddComponent<LayoutElement>();
-                element.preferredWidth = 46f;
-                element.preferredHeight = 16f;
-                _slotImages.Add(slot.GetComponent<Image>());
-                _slotMarks.Add(UiBuilder.Label(slot, "Mark", "", 14, TextAnchor.MiddleCenter,
-                    UiBuilder.InkSolid));
-            }
+            EnsureSlots(snapshot.Slots.Count);
 
             for (int i = 0; i < _slotImages.Count; i++)
             {
@@ -260,60 +242,64 @@ namespace Kordon.Game.Ui
             }
         }
 
+        private void EnsureSlots(int count)
+        {
+            while (_slotImages.Count < count)
+            {
+                Image slot = UiBuilder.Panel(_strip, "Mag" + _slotImages.Count,
+                    UiBuilder.MagazineColor("empty"), new Vector2(0.5f, 0.5f), Vector2.zero,
+                    new Vector2(44f, 15f));
+                slot.raycastTarget = false;
+                LayoutElement element = slot.gameObject.AddComponent<LayoutElement>();
+                element.preferredWidth = 44f;
+                element.preferredHeight = 15f;
+                _slotImages.Add(slot);
+                _slotMarks.Add(UiBuilder.LabelAt(slot.transform, "Mark", "", 13,
+                    UiBuilder.Ink, new Vector2(0.5f, 0.5f), Vector2.zero,
+                    new Vector2(44f, 15f), TextAnchor.MiddleCenter));
+            }
+        }
+
         private void RefreshInspect(AmmoHudSnapshot snapshot)
         {
             if (snapshot.MayShowExactCount)
             {
-                string reserve = snapshot.HasReserveAmmunition
-                    ? "reserve magazines in pouch"
-                    : "no reserve magazines";
-                _inspect.text = string.Format("{0}: {1}/{2} - {3}",
-                    snapshot.InspectedMagazineName, snapshot.InspectedRounds,
-                    snapshot.InspectedCapacity, reserve);
+                _inspect.text = snapshot.InspectedMagazineName + "   " +
+                                snapshot.InspectedRounds + " / " + snapshot.InspectedCapacity +
+                                (snapshot.HasReserveAmmunition
+                                    ? "   spares in pouch"
+                                    : "   last magazine");
                 _hint.gameObject.SetActive(false);
             }
             else
             {
                 _inspect.text = "";
-                _hint.gameObject.SetActive(snapshot.Interaction == AmmoInteraction.Idle);
+                _hint.gameObject.SetActive(ShowHints);
             }
         }
 
         private void RefreshScoreboard()
         {
-            while (_scoreRows.childCount < _lastScore.Count)
+            UiBuilder.Clear(_scoreRows);
+            foreach (ScoreRow row in _rows)
             {
-                // Rows are rebuilt from scratch whenever the count changes; the
-                // scoreboard only exists while Tab is held, so churn is rare.
-                foreach (Transform child in _scoreRows)
+                HorizontalLayoutGroup line = UiBuilder.Row(_scoreRows, "Row", 10f,
+                    new Vector2(840f, 26f));
+                Color color = row.IsLocal ? UiBuilder.Accent : UiBuilder.Paper;
+                if (row.IsBot)
                 {
-                    Object.Destroy(child.gameObject);
+                    color = UiBuilder.Warning;
                 }
 
-                for (int i = 0; i < _lastScore.Count; i++)
-                {
-                    RectTransform row = UiBuilder.Row(_scoreRows, "Row" + i,
-                        new Vector2(800f, 34f));
-                    HorizontalLayoutGroup line = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-                    line.spacing = 12f;
-                    line.childForceExpandWidth = false;
-                    ScoreRow data = _lastScore[i];
-                    AddCell(row, data.IsLocal ? "> " + data.Name : data.Name, 380f,
-                        data.IsBot ? UiBuilder.MagazinePartial : UiBuilder.Paper);
-                    AddCell(row, data.Kills.ToString(), 90f, UiBuilder.Paper);
-                    AddCell(row, data.Deaths.ToString(), 90f, UiBuilder.Paper);
-                    AddCell(row, data.Ping + " ms", 120f, UiBuilder.Paper);
-                }
-
-                break;
+                string name = row.IsBot ? row.Name + "  [practice bot]" : row.Name;
+                UiBuilder.Cell(line.transform, "Name", name, 420f, 20, color);
+                UiBuilder.Cell(line.transform, "Kills", row.Kills.ToString(), 120f, 20, color,
+                    TextAnchor.MiddleRight);
+                UiBuilder.Cell(line.transform, "Deaths", row.Deaths.ToString(), 120f, 20,
+                    UiBuilder.Dim, TextAnchor.MiddleRight);
+                UiBuilder.Cell(line.transform, "Ping", row.Ping + " ms", 140f, 18,
+                    UiBuilder.Dim, TextAnchor.MiddleRight);
             }
-        }
-
-        private void AddCell(RectTransform row, string content, float width, Color color)
-        {
-            Text cell = UiBuilder.Label(row, "Cell", content, 20, TextAnchor.MiddleLeft, color);
-            LayoutElement element = cell.gameObject.AddComponent<LayoutElement>();
-            element.preferredWidth = width;
         }
     }
 }

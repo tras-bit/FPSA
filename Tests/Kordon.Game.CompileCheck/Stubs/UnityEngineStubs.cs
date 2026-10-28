@@ -881,6 +881,29 @@ namespace UnityEngine
         public static Vector2 mouseScrollDelta => Vector2.zero;
     }
 
+    public static class QualitySettings
+    {
+        public static int GetQualityLevel() => 2;
+        public static void SetQualityLevel(int level, bool applyExpensiveChanges = true)
+        {
+        }
+
+        public static string[] names => new[] { "Low", "Medium", "High", "Ultra" };
+    }
+
+    public enum CursorLockMode
+    {
+        None = 0,
+        Locked = 1,
+        Confined = 2,
+    }
+
+    public static class Cursor
+    {
+        public static bool visible { get; set; } = true;
+        public static CursorLockMode lockState { get; set; } = CursorLockMode.None;
+    }
+
     public static class Screen
     {
         public static int width => 1920;
