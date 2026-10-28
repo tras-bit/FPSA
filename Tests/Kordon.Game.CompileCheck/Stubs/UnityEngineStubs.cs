@@ -90,13 +90,9 @@ namespace UnityEngine
             new Vector3(a.x * d, a.y * d, a.z * d);
 
         public static Vector3 operator *(float d, Vector3 a) => a * d;
+
         public static Vector3 operator /(Vector3 a, float d) =>
             new Vector3(a.x / d, a.y / d, a.z / d);
-        public static Vector3 operator -(Vector3 a) => new Vector3(-a.x, -a.y, -a.z);
-        public static Vector3 operator +(Vector3 a, Vector3 b) =>
-            new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
-        public static Vector3 operator -(Vector3 a, Vector3 b) =>
-            new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
 
         public static bool operator ==(Vector3 a, Vector3 b) =>
             Math.Abs(a.x - b.x) < 1e-5 && Math.Abs(a.y - b.y) < 1e-5 &&
