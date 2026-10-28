@@ -280,6 +280,9 @@ namespace UnityEngine
         {
         }
 
+        public static T FindObjectOfType<T>() where T : Object => null;
+        public static Object FindObjectOfType(Type type) => null;
+
         public static T Instantiate<T>(T original) where T : Object => original;
         public static T Instantiate<T>(T original, Transform parent) where T : Object => original;
         public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation)
@@ -394,6 +397,17 @@ namespace UnityEngine
             this.name = name;
         }
 
+        public GameObject(string name, params Type[] components) : this(name)
+        {
+            foreach (Type type in components)
+            {
+                if (type == typeof(RectTransform))
+                {
+                    AddComponent<RectTransform>();
+                }
+            }
+        }
+
         public void SetActive(bool value) => activeSelf = value;
 
         public T AddComponent<T>() where T : Component, new()
@@ -489,6 +503,26 @@ namespace UnityEngine
 
         public void DisableKeyword(string keyword)
         {
+        }
+    }
+
+    public class RectOffset
+    {
+        public int left { get; set; }
+        public int right { get; set; }
+        public int top { get; set; }
+        public int bottom { get; set; }
+
+        public RectOffset()
+        {
+        }
+
+        public RectOffset(int left, int right, int top, int bottom)
+        {
+            this.left = left;
+            this.right = right;
+            this.top = top;
+            this.bottom = bottom;
         }
     }
 
@@ -663,6 +697,7 @@ namespace UnityEngine
         public static T Load<T>(string path) where T : Object => null;
         public static Object Load(string path) => null;
         public static T[] LoadAll<T>(string path) where T : Object => new T[0];
+        public static T GetBuiltinResource<T>(string path) where T : Object => null;
         public static void UnloadUnusedAssets()
         {
         }
