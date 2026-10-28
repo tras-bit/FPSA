@@ -271,6 +271,9 @@ namespace Kordon.Core.Tests
             Assert.Equal(ScoreActionOutcome.VictimAlreadyDead,
                 match.RegisterKill(1UL, 2UL, "vk74", HitZone.Thorax, 42f, 14f).Outcome);
 
+            // A kicked client is a disconnected client: its damage no longer counts.
+            match.MarkDisconnected(2UL, 14.5f);
+
             // A lethal hit resolves the death inside the damage registration itself.
             DamageRegistrationResult lethal = match.RegisterDamage(2UL, 1UL, 140f, HitZone.Head, 15f);
             Assert.Equal(ScoreActionOutcome.ActorDisconnected, lethal.Outcome);

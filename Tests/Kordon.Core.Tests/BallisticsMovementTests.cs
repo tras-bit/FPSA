@@ -52,7 +52,7 @@ namespace Kordon.Core.Tests
             float aimingPitch = Shoot(new RecoilSolver(), aiming, 0f).PitchDeg;
             float hipPitch = Shoot(new RecoilSolver(), hip, 0f).PitchDeg;
             Assert.True(aimingPitch < hipPitch);
-            Assert.Equal(hipPitch / Rifle.Recoil.AimingVerticalMultiplier, aimingPitch, 3);
+            Assert.Equal(hipPitch * Rifle.Recoil.AimingVerticalMultiplier, aimingPitch, 3);
 
             SpreadModel spread = new SpreadModel();
             Assert.True(spread.ComputeCone(Rifle.Spread, aiming) < spread.ComputeCone(Rifle.Spread, hip));

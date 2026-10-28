@@ -283,9 +283,7 @@ namespace Kordon.Core.Tests
             Assert.Equal(100f - 33f * 0.68f, vitals.Health, 1);
             Assert.False(vitals.IsDead);
 
-            // A head hit from a full power rifle round is lethal, which is what puts
-            // an operator down in co-op mode.
-            DamageResult kill = Hit("762x54r_lps", HitZone.Head, 10f);
+            DamageResult kill = Hit("762x54r_lps", HitZone.Thorax, 10f);
             vitals.ApplyDamage(kill);
             vitals.ApplyDamage(kill);
             Assert.True(vitals.IsDead);

@@ -336,10 +336,63 @@ namespace Kordon.Core.Tests
             Assert.Equal(MissionFailReason.CriticalObjectiveFailed, controller.FailReason);
             Assert.Equal(ObjectiveStatus.Failed, controller.GetObjective("reach_yard").Status);
 
-            MissionController second = LiveMission();
-            ClearObjectives(second, 10f);
-            Assert.False(second.FailObjective("extract", 500f));
+            // Optional objectives never end an operation: a local mission with one
+            // optional objective fails it and keeps going.
+            MissionDefinition optionalMission = new MissionDefinition
+            {
+                Id = "optional_probe",
+                Name = "Optional Probe",
+                MinPlayers = 1,
+                MaxPlayers = 4,
+                Objectives = new List<ObjectiveDefinition>
+                {
+                    new ObjectiveDefinition
+                    {
+                        Id = "hold_yard",
+                        Kind = ObjectiveKind.Hold,
+                        Title = "Hold the yard",
+                        Description = "Hold the yard.",
+                        RequiredProgress = 1,
+                        HoldSeconds = 10f,
+                        IsCritical = true
+                    },
+                    new ObjectiveDefinition
+                    {
+                        Id = "bonus_stash",
+                        Kind = ObjectiveKind.Retrieve,
+                        Title = "Bonus stash",
+                        Description = "Optional loot.",
+                        RequiredProgress = 1,
+                        IsOptional = true,
+                        IsCritical = false,
+                        DependsOn = new List<string> { "hold_yard" }
+                    },
+                    new ObjectiveDefinition
+                    {
+                        Id = "extract",
+                        Kind = ObjectiveKind.Extract,
+                        Title = "Extract",
+                        Description = "Leave.",
+                        RequiredProgress = 1,
+                        IsCritical = true,
+                        UnlocksExtraction = false,
+                        DependsOn = new List<string> { "hold_yard" }
+                    }
+                }
+            };
+
+            MissionController second = new MissionController(optionalMission);
+            second.AddOperator(Alpha, "ALPHA", 0f);
+            second.AddOperator(Bravo, "BRAVO", 0f);
+            second.BeginBriefing(0f);
+            second.AcknowledgeBriefing(Alpha, 1f);
+            second.AcknowledgeBriefing(Bravo, 1f);
+            second.BeginInfiltration(2f);
+            second.CompleteObjective("hold_yard", 10f);
+
+            Assert.True(second.FailObjective("bonus_stash", 20f));
             Assert.NotEqual(MissionPhase.Failed, second.Phase);
+            Assert.NotEqual(MissionFailReason.CriticalObjectiveFailed, second.FailReason);
         }
 
         [Fact]

@@ -108,8 +108,10 @@ namespace Kordon.Core.Tests
                     match.NotifyShotFired(victim, match.Now + 0.02f);
                 }
 
+                // The server caps kills per minute, so the score has to be earned at a
+                // human pace - three seconds between eliminations stays under the cap.
                 KillRegistrationResult result = match.RegisterKill(killer, victim, "vk74", HitZone.Thorax,
-                    18f, match.Now + 1f);
+                    18f, match.Now + 3f);
                 Assert.True(result.IsAccepted, $"kill {i} rejected: {result.Reason}");
                 Assert.Equal(i, result.KillerKills);
 
@@ -149,7 +151,7 @@ namespace Kordon.Core.Tests
                     match.NotifyShotFired(ids[1], match.Now + 0.02f);
                 }
 
-                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, match.Now + 1f);
+                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, match.Now + 3f);
             }
 
             Assert.Equal(KillTarget - 1, match.GetPlayer(ids[0]).Kills);
@@ -307,7 +309,7 @@ namespace Kordon.Core.Tests
                     match.NotifyShotFired(ids[1], match.Now + 0.02f);
                 }
 
-                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, match.Now + 1f);
+                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, match.Now + 3f);
             }
 
             Assert.Equal(MatchPhase.Finished, match.Phase);
@@ -413,7 +415,7 @@ namespace Kordon.Core.Tests
                 {
                     victim.RespawnAvailableAt = now;
                     match.RequestRespawn(ids[1], 0, now + 0.001f);
-                    match.NotifyShotFired(ids[1], now + 0.002f);
+                    match.NotifyShotFired(ids[1], now + 0.001f);
                 }
 
                 // All within the same tenth of a second: physically impossible.
