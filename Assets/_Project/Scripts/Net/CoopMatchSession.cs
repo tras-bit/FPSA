@@ -110,7 +110,7 @@ namespace Kordon.Net
             GameObject root = new GameObject("LocalOperatorRoot");
             root.transform.SetParent(transform, false);
             _local = LocalOperatorFactory.Build(root.transform, this, _database.Definitions,
-                _loadout, 0xC00B5EEDUL, true);
+                _loadout, 0xC00B5EEDUL, true, _map != null ? _map.Layout : null, true);
             _local.Weapons.ShotFired += shot => _director?.ShotServerRpc(shot.Origin, shot.Direction);
             _local.Hud.SetObjective("awaiting briefing");
             _local.Body.Respawn(InsertionPoint(), 0f);

@@ -105,7 +105,7 @@ namespace Kordon.Net
             GameObject root = new GameObject("LocalOperatorRoot");
             root.transform.SetParent(transform, false);
             _local = LocalOperatorFactory.Build(root.transform, this, _database.Definitions,
-                _loadout, 0xD00D5EEDUL, true);
+                _loadout, 0xD00D5EEDUL, true, _map != null ? _map.Layout : null, false);
             _local.Weapons.ShotFired += OnLocalShot;
             _local.Weapons.AmmoEventRaised += OnAmmoEvent;
             _local.Hud.SetObjective("FREE-FOR-ALL - first operator to 50 kills wins");

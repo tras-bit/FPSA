@@ -769,6 +769,19 @@ namespace UnityEngine
         public static float volume { get; set; } = 1f;
     }
 
+    public enum AudioRolloffMode
+    {
+        Logarithmic = 0,
+        Linear = 1,
+        Custom = 2,
+    }
+
+    public class AudioLowPassFilter : Behaviour
+    {
+        public float cutoffFrequency { get; set; } = 22000f;
+        public float lowpassResonanceQ { get; set; } = 1f;
+    }
+
     public class AudioSource : Behaviour
     {
         public AudioClip clip { get; set; }
@@ -776,6 +789,8 @@ namespace UnityEngine
         public float pitch { get; set; } = 1f;
         public bool loop { get; set; }
         public bool playOnAwake { get; set; }
+        public float spatialBlend { get; set; } = 0f;
+        public AudioRolloffMode rolloffMode { get; set; } = AudioRolloffMode.Logarithmic;
         public float minDistance { get; set; } = 1f;
         public float maxDistance { get; set; } = 500f;
         public bool isPlaying { get; private set; }

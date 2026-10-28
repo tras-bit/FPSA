@@ -44,6 +44,7 @@ namespace Kordon.Game.Ui
         private Image _hitMarker;
         private Image _damageFlash;
         private Image _lowHealthEdge;
+        private Text _voiceLine;
 
         private readonly List<Image> _slotImages = new List<Image>();
         private readonly List<Text> _slotMarks = new List<Text>();
@@ -124,6 +125,10 @@ namespace Kordon.Game.Ui
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7f, 7f));
             _hitMarker.raycastTarget = false;
 
+            _voiceLine = UiBuilder.LabelAt(root, "Voice", "VOICE   not configured", 17,
+                UiBuilder.Dim, new Vector2(0f, 0f), new Vector2(230f, 28f),
+                new Vector2(420f, 24f), TextAnchor.MiddleCenter);
+
             BuildScoreboard(root);
         }
 
@@ -181,6 +186,28 @@ namespace Kordon.Game.Ui
         {
             _rows = rows;
             _scoreVersion++;
+        }
+
+        /// <summary>Squad channel is drawn in the accent colour, proximity in plain paper.</summary>
+        public void SetVoiceState(Kordon.Game.Audio.VoiceMode mode, bool talking, bool configured)
+        {
+            if (_voiceLine == null)
+            {
+                return;
+            }
+
+            if (!configured)
+            {
+                _voiceLine.text = "VOICE   not configured";
+                _voiceLine.color = UiBuilder.Dim;
+                return;
+            }
+
+            string channel = mode == Kordon.Game.Audio.VoiceMode.Squad ? "SQUAD" : "PROXIMITY";
+            _voiceLine.text = "VOICE   " + channel + (talking ? "   transmitting" : string.Empty);
+            _voiceLine.color = mode == Kordon.Game.Audio.VoiceMode.Squad
+                ? UiBuilder.Accent
+                : UiBuilder.Paper;
         }
 
         public void SetHealth(float health01)

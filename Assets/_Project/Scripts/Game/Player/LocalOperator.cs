@@ -1,6 +1,9 @@
 using Kordon.Core.Data;
 using Kordon.Core.Loadout;
+using Kordon.Core.Movement;
+using Kordon.Game.Audio;
 using Kordon.Game.Camera;
+using Kordon.Game.Maps;
 using Kordon.Game.Ui;
 using Kordon.Game.Weapons;
 using UnityEngine;
@@ -15,6 +18,8 @@ namespace Kordon.Game.Player
         public WeaponController Weapons;
         public WeaponViewmodel Viewmodel;
         public HudScreen Hud;
+        public AudioDirector Audio;
+        public VoiceChannel Voice;
     }
 
     /// <summary>
@@ -24,7 +29,8 @@ namespace Kordon.Game.Player
     public static class LocalOperatorFactory
     {
         public static LocalOperator Build(Transform parent, MonoBehaviour host,
-            DefinitionLibrary library, LoadoutSelection loadout, ulong seed, bool serverAuthority)
+            DefinitionLibrary library, LoadoutSelection loadout, ulong seed, bool serverAuthority,
+            MapLayout layout = null, bool squadVoice = false)
         {
             LocalOperator op = new LocalOperator();
 
@@ -53,7 +59,40 @@ namespace Kordon.Game.Player
 
             op.Hud = host.gameObject.AddComponent<HudScreen>();
             op.Hud.Weapons = op.Weapons;
+
+            // Audio: the director hears the same noise events the AI and the server do.
+            GameObject audioObject = new GameObject("Audio");
+            audioObject.transform.SetParent(parent, false);
+            op.Audio = audioObject.AddComponent<AudioDirector>();
+            op.Audio.Listener = op.Body;
+            op.Audio.Layout = layout;
+            op.Body.NoiseEmitted += noise => OnNoise(op, noise);
+            op.Weapons.ShotFired += shot => op.Audio.PlayShot(shot.Origin, shot.WeaponId, false);
+            op.Weapons.AmmoEventRaised += ammoEvent =>
+                op.Audio.PlayAmmoEvent(op.Body.transform.position, ammoEvent.Kind);
+            op.Weapons.PlayerHit += (target, result) =>
+                op.Audio.PlayHit(target.transform.position, result.BlockedByArmor);
+
+            op.Voice = host.gameObject.AddComponent<VoiceChannel>();
+            op.Voice.Listener = op.Body;
+            op.Voice.AllowSquadChannel(squadVoice);
+            op.Voice.StateChanged += (mode, talking, configured) =>
+                op.Hud.SetVoiceState(mode, talking, configured);
             return op;
+        }
+
+        private static void OnNoise(LocalOperator op, NoiseEvent noise)
+        {
+            switch (noise.Kind)
+            {
+                case NoiseKind.Footstep:
+                    op.Audio.PlayFootstep(op.Body.transform.position, noise.SurfaceId,
+                        op.Body.Gait, op.Body.GearMassKg);
+                    break;
+                case NoiseKind.Landing:
+                    op.Audio.PlayLanding(op.Body.transform.position, 1.5f);
+                    break;
+            }
         }
     }
 }

@@ -86,7 +86,7 @@ namespace Kordon.Game.Match
         private void BuildLocalPlayer(Transform parent, MapLayout layout)
         {
             LocalOperator op = LocalOperatorFactory.Build(parent, this, _database.Definitions,
-                LocalLoadout, 0x51E5D5EEDUL, false);
+                LocalLoadout, 0x51E5D5EEDUL, false, layout, false);
             Player = op.Body;
             Rig = op.Rig;
             Weapons = op.Weapons;
