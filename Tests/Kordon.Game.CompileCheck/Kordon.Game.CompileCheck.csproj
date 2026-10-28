@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Type checks every Unity-side script against hand written UnityEngine and
+    UnityEditor stubs (Stubs/*.cs). Unity itself cannot run in CI, but Roslyn
+    can: this project compiles Core + Game + Editor exactly as the editor will,
+    so a typo, a wrong signature or a missing member fails the build here
+    instead of at project import time.
+
+    NOTE: the repo .gitignore carries Unity's blanket "*.csproj" rule (the
+    editor regenerates those), so this hand written project file is tracked
+    with `git add -f` on purpose.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Kordon.Game.CompileCheck</AssemblyName>
+    <RootNamespace>Kordon.CompileCheck</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>CS0108;CS0114;CS0414;CS0649;CS0067</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Stubs/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Core/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Game/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Editor/**/*.cs" />
+  </ItemGroup>
+
+</Project>
