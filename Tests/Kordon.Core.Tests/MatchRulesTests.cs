@@ -96,22 +96,24 @@ namespace Kordon.Core.Tests
             ulong killer = ids[0];
             ulong victim = ids[1];
 
+            float clock = match.Now;
             for (int i = 1; i <= KillTarget; i++)
             {
+                clock += 3f;
                 // Keep the victim alive and available for the next elimination.
                 if (!match.GetPlayer(victim).IsAlive)
                 {
-                    match.GetPlayer(victim).RespawnAvailableAt = match.Now;
-                    Assert.True(match.RequestRespawn(victim, 1, match.Now + 0.01f).IsAccepted);
+                    match.GetPlayer(victim).RespawnAvailableAt = clock;
+                    Assert.True(match.RequestRespawn(victim, 1, clock + 0.01f).IsAccepted);
                     // Firing ends spawn protection - the victim shoots back instead of
                     // standing in the open, which is what the test is modelling.
-                    match.NotifyShotFired(victim, match.Now + 0.02f);
+                    match.NotifyShotFired(victim, clock + 0.02f);
                 }
 
                 // The server caps kills per minute, so the score has to be earned at a
                 // human pace - three seconds between eliminations stays under the cap.
                 KillRegistrationResult result = match.RegisterKill(killer, victim, "vk74", HitZone.Thorax,
-                    18f, match.Now + 3f);
+                    18f, clock);
                 Assert.True(result.IsAccepted, $"kill {i} rejected: {result.Reason}");
                 Assert.Equal(i, result.KillerKills);
 
@@ -141,17 +143,19 @@ namespace Kordon.Core.Tests
         public void FortyNineKills_DoesNotWinTheMatch()
         {
             FfaMatchController match = CreateLiveMatch(2, out List<ulong> ids);
+            float clock = match.Now;
             for (int i = 0; i < KillTarget - 1; i++)
             {
+                clock += 3f;
                 PlayerMatchState victim = match.GetPlayer(ids[1]);
                 if (!victim.IsAlive)
                 {
-                    victim.RespawnAvailableAt = match.Now;
-                    match.RequestRespawn(ids[1], 1, match.Now + 0.01f);
-                    match.NotifyShotFired(ids[1], match.Now + 0.02f);
+                    victim.RespawnAvailableAt = clock;
+                    match.RequestRespawn(ids[1], 1, clock + 0.01f);
+                    match.NotifyShotFired(ids[1], clock + 0.02f);
                 }
 
-                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, match.Now + 3f);
+                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, clock);
             }
 
             Assert.Equal(KillTarget - 1, match.GetPlayer(ids[0]).Kills);
@@ -299,17 +303,19 @@ namespace Kordon.Core.Tests
         public void Rematch_ResetsScoreAndReopensTheLoadoutScreen()
         {
             FfaMatchController match = CreateLiveMatch(2, out List<ulong> ids);
+            float clock = match.Now;
             for (int i = 0; i < KillTarget; i++)
             {
+                clock += 3f;
                 PlayerMatchState victim = match.GetPlayer(ids[1]);
                 if (!victim.IsAlive)
                 {
-                    victim.RespawnAvailableAt = match.Now;
-                    match.RequestRespawn(ids[1], 1, match.Now + 0.01f);
-                    match.NotifyShotFired(ids[1], match.Now + 0.02f);
+                    victim.RespawnAvailableAt = clock;
+                    match.RequestRespawn(ids[1], 1, clock + 0.01f);
+                    match.NotifyShotFired(ids[1], clock + 0.02f);
                 }
 
-                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, match.Now + 3f);
+                match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, clock);
             }
 
             Assert.Equal(MatchPhase.Finished, match.Phase);

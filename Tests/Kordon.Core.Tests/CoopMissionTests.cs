@@ -364,8 +364,7 @@ namespace Kordon.Core.Tests
                         Description = "Optional loot.",
                         RequiredProgress = 1,
                         IsOptional = true,
-                        IsCritical = false,
-                        DependsOn = new List<string> { "hold_yard" }
+                        IsCritical = false
                     },
                     new ObjectiveDefinition
                     {

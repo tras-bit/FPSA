@@ -277,8 +277,9 @@ namespace Kordon.Core.Tests
             // A lethal hit resolves the death inside the damage registration itself.
             DamageRegistrationResult lethal = match.RegisterDamage(2UL, 1UL, 140f, HitZone.Head, 15f);
             Assert.Equal(ScoreActionOutcome.ActorDisconnected, lethal.Outcome);
+            // A disconnected operator is no longer a valid target either.
             DamageRegistrationResult honestLethal = match.RegisterDamage(1UL, 2UL, 140f, HitZone.Thorax, 15f);
-            Assert.Equal(ScoreActionOutcome.VictimAlreadyDead, honestLethal.Outcome);
+            Assert.Equal(ScoreActionOutcome.UnknownVictim, honestLethal.Outcome);
         }
 
         [Fact]
