@@ -15,7 +15,7 @@ if [ ! -f "$STUBS/libXrender.so.1" ]; then
   echo "[blender.sh] building loader stubs in $STUBS ..." >&2
   python3 "$HERE/env/make_bpy_stubs.py" --out "$STUBS" >&2
 fi
-if ! python3 -c "import bpy" 2>/dev/null; then
+if ! LD_LIBRARY_PATH="$STUBS:${LD_LIBRARY_PATH:-}" python3 -c "import bpy" >/dev/null 2>&1; then
   echo "[blender.sh] installing bpy (official Blender 4.5 LTS python module) ..." >&2
   python3 -m pip install --user --break-system-packages -q "bpy==4.5.15" numpy pillow >&2
 fi
