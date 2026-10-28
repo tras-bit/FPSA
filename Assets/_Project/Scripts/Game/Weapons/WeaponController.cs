@@ -186,12 +186,12 @@ namespace Kordon.Game.Weapons
                 return;
             }
 
-            if (KordonInput.Pressed(InputAction.ReloadInspect))
+            if (KordonInput.Pressed(InputAction.Reload))
             {
                 kit.PressReloadKey(Now);
             }
 
-            if (KordonInput.Released(InputAction.ReloadInspect))
+            if (KordonInput.Released(InputAction.Reload))
             {
                 kit.ReleaseReloadKey(Now);
             }

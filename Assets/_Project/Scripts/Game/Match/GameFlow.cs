@@ -5,6 +5,7 @@ using Kordon.Core.Loadout;
 using Kordon.Core.Rules;
 using Kordon.Game.Input;
 using Kordon.Game.Maps;
+using Kordon.Core.Settings;
 using Kordon.Game.Settings;
 using Kordon.Game.Ui;
 using UnityEngine;
@@ -23,7 +24,7 @@ namespace Kordon.Game.Match
 
         public GameDatabase Database { get; private set; }
         public GameSettings Settings { get; private set; }
-        public InputBindings Bindings { get; private set; }
+        public KeyBindings Bindings { get; private set; }
         public UiDirector Director { get; private set; }
         public LoadoutSelection Loadout { get; set; }
         public PracticeMatch Practice { get; private set; }
@@ -69,9 +70,9 @@ namespace Kordon.Game.Match
             }
 
             _bootstrapped = true;
-            Settings = GameSettings.Load();
-            Settings.Apply();
-            Bindings = InputBindings.Load();
+            Settings = SettingsStore.Load();
+            SettingsStore.Apply(Settings);
+            Bindings = KordonInput.LoadBindings();
             KordonInput.Rebind(Bindings);
 
             Database = GameDatabase.Load(ContentPaths.DataRoot);

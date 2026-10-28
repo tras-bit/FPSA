@@ -189,7 +189,7 @@ namespace Kordon.Game.Ui
         }
 
         /// <summary>Squad channel is drawn in the accent colour, proximity in plain paper.</summary>
-        public void SetVoiceState(Kordon.Game.Audio.VoiceMode mode, bool talking, bool configured)
+        public void SetVoiceState(Kordon.Core.Voice.VoiceChannel channel, bool talking, bool configured)
         {
             if (_voiceLine == null)
             {
@@ -203,9 +203,11 @@ namespace Kordon.Game.Ui
                 return;
             }
 
-            string channel = mode == Kordon.Game.Audio.VoiceMode.Squad ? "SQUAD" : "PROXIMITY";
-            _voiceLine.text = "VOICE   " + channel + (talking ? "   transmitting" : string.Empty);
-            _voiceLine.color = mode == Kordon.Game.Audio.VoiceMode.Squad
+            string label = channel == Kordon.Core.Voice.VoiceChannel.TeamRadio
+                ? "SQUAD RADIO"
+                : "PROXIMITY";
+            _voiceLine.text = "VOICE   " + label + (talking ? "   transmitting" : string.Empty);
+            _voiceLine.color = channel == Kordon.Core.Voice.VoiceChannel.TeamRadio
                 ? UiBuilder.Accent
                 : UiBuilder.Paper;
         }

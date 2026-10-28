@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Kordon.Core.Settings;
 using Kordon.Game.Input;
 using Kordon.Game.Match;
+using Kordon.Game.Settings;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,8 +23,8 @@ namespace Kordon.Game.Ui
             InputAction.MoveForward, InputAction.MoveBack, InputAction.MoveLeft,
             InputAction.MoveRight, InputAction.Jump, InputAction.Sprint, InputAction.Crouch,
             InputAction.Prone, InputAction.LeanLeft, InputAction.LeanRight,
-            InputAction.ReloadInspect, InputAction.Use, InputAction.Scoreboard,
-            InputAction.Pause,
+            InputAction.Reload, InputAction.Interact, InputAction.Scoreboard,
+            InputAction.Pause, InputAction.VoiceLocal, InputAction.VoiceTeam,
         };
 
         private readonly List<Text> _rows = new List<Text>();
@@ -56,9 +58,9 @@ namespace Kordon.Game.Ui
                 18, UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -100f),
                 new Vector2(520f, 24f), TextAnchor.MiddleLeft);
             _sensitivity = UiBuilder.Slider(left.transform, new Vector2(0f, 326f),
-                new Vector2(520f, 18f), 0.4f, 8f, Flow.Settings.Sensitivity, value =>
+                new Vector2(520f, 18f), 0.4f, 8f, Flow.Settings.MouseSensitivity, value =>
                 {
-                    Flow.Settings.Sensitivity = value;
+                    Flow.Settings.MouseSensitivity = value;
                     UpdateLabels();
                 });
 
@@ -150,19 +152,14 @@ namespace Kordon.Game.Ui
         private void UpdateLabels()
         {
             _sensitivityLabel.text = "look sensitivity: " +
-                                     Flow.Settings.Sensitivity.ToString("0.0");
+                                     Flow.Settings.MouseSensitivity.ToString("0.00");
             _volumeLabel.text = "master volume: " +
                                 Mathf.RoundToInt(Flow.Settings.MasterVolume * 100f) + "%";
-            _qualityLabel.text = "quality: " + QualityName(Flow.Settings.QualityLevel) +
+            _qualityLabel.text = "quality: " + SettingsStore.QualityName(Flow.Settings.Quality) +
                                  "     fullscreen: " + (Flow.Settings.Fullscreen ? "on" : "off") +
                                  "\nresolution: " + Flow.Settings.ResolutionWidth + " x " +
                                  Flow.Settings.ResolutionHeight;
             AudioListener.volume = Flow.Settings.MasterVolume;
-        }
-
-        private static string QualityName(int level)
-        {
-            return level == 0 ? "low" : level == 1 ? "medium" : level == 2 ? "high" : "ultra";
         }
 
         private void UpdateRows()
@@ -170,8 +167,8 @@ namespace Kordon.Game.Ui
             for (int i = 0; i < Rebindable.Length && i < _rows.Count; i++)
             {
                 InputAction action = Rebindable[i];
-                _rows[i].text = ActionName(action) + "  ...  " +
-                                KordonInput.Bindings[action].ToString();
+                _rows[i].text = ActionName(action) + "     " +
+                                KordonInput.Bindings.GetKeyName(action).ToUpperInvariant();
             }
         }
 
@@ -189,9 +186,11 @@ namespace Kordon.Game.Ui
                 case InputAction.Prone: return "prone";
                 case InputAction.LeanLeft: return "lean left";
                 case InputAction.LeanRight: return "lean right";
-                case InputAction.ReloadInspect: return "reload / inspect";
-                case InputAction.Use: return "use";
+                case InputAction.Reload: return "reload / inspect";
+                case InputAction.Interact: return "use / interact";
                 case InputAction.Scoreboard: return "scoreboard";
+                case InputAction.VoiceLocal: return "voice (proximity)";
+                case InputAction.VoiceTeam: return "voice (squad radio)";
                 case InputAction.Pause: return "pause";
                 default: return action.ToString();
             }
@@ -224,9 +223,13 @@ namespace Kordon.Game.Ui
                     continue;
                 }
 
-                InputBindings bindings = KordonInput.Bindings;
-                bindings[_capturing.Value] = key;
+                KeyBindings bindings = KordonInput.Bindings;
+                bindings.Rebind(_capturing.Value, (int)key, out List<InputAction> displaced);
                 KordonInput.Rebind(bindings);
+                if (displaced != null && displaced.Count > 0)
+                {
+                    _captureHint.text = ActionName(displaced[0]) + " was unbound";
+                }
                 _capturing = null;
                 _captureHint.text = "bound to " + key;
                 UpdateRows();
@@ -236,7 +239,7 @@ namespace Kordon.Game.Ui
 
         private void ResetBindings()
         {
-            InputBindings bindings = new InputBindings();
+            KeyBindings bindings = KeyBindings.CreateDefault();
             KordonInput.Rebind(bindings);
             UpdateRows();
             _captureHint.text = "defaults restored";
@@ -244,13 +247,13 @@ namespace Kordon.Game.Ui
 
         private void ToggleSubtitles()
         {
-            Flow.Settings.Subtitles = !Flow.Settings.Subtitles;
+            Flow.Settings.SubtitlesEnabled = !Flow.Settings.SubtitlesEnabled;
             SaveAndApply();
         }
 
         private void CycleQuality()
         {
-            Flow.Settings.QualityLevel = (Flow.Settings.QualityLevel + 1) % 4;
+            Flow.Settings.Quality = (QualityPreset)(((int)Flow.Settings.Quality + 1) % 4);
             SaveAndApply();
         }
 
@@ -283,8 +286,8 @@ namespace Kordon.Game.Ui
 
         private void SaveAndApply()
         {
-            Flow.Settings.Apply();
-            Flow.Settings.Save();
+            SettingsStore.Apply(Flow.Settings);
+            SettingsStore.Save(Flow.Settings);
             UpdateLabels();
         }
     }

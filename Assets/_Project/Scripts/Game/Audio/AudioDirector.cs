@@ -174,7 +174,7 @@ namespace Kordon.Game.Audio
             UpdateAmbience();
             UpdateBodycamLayer();
 
-            EffectsVolume = GameSettings.Load().EffectsVolume;
+            EffectsVolume = SettingsStore.Load().EffectsVolume;
         }
 
         private void UpdateAmbience()

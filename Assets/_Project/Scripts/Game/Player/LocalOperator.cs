@@ -19,7 +19,7 @@ namespace Kordon.Game.Player
         public WeaponViewmodel Viewmodel;
         public HudScreen Hud;
         public AudioDirector Audio;
-        public VoiceChannel Voice;
+        public VoiceRuntime Voice;
     }
 
     /// <summary>
@@ -73,11 +73,11 @@ namespace Kordon.Game.Player
             op.Weapons.PlayerHit += (target, result) =>
                 op.Audio.PlayHit(target.transform.position, result.BlockedByArmor);
 
-            op.Voice = host.gameObject.AddComponent<VoiceChannel>();
+            op.Voice = host.gameObject.AddComponent<VoiceRuntime>();
             op.Voice.Listener = op.Body;
             op.Voice.AllowSquadChannel(squadVoice);
-            op.Voice.StateChanged += (mode, talking, configured) =>
-                op.Hud.SetVoiceState(mode, talking, configured);
+            op.Voice.StateChanged += (channel, talking, configured) =>
+                op.Hud.SetVoiceState(channel, talking, configured);
             return op;
         }
 

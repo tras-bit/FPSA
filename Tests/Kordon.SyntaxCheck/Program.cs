@@ -105,7 +105,7 @@ namespace Kordon.SyntaxCheck
                 }
                 else
                 {
-                    if (owner.NoEngineReferences && UsesEngine(text))
+                    if (owner.NoEngineReferences && UsesEngine(StripComments(text)))
                     {
                         report.Errors.Add($"{relative}: references UnityEngine but lives in " +
                                           $"{owner.Name} which sets noEngineReferences=true");
@@ -153,6 +153,78 @@ namespace Kordon.SyntaxCheck
             }
 
             return report.Errors.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// Comments may name Unity (documentation explaining why the Core is engine
+        /// free is a good thing); only real code counts for the engine-free rule.
+        /// </summary>
+        private static string StripComments(string text)
+        {
+            System.Text.StringBuilder builder = new System.Text.StringBuilder(text.Length);
+            bool inLineComment = false;
+            bool inBlockComment = false;
+            bool inString = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                char next = i + 1 < text.Length ? text[i + 1] : '\0';
+                if (inLineComment)
+                {
+                    if (c == '\n')
+                    {
+                        inLineComment = false;
+                        builder.Append(c);
+                    }
+
+                    continue;
+                }
+
+                if (inBlockComment)
+                {
+                    if (c == '*' && next == '/')
+                    {
+                        inBlockComment = false;
+                        i++;
+                    }
+
+                    continue;
+                }
+
+                if (inString)
+                {
+                    builder.Append(c);
+                    if (c == '"' && (i == 0 || text[i - 1] != '\\'))
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                if (c == '/' && next == '/')
+                {
+                    inLineComment = true;
+                    i++;
+                    continue;
+                }
+
+                if (c == '/' && next == '*')
+                {
+                    inBlockComment = true;
+                    i++;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = true;
+                }
+
+                builder.Append(c);
+            }
+
+            return builder.ToString();
         }
 
         private static bool UsesEngine(string text) =>

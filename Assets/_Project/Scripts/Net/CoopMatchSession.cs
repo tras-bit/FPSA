@@ -346,7 +346,6 @@ namespace Kordon.Net
     internal static class GameInput
     {
         public static bool UsePressed =>
-            UnityEngine.Input.GetKeyDown(Kordon.Game.Input.KordonInput.Bindings[
-                Kordon.Game.Input.InputAction.Use]);
+            Kordon.Game.Input.KordonInput.Pressed(Kordon.Core.Settings.InputAction.Interact);
     }
 }
