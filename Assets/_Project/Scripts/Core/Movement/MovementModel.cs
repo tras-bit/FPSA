@@ -100,19 +100,19 @@ namespace Kordon.Core.Movement
                 float control = sprinting ? 1f : 1f;
                 if (wish.SqrMagnitude > 0.0001f)
                 {
-                    float accel = Profile.GroundAcceleration * control * MathUtil.Clamp(mobilityMultiplier, 0.2f, 1.2f);
+                    float accel = MovementProfile.GroundAcceleration * control * MathUtil.Clamp(mobilityMultiplier, 0.2f, 1.2f);
                     horizontal = Approach(horizontal, wishVelocity, accel * deltaTime);
                 }
                 else
                 {
-                    horizontal = Approach(horizontal, KordonVec3.Zero, Profile.GroundDeceleration * deltaTime);
+                    horizontal = Approach(horizontal, KordonVec3.Zero, MovementProfile.GroundDeceleration * deltaTime);
                 }
 
                 float vertical = 0f;
                 if (intent.WantsJump)
                 {
-                    vertical = Profile.JumpUpVelocity *
-                               (intent.Stance == Stance.Crouch ? Profile.CrouchJumpVelocityMultiplier : 1f);
+                    vertical = MovementProfile.JumpUpVelocity *
+                               (intent.Stance == Stance.Crouch ? MovementProfile.CrouchJumpVelocityMultiplier : 1f);
                     step.Jumped = true;
                 }
                 else if (velocity.Y < 0f)
@@ -125,7 +125,7 @@ namespace Kordon.Core.Movement
             else
             {
                 // Weak air control: jumping never becomes an efficient way to travel.
-                float airAccel = Profile.GroundAcceleration * Profile.AirControlMultiplier;
+                float airAccel = MovementProfile.GroundAcceleration * MovementProfile.AirControlMultiplier;
                 KordonVec3 airVelocity = horizontal + wish * (airAccel * deltaTime);
                 float maxAir = Math.Max(horizontal.Magnitude, maxSpeed * 0.9f);
                 if (airVelocity.Magnitude > maxAir)
@@ -133,10 +133,10 @@ namespace Kordon.Core.Movement
                     airVelocity = airVelocity.Normalized() * maxAir;
                 }
 
-                float drag = MathUtil.Clamp01(Profile.AirDragPerSecond * deltaTime);
+                float drag = MathUtil.Clamp01(MovementProfile.AirDragPerSecond * deltaTime);
                 airVelocity = airVelocity * (1f - drag);
 
-                float vertical = velocity.Y - Profile.Gravity * deltaTime;
+                float vertical = velocity.Y - MovementProfile.Gravity * deltaTime;
                 if (intent.WantsJump)
                 {
                     // Jumping while airborne is not possible.
@@ -151,9 +151,9 @@ namespace Kordon.Core.Movement
                                                     Math.Max(0.01f, MovementProfile.SprintSpeed));
             step.Gait = ClassifyGait(intent.Stance, sprinting, step.Velocity);
             step.WeaponControlPenalty = grounded
-                ? MathUtil.Lerp(1f, Profile.AirborneWeaponControlPenalty * 0.55f,
+                ? MathUtil.Lerp(1f, MovementProfile.AirborneWeaponControlPenalty * 0.55f,
                     MathUtil.Clamp01(new KordonVec3(velocity.X, 0f, velocity.Z).Magnitude / MovementProfile.SprintSpeed))
-                : Profile.AirborneWeaponControlPenalty;
+                : MovementProfile.AirborneWeaponControlPenalty;
             return step;
         }
 
