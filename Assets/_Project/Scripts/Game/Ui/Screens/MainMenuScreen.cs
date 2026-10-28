@@ -43,14 +43,22 @@ namespace Kordon.Game.Ui
                 17, UiBuilder.Dim, new Vector2(0.5f, 1f), new Vector2(0f, -232f),
                 new Vector2(520f, 70f), TextAnchor.UpperLeft);
 
-            UiBuilder.Button(left.transform, "PLAY - FREE-FOR-ALL", () => Flow.OpenConnect(),
-                new Vector2(0f, 60f), new Vector2(480f, 62f));
+            UiBuilder.Button(left.transform, "PLAY - FREE-FOR-ALL", () =>
+            {
+                Flow.CoopRequested = false;
+                Flow.OpenConnect();
+            }, new Vector2(0f, 68f), new Vector2(480f, 58f));
+            UiBuilder.Button(left.transform, "CO-OP OPERATION (2-4)", () =>
+            {
+                Flow.CoopRequested = true;
+                Flow.OpenConnect();
+            }, new Vector2(0f, 6f), new Vector2(480f, 50f), 18);
             UiBuilder.Button(left.transform, "PRACTICE (OFFLINE, NO BOTS)", () => Flow.OpenPrep(),
-                new Vector2(0f, -14f), new Vector2(480f, 58f), 20);
+                new Vector2(0f, -52f), new Vector2(480f, 50f), 18);
             UiBuilder.Button(left.transform, "SETTINGS & CONTROLS", () => Flow.OpenSettings(),
-                new Vector2(0f, -84f), new Vector2(480f, 58f), 20);
+                new Vector2(0f, -110f), new Vector2(480f, 50f), 18);
             UiBuilder.Button(left.transform, "QUIT", () => Flow.Quit(),
-                new Vector2(0f, -154f), new Vector2(480f, 50f), 18);
+                new Vector2(0f, -168f), new Vector2(480f, 46f), 16);
 
             // Right: operator identity and honest build information.
             Image right = UiBuilder.Panel(Root, "RightPanel", new Color(0.05f, 0.06f, 0.07f, 0.55f),

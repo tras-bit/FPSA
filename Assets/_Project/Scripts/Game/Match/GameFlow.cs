@@ -30,6 +30,9 @@ namespace Kordon.Game.Match
 
         /// <summary>Set by the network stage once a client/server can be created.</summary>
         public Func<IMatchConnector> ConnectorFactory;
+
+        /// <summary>Set by the connect screen: the next session is the co-op operation.</summary>
+        public bool CoopRequested;
         public IMatchConnector Connector { get; private set; }
         public string StatusLine { get; private set; } = string.Empty;
 
@@ -195,7 +198,20 @@ namespace Kordon.Game.Match
             ShowResults(results, "PRACTICE");
         }
 
+        public void StartCoopMatch(string address, int port, bool host, string regionId)
+        {
+            CoopRequested = true;
+            StartNetworkMatchInternal(address, port, host, regionId, true);
+        }
+
         public void StartNetworkMatch(string address, int port, bool host, string regionId)
+        {
+            CoopRequested = false;
+            StartNetworkMatchInternal(address, port, host, regionId, false);
+        }
+
+        private void StartNetworkMatchInternal(string address, int port, bool host,
+            string regionId, bool coop)
         {
             if (ConnectorFactory == null)
             {
@@ -207,7 +223,14 @@ namespace Kordon.Game.Match
             Connector = ConnectorFactory();
             Connector.Status += SetStatus;
 
-            Connector.MatchEnded += results => ShowResults(results, "ONLINE");
+            Connector.MatchEnded += results => ShowResults(results, Connector.ModeLabel);
+            if (Connector.ModeLabel == "CO-OP" != coop)
+            {
+                SetStatus("this build cannot start " + (coop ? "co-op" : "free-for-all") +
+                          " from the current connector");
+                return;
+            }
+
             Connector.Begin(address, port, host, regionId, Loadout, PlayerProfile.Name);
             SetStatus(host ? "hosting on " + address + ":" + port : "connecting to " + address + ":" + port);
         }
@@ -273,6 +296,9 @@ namespace Kordon.Game.Match
     /// </summary>
     public interface IMatchConnector
     {
+        /// <summary>"ONLINE" for networked FFA, "CO-OP" for the operation.</summary>
+        string ModeLabel { get; }
+
         event Action<string> Status;
         event Action<MatchResults> MatchEnded;
 

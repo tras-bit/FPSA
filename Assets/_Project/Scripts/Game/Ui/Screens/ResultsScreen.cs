@@ -61,10 +61,19 @@ namespace Kordon.Game.Ui
                 return;
             }
 
-            _headline.text = results.WinnerName + " WINS";
-            _reason.text = string.Format("{0}   |   {1} kills   |   {2}   |   {3}",
-                modeLabel, results.WinnerKills, ReasonText(results.Reason),
-                FormatDuration(results.DurationSeconds));
+            if (modeLabel == "CO-OP")
+            {
+                _headline.text = results.WinnerName;
+                _reason.text = string.Format("{0}   |   {1} hostiles removed   |   {2}",
+                    modeLabel, results.WinnerKills, FormatDuration(results.DurationSeconds));
+            }
+            else
+            {
+                _headline.text = results.WinnerName + " WINS";
+                _reason.text = string.Format("{0}   |   {1} kills   |   {2}   |   {3}",
+                    modeLabel, results.WinnerKills, ReasonText(results.Reason),
+                    FormatDuration(results.DurationSeconds));
+            }
             RefreshStandings(results.Standings);
         }
 

@@ -28,6 +28,8 @@ namespace Kordon.Net
         public event Action<string> Status;
         public event Action<MatchResults> MatchEnded;
 
+        public string ModeLabel => "ONLINE";
+
         private const float FrameInterval = 0.05f;
 
         private KordonNetwork _network;

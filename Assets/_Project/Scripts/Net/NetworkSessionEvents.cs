@@ -1,4 +1,5 @@
 using System;
+using Kordon.Core.Coop;
 using Kordon.Core.Rules;
 using UnityEngine;
 
@@ -20,6 +21,10 @@ namespace Kordon.Net
         public static event Action<int, ulong, string, int, float> MatchEnded;
         public static event Action<ulong[], int[], int[], string[], int[], MatchPhase> Scores;
         public static event Action<ulong[], Vector3[], float[], int[], bool[]> State;
+        public static event Action<Vector3[], bool[]> Hostiles;
+        public static event Action<string, string, string> Briefing;
+        public static event Action<MissionPhase, string, string, float, float, bool, int, float> Mission;
+        public static event Action<bool, string, int, float, string> MissionEnded;
 
         public static void RaiseWelcome(int killTarget, float serverTime) =>
             Welcome?.Invoke(killTarget, serverTime);
@@ -45,6 +50,22 @@ namespace Kordon.Net
             int[] pings, MatchPhase phase) =>
             Scores?.Invoke(ids, kills, deaths, names, pings, phase);
 
+        public static void RaiseHostiles(Vector3[] positions, bool[] dead) =>
+            Hostiles?.Invoke(positions, dead);
+
+        public static void RaiseBriefing(string missionName, string title, string text) =>
+            Briefing?.Invoke(missionName, title, text);
+
+        public static void RaiseMission(MissionPhase phase, string title, string description,
+            float progress, float holdSeconds, bool extractionAvailable, int failReason,
+            float timeRemaining) =>
+            Mission?.Invoke(phase, title, description, progress, holdSeconds, extractionAvailable,
+                failReason, timeRemaining);
+
+        public static void RaiseMissionEnded(bool success, string reason, int hostilesRemoved,
+            float durationSeconds, string debrief) =>
+            MissionEnded?.Invoke(success, reason, hostilesRemoved, durationSeconds, debrief);
+
         public static void RaiseState(ulong[] ids, Vector3[] positions, float[] yaws,
             int[] health, bool[] dead) => State?.Invoke(ids, positions, yaws, health, dead);
 
@@ -59,6 +80,10 @@ namespace Kordon.Net
             MatchEnded = null;
             Scores = null;
             State = null;
+            Hostiles = null;
+            Briefing = null;
+            Mission = null;
+            MissionEnded = null;
         }
     }
 }

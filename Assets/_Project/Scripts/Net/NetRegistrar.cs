@@ -34,17 +34,29 @@ namespace Kordon.Net
 
             if (flow.ConnectorFactory == null)
             {
-                flow.ConnectorFactory = CreateSession;
+                flow.ConnectorFactory = flow.CoopRequested ? CreateCoopSession : CreateFfaSession;
+            }
+            else if (flow.CoopRequested && !(flow.Connector is CoopMatchSession) &&
+                     flow.Connector == null)
+            {
+                flow.ConnectorFactory = CreateCoopSession;
             }
 
             Destroy(gameObject);
         }
 
-        private static IMatchConnector CreateSession()
+        private static IMatchConnector CreateFfaSession()
         {
             GameObject go = new GameObject("NetworkSession");
             Object.DontDestroyOnLoad(go);
             return go.AddComponent<NetworkMatchSession>();
+        }
+
+        private static IMatchConnector CreateCoopSession()
+        {
+            GameObject go = new GameObject("CoopSession");
+            Object.DontDestroyOnLoad(go);
+            return go.AddComponent<CoopMatchSession>();
         }
     }
 }

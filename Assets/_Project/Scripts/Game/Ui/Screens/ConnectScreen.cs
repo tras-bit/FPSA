@@ -20,6 +20,8 @@ namespace Kordon.Game.Ui
         private Text _regionLabel;
         private Text _status;
         private Text _kitLabel;
+        private Text _title;
+        private Text _subtitle;
         private int _regionIndex;
 
         protected override void Build()
@@ -32,14 +34,18 @@ namespace Kordon.Game.Ui
             Image panel = UiBuilder.Panel(Root, "Panel", UiBuilder.Ink, new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(880f, 700f));
 
-            Text title = UiBuilder.LabelAt(panel.transform, "Title", "FREE-FOR-ALL", 40,
+            _title = UiBuilder.LabelAt(panel.transform, "Title", "FREE-FOR-ALL", 40,
                 UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -54f),
                 new Vector2(800f, 50f), TextAnchor.MiddleCenter);
-            title.fontStyle = FontStyle.Bold;
-            UiBuilder.LabelAt(panel.transform, "Sub",
+            _title.fontStyle = FontStyle.Bold;
+            _subtitle = UiBuilder.LabelAt(panel.transform, "Sub",
                 "20 human slots - no teams - first operator to 50 kills wins", 18, UiBuilder.Dim,
                 new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(800f, 26f),
                 TextAnchor.MiddleCenter);
+            UiBuilder.Button(panel.transform, "FREE-FOR-ALL", () => SetMode(false),
+                new Vector2(-130f, 300f), new Vector2(240f, 44f), 17);
+            UiBuilder.Button(panel.transform, "CO-OP OPERATION", () => SetMode(true),
+                new Vector2(130f, 300f), new Vector2(240f, 44f), 17);
 
             UiBuilder.LabelAt(panel.transform, "AddressLabel",
                 "SERVER ADDRESS  (DNS name or IP, port below)", 16, UiBuilder.Dim,
@@ -96,7 +102,20 @@ namespace Kordon.Game.Ui
         {
             RefreshRegion();
             RefreshKit();
+            SetMode(Flow.CoopRequested);
             _status.text = "Server list is configured by address: press HOST or JOIN.";
+        }
+
+        private void SetMode(bool coop)
+        {
+            Flow.CoopRequested = coop;
+            if (_title != null)
+            {
+                _title.text = coop ? "OPERATION SILENT KILN" : "FREE-FOR-ALL";
+                _subtitle.text = coop
+                    ? "2-4 operators - briefing, objectives, AI hostiles, evacuation"
+                    : "20 human slots - no teams - first operator to 50 kills wins";
+            }
         }
 
         private void CycleRegion(int direction)
@@ -156,7 +175,14 @@ namespace Kordon.Game.Ui
         {
             string address = _address.text;
             int port = ParsePort();
-            Flow.StartNetworkMatch(address, port, true, CurrentRegionId());
+            if (Flow.CoopRequested)
+            {
+                Flow.StartCoopMatch(address, port, true, CurrentRegionId());
+            }
+            else
+            {
+                Flow.StartNetworkMatch(address, port, true, CurrentRegionId());
+            }
             _status.text = "hosting: " + address + ":" + port + " - waiting for players";
         }
 
@@ -184,7 +210,14 @@ namespace Kordon.Game.Ui
                 return;
             }
 
-            Flow.StartNetworkMatch(request.Address, request.Port, false, CurrentRegionId());
+            if (Flow.CoopRequested)
+            {
+                Flow.StartCoopMatch(request.Address, request.Port, false, CurrentRegionId());
+            }
+            else
+            {
+                Flow.StartNetworkMatch(request.Address, request.Port, false, CurrentRegionId());
+            }
             _status.text = "connecting to " + address.Trim() + ":" + port;
         }
 
