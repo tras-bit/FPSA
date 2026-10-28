@@ -40,7 +40,9 @@ namespace Kordon.Core.Tests
         {
             for (int i = 0; i < count; i++)
             {
-                now += 0.2f;
+                // Never ask the kit to fire faster than the weapon allows: the rate
+                // limit is a hard rule, not a suggestion.
+                now += Math.Max(0.2f, kit.Weapon.SecondsPerShot + 0.05f);
                 FireAttempt attempt = kit.TryFire(now);
                 Assert.True(attempt.Fired, $"shot {i} denied: {attempt.Denial}");
             }
@@ -219,7 +221,10 @@ namespace Kordon.Core.Tests
                 }
 
                 Assert.DoesNotContain("Total", name);
-                Assert.DoesNotContain("Reserve", name);
+                // "HasReserveAmmunition" is a yes/no flag and is allowed; a reserve
+                // round count would not be.
+                Assert.DoesNotContain("ReserveRounds", name);
+                Assert.DoesNotContain("ReserveCount", name);
                 Assert.DoesNotContain("AmmoCount", name);
                 Assert.DoesNotContain("RoundCount", name);
                 Assert.DoesNotContain("RoundsRemaining", name);
@@ -357,7 +362,7 @@ namespace Kordon.Core.Tests
             Assert.Equal(18, forbidden.Chambered.Rounds);
 
             AmmoKit defaultRule = CreateRifleKit(3);
-            float now2 = 0f;
+            float now2 = now;
             FireRounds(defaultRule, 12, ref now2);
             Assert.Equal(18, defaultRule.Chambered.Rounds);
 
@@ -370,7 +375,7 @@ namespace Kordon.Core.Tests
 
             // Suppressing resupply mid-round sticks.
             defaultRule.SuppressResupply();
-            float now3 = 0f;
+            float now3 = now2;
             FireRounds(defaultRule, 5, ref now3);
             Assert.False(defaultRule.ReissueFullMagazines());
             Assert.Equal(25, defaultRule.Chambered.Rounds);

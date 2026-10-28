@@ -426,7 +426,9 @@ namespace Kordon.Core.Tests
             Assert.True(controller.ProgressObjective("clear_yard", 1, Bravo, 21f));
             Assert.Equal(6, controller.HostilesRemovedTotal);
             Assert.Equal(0, controller.BuildStatus().HostilesRemainingBudget);
-            Assert.Equal(1, controller.GetOperator(Bravo).HostilesRemoved);
+            // Bravo removed two hostiles: the one that filled the objective and the
+            // one after it (which still counts as a removal, just not as progress).
+            Assert.Equal(2, controller.GetOperator(Bravo).HostilesRemoved);
             Assert.Equal(ObjectiveStatus.Active, controller.GetObjective("extract").Status);
         }
 

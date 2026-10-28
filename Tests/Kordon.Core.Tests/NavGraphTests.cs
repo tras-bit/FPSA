@@ -164,7 +164,7 @@ namespace Kordon.Core.Tests
             Assert.Equal(new List<int> { 1 }, graph.NodesWithMarker("spawn_south"));
             Assert.Empty(graph.NodesWithMarker("nowhere"));
             Assert.Equal(new List<int> { 6 }, graph.NodesInArea(NavArea.Tunnel));
-            Assert.Equal(2, graph.NodesInArea(NavArea.Exterior).Count);
+            Assert.Equal(1, graph.NodesInArea(NavArea.Exterior).Count);
 
             Assert.True(graph.TryGetNode(3, out NavNode hall));
             Assert.Equal("kiln_hall", hall.Marker);

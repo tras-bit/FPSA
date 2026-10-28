@@ -226,6 +226,10 @@ namespace Kordon.Core.Tests
             match.BeginCountdown(1f);
             match.BeginLive(10f);
             match.InitialSpawn(_ => 0, 10f);
+            // Firing ends spawn protection, which is what the honest operator does
+            // the moment the round starts; otherwise the protection window would
+            // legitimately swallow the damage this test is about.
+            match.NotifyShotFired(2UL, 10.5f);
 
             ViolationLog log = new ViolationLog();
 

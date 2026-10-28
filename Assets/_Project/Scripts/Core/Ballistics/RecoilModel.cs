@@ -225,7 +225,10 @@ namespace Kordon.Core.Ballistics
             }
 
             multiplier *= MathUtil.Lerp(profile.StaminaExhaustedMultiplier, 1f, MathUtil.Clamp01(context.Stamina01));
-            multiplier *= MathUtil.Lerp(profile.SuppressionMultiplier, 1f, MathUtil.Clamp01(context.Suppression01));
+            // Being suppressed makes the weapon harder to hold, never easier: the
+            // multiplier has to grow with the suppression level.
+            multiplier *= MathUtil.Lerp(1f, profile.SuppressionMultiplier,
+                MathUtil.Clamp01(context.Suppression01));
             multiplier *= MathUtil.Clamp(context.AimStability <= 0f ? 1f : 1f / context.AimStability, 1f, 2.5f);
 
             float horizontalSign = random != null ? (random.Next01() < 0.5f ? -1f : 1f) : 1f;

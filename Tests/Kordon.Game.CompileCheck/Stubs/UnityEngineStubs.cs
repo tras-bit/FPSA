@@ -105,6 +105,33 @@ namespace UnityEngine
         public override string ToString() => $"({x:F2}, {y:F2}, {z:F2})";
 
         public static float Distance(Vector3 a, Vector3 b) => (a - b).magnitude;
+
+        public static float Angle(Vector3 from, Vector3 to)
+        {
+            float denominator = from.magnitude * to.magnitude;
+            if (denominator < 1e-6f)
+            {
+                return 0f;
+            }
+
+            float dot = (from.x * to.x + from.y * to.y + from.z * to.z) / denominator;
+            dot = dot < -1f ? -1f : dot > 1f ? 1f : dot;
+            return (float)(System.Math.Acos(dot) * 57.29578);
+        }
+
+        public static Vector3 Project(Vector3 vector, Vector3 onNormal)
+        {
+            float denominator = onNormal.x * onNormal.x + onNormal.y * onNormal.y +
+                                onNormal.z * onNormal.z;
+            if (denominator < 1e-6f)
+            {
+                return zero;
+            }
+
+            float scale = (vector.x * onNormal.x + vector.y * onNormal.y +
+                           vector.z * onNormal.z) / denominator;
+            return new Vector3(onNormal.x * scale, onNormal.y * scale, onNormal.z * scale);
+        }
         public static float Dot(Vector3 a, Vector3 b) => a.x * b.x + a.y * b.y + a.z * b.z;
         public static Vector3 Cross(Vector3 a, Vector3 b) =>
             new Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
@@ -251,6 +278,23 @@ namespace UnityEngine
         }
     }
 
+    public static class Random
+    {
+        private static readonly System.Random Source = new System.Random(12345);
+
+        public static float value => (float)Source.NextDouble();
+
+        public static float Range(float minInclusive, float maxInclusive) =>
+            minInclusive + (float)Source.NextDouble() * (maxInclusive - minInclusive);
+
+        public static int Range(int minInclusive, int maxExclusive) =>
+            Source.Next(minInclusive, maxExclusive);
+
+        public static Vector3 insideUnitSphere => new Vector3(
+            (float)Source.NextDouble() - 0.5f, (float)Source.NextDouble() - 0.5f,
+            (float)Source.NextDouble() - 0.5f);
+    }
+
     public static class Time
     {
         public static float timeScale { get; set; } = 1f;
@@ -296,6 +340,10 @@ namespace UnityEngine
         public HideFlags hideFlags { get; set; }
 
         public static void Destroy(Object obj)
+        {
+        }
+
+        public static void Destroy(Object obj, float t)
         {
         }
 

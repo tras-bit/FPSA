@@ -103,6 +103,9 @@ namespace Kordon.Core.Tests
                 {
                     match.GetPlayer(victim).RespawnAvailableAt = match.Now;
                     Assert.True(match.RequestRespawn(victim, 1, match.Now + 0.01f).IsAccepted);
+                    // Firing ends spawn protection - the victim shoots back instead of
+                    // standing in the open, which is what the test is modelling.
+                    match.NotifyShotFired(victim, match.Now + 0.02f);
                 }
 
                 KillRegistrationResult result = match.RegisterKill(killer, victim, "vk74", HitZone.Thorax,
@@ -143,6 +146,7 @@ namespace Kordon.Core.Tests
                 {
                     victim.RespawnAvailableAt = match.Now;
                     match.RequestRespawn(ids[1], 1, match.Now + 0.01f);
+                    match.NotifyShotFired(ids[1], match.Now + 0.02f);
                 }
 
                 match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Head, 12f, match.Now + 1f);
@@ -250,8 +254,9 @@ namespace Kordon.Core.Tests
             Assert.False(match.GetPlayer(leaver).IsConnected);
             Assert.Equal(3, match.Roster.Count);
 
-            // Somebody else cannot take the slot while the grace window is open.
-            Assert.Equal(2, match.FreeSlots);
+            // Somebody else cannot take the slot while the grace window is open:
+            // 20 slots, three of them held (one by the disconnected operator).
+            Assert.Equal(17, match.FreeSlots);
 
             Assert.True(match.TryReconnect(leaver, match.GetPlayer(leaver).SessionToken, match.Now + 10f));
             Assert.True(match.GetPlayer(leaver).IsConnected);
@@ -273,7 +278,8 @@ namespace Kordon.Core.Tests
             FfaMatchController match = CreateLiveMatch(2, out List<ulong> ids);
             match.MarkDisconnected(ids[1], match.Now);
             match.Tick(match.Now + match.Config.ReconnectGraceSeconds + 1f);
-            Assert.Equal(2, match.FreeSlots);
+            // The slot came back: 20 slots, one operator still in the match.
+            Assert.Equal(19, match.FreeSlots);
             Assert.Null(match.GetPlayer(ids[1]));
             Assert.True(match.TryJoin(4242UL, "REPLACEMENT", false, match.Now + 200f).IsAccepted);
         }
@@ -298,6 +304,7 @@ namespace Kordon.Core.Tests
                 {
                     victim.RespawnAvailableAt = match.Now;
                     match.RequestRespawn(ids[1], 1, match.Now + 0.01f);
+                    match.NotifyShotFired(ids[1], match.Now + 0.02f);
                 }
 
                 match.RegisterKill(ids[0], ids[1], "vk74", HitZone.Thorax, 10f, match.Now + 1f);
@@ -406,6 +413,7 @@ namespace Kordon.Core.Tests
                 {
                     victim.RespawnAvailableAt = now;
                     match.RequestRespawn(ids[1], 0, now + 0.001f);
+                    match.NotifyShotFired(ids[1], now + 0.002f);
                 }
 
                 // All within the same tenth of a second: physically impossible.

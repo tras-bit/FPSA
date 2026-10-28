@@ -38,7 +38,7 @@
           "requiredProgress": 1, "locationId": "nav_extraction_pad", "interactionRadiusM": 8, "isCritical": true,
           "dependsOn": ["hold_kiln_hall"] },
         { "id": "extract", "kind": "Extract", "title": "Extract", "description": "Board the extraction aircraft before it leaves without you.",
-          "requiredProgress": 1, "locationId": "nav_extraction_pad", "interactionRadiusM": 8, "isCritical": false,
+          "requiredProgress": 1, "locationId": "nav_extraction_pad", "interactionRadiusM": 8, "isCritical": true,
           "unlocksExtraction": false, "dependsOn": ["reach_extraction"] }
       ]
     }

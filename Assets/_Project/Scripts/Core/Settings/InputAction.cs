@@ -143,6 +143,10 @@ namespace Kordon.Core.Settings
                 case "leftcontrol": return KeyCodeLeftControl;
                 case "r-ctrl":
                 case "rightcontrol": return KeyCodeRightControl;
+                case "l-alt":
+                case "leftalt": return KeyCodeLeftAlt;
+                case "r-alt":
+                case "rightalt": return KeyCodeRightAlt;
                 case "lmb":
                 case "mouse0": return KeyCodeMouse0;
                 case "rmb":
@@ -173,6 +177,12 @@ namespace Kordon.Core.Settings
                 int.TryParse(value.Substring(1), out int fkey) && fkey >= 1 && fkey <= 15)
             {
                 return 281 + fkey;
+            }
+
+            if (value.StartsWith("Key", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(value.Substring(3), out int named))
+            {
+                return named;
             }
 
             if (int.TryParse(value, out int raw))

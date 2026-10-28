@@ -283,7 +283,9 @@ namespace Kordon.Core.Tests
             Assert.Equal(100f - 33f * 0.68f, vitals.Health, 1);
             Assert.False(vitals.IsDead);
 
-            DamageResult kill = Hit("762x54r_lps", HitZone.Thorax, 10f);
+            // A head hit from a full power rifle round is lethal, which is what puts
+            // an operator down in co-op mode.
+            DamageResult kill = Hit("762x54r_lps", HitZone.Head, 10f);
             vitals.ApplyDamage(kill);
             vitals.ApplyDamage(kill);
             Assert.True(vitals.IsDead);
@@ -298,7 +300,9 @@ namespace Kordon.Core.Tests
         public void Vitals_DownAndReviveInCoopMode()
         {
             PlayerVitals vitals = new PlayerVitals(VitalsMode.DownAndRevive);
-            DamageResult kill = Hit("762x54r_lps", HitZone.Thorax, 10f);
+            // A head hit from a full power rifle round is lethal, which is what puts
+            // an operator down in co-op mode.
+            DamageResult kill = Hit("762x54r_lps", HitZone.Head, 10f);
             Assert.True(vitals.ApplyDamage(kill));
             Assert.True(vitals.IsDowned);
             Assert.False(vitals.IsDead);
@@ -316,7 +320,7 @@ namespace Kordon.Core.Tests
         public void DownedOperatorBleedsOut_WhenNobodyPicksThemUp()
         {
             PlayerVitals vitals = new PlayerVitals(VitalsMode.DownAndRevive);
-            vitals.ApplyDamage(Hit("762x54r_lps", HitZone.Thorax, 10f));
+            vitals.ApplyDamage(Hit("762x54r_lps", HitZone.Head, 10f));
             Assert.True(vitals.IsDowned);
 
             for (int i = 0; i < 60 && !vitals.IsDead; i++)

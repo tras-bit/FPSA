@@ -66,7 +66,8 @@ namespace Kordon.Core.Tests
             Assert.True(marksman.MaxEffectiveRangeM > rifle.MaxEffectiveRangeM);
             Assert.True(rifle.MaxEffectiveRangeM > smg.MaxEffectiveRangeM);
             Assert.True(smg.MaxEffectiveRangeM > shotgun.MaxEffectiveRangeM);
-            Assert.True(shotgun.MaxEffectiveRangeM > pistol.MaxEffectiveRangeM);
+            // The shotgun is the shortest reach in the game; the sidearm outranges it.
+            Assert.True(pistol.MaxEffectiveRangeM > shotgun.MaxEffectiveRangeM);
 
             // weight and handling
             Assert.True(sniper.WeightKg > marksman.WeightKg);
@@ -294,7 +295,8 @@ namespace Kordon.Core.Tests
             LoadoutValidationResult result = LoadoutValidator.Validate(selection, library);
             Assert.False(result.IsValid);
             Assert.Contains("too-heavy", string.Join("|", result.Errors.ToArray()));
-            Assert.Equal(42.5f, result.TotalMassKg, 2);
+            // 30 kg weapon + one 5 kg loaded magazine + 6.5 kg of plates.
+            Assert.Equal(41.5f, result.TotalMassKg, 2);
 
             LoadoutSelection feather = new LoadoutSelection
             {

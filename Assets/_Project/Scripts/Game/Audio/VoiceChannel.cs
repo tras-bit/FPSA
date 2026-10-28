@@ -1,6 +1,7 @@
 using System;
 using Kordon.Game.Player;
 using UnityEngine;
+using UnityInput = UnityEngine.Input;
 
 namespace Kordon.Game.Audio
 {
@@ -92,7 +93,7 @@ namespace Kordon.Game.Audio
 
         private void Update()
         {
-            bool talking = Configured && Input.GetKey(PushToTalkKey);
+            bool talking = Configured && UnityInput.GetKey(PushToTalkKey);
             if (talking != Talking)
             {
                 Talking = talking;

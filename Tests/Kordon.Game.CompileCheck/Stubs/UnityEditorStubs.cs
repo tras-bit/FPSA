@@ -106,6 +106,8 @@ namespace UnityEditor.SceneManagement
 
     public static class EditorSceneManager
     {
+        public static Scene OpenScene(string path) => default;
+
         public static Scene NewScene(NewSceneSetup setup, NewSceneMode mode) => default;
         public static bool SaveScene(Scene scene, string destinationPath,
             bool saveAsCopy = false) => true;

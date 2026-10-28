@@ -117,6 +117,11 @@ namespace Kordon.Core.Config
             }
 
             string normalized = address.Trim().ToLowerInvariant();
+            if (normalized.StartsWith("[") && normalized.EndsWith("]"))
+            {
+                normalized = normalized.Substring(1, normalized.Length - 2);
+            }
+
             return normalized == "localhost" || normalized == "127.0.0.1" || normalized == "::1" ||
                    normalized.StartsWith("127.") || normalized == "[::1]";
         }
@@ -178,16 +183,23 @@ namespace Kordon.Core.Config
                 }
 
                 request.Address = region.Address;
-                if (request.Port <= 0)
-                {
-                    request.Port = region.Port;
-                }
+                // The region owns the endpoint: when it supplied the address it
+                // supplies the port too, so a stale default cannot send the player
+                // to the wrong port on that host.
+                request.Port = region.Port;
             }
 
             if (string.IsNullOrEmpty(request.Address))
             {
                 return ConnectionValidation.Deny("no-address: pick a configured region, enter an address, " +
                                                  "or use LAN discovery");
+            }
+
+            if (IsLoopback(request.Address) && !AllowLoopbackForDevelopment)
+            {
+                return ConnectionValidation.Deny(
+                    "loopback-address-refused: the release client never connects to localhost " +
+                    "(set allowLoopbackForDevelopment=true in net_config.json for a local test server)");
             }
 
             if (!IsValidAddress(request.Address))
