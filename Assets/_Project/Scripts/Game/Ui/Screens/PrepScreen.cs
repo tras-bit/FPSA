@@ -129,6 +129,15 @@ namespace Kordon.Game.Ui
                 UiBuilder.Danger, new Vector2(0.5f, 0f), new Vector2(0f, 150f),
                 new Vector2(1000f, 40f), TextAnchor.MiddleCenter);
 
+            UiBuilder.Button(panel.transform, "PRESET: ASSAULT", () => ApplyPreset(0),
+                new Vector2(-390f, -246f), new Vector2(220f, 44f), 15);
+            UiBuilder.Button(panel.transform, "PRESET: BREACHER", () => ApplyPreset(1),
+                new Vector2(-150f, -246f), new Vector2(220f, 44f), 15);
+            UiBuilder.Button(panel.transform, "PRESET: MARKSMAN", () => ApplyPreset(2),
+                new Vector2(90f, -246f), new Vector2(220f, 44f), 15);
+            UiBuilder.Button(panel.transform, "NEXT CONTROL PROFILE", () => CycleControlProfile(),
+                new Vector2(340f, -246f), new Vector2(220f, 44f), 13);
+
             UiBuilder.Button(panel.transform, "LOCK KIT AND DEPLOY TO PRACTICE",
                 () => LockInPractice(), new Vector2(-230f, -320f), new Vector2(460f, 56f), 18);
             UiBuilder.Button(panel.transform, "BACK", () => Back(),
@@ -366,6 +375,55 @@ namespace Kordon.Game.Ui
             List<MagazineDefinition> magazines =
                 Flow.Database.Definitions.MagazinesForWeapon(weapon);
             return magazines.Count > 0 ? magazines[0].Id : "mag_9x19_17_ap";
+        }
+
+        /// <summary>
+        /// Three ready made kits. They are starting points, not classes: every
+        /// weapon, magazine and plate here is available to everybody from the first
+        /// match, and nothing about them is locked behind progression.
+        /// </summary>
+        private void ApplyPreset(int preset)
+        {
+            switch (preset)
+            {
+                case 0: // assault
+                    _primary = IndexOf(Primaries, "vk74");
+                    _secondary = 0;
+                    _primarySight = IndexOf(Sights, SightKind.RedDot);
+                    _primaryMagCount = 6;
+                    _armor = IndexOf(Armors, "standard");
+                    _grenade = IndexOf(Grenades, "frag_f1");
+                    break;
+                case 1: // breacher
+                    _primary = IndexOf(Primaries, "k870");
+                    _secondary = 0;
+                    _primarySight = IndexOf(Sights, SightKind.IronSight);
+                    _primaryMagCount = 4;
+                    _armor = IndexOf(Armors, "heavy");
+                    _grenade = IndexOf(Grenades, "flash_zarya");
+                    break;
+                default: // marksman
+                    _primary = IndexOf(Primaries, "dmr14");
+                    _secondary = 0;
+                    _primarySight = IndexOf(Sights, SightKind.Scope4x);
+                    _primaryMagCount = 5;
+                    _armor = IndexOf(Armors, "light");
+                    _grenade = IndexOf(Grenades, "smoke_rdg");
+                    break;
+            }
+
+            _primaryMagId = string.Empty;
+            Refresh();
+        }
+
+        /// <summary>Swaps between the two shipped control profiles (default and tactical).</summary>
+        private void CycleControlProfile()
+        {
+            Kordon.Game.Input.KordonInput.Rebind(
+                Kordon.Game.Input.KordonInput.Bindings.ProfileName == "Tactical"
+                    ? Kordon.Core.Settings.KeyBindings.CreateDefault()
+                    : Kordon.Core.Settings.KeyBindings.CreateTactical());
+            _warningLabel.text = "control profile: " + Kordon.Game.Input.KordonInput.Bindings.ProfileName;
         }
 
         private void LockInPractice()

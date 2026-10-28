@@ -95,6 +95,7 @@ namespace Kordon.Game.Match
             Create<SettingsScreen>("settings");
             Create<ResultsScreen>("results");
             Create<PauseScreen>("pause");
+            Create<TutorialScreen>("tutorial");
         }
 
         private void Create<T>(string name) where T : UiScreenBase
@@ -152,6 +153,11 @@ namespace Kordon.Game.Match
         public void OpenSettings()
         {
             Director.Push("settings");
+        }
+
+        public void OpenTutorial()
+        {
+            Director.Push("tutorial");
         }
 
         public void OpenConnect()

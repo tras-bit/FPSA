@@ -55,10 +55,12 @@ namespace Kordon.Game.Ui
             }, new Vector2(0f, 6f), new Vector2(480f, 50f), 18);
             UiBuilder.Button(left.transform, "PRACTICE (OFFLINE, NO BOTS)", () => Flow.OpenPrep(),
                 new Vector2(0f, -52f), new Vector2(480f, 50f), 18);
+            UiBuilder.Button(left.transform, "BASIC TRAINING", () => Flow.OpenTutorial(),
+                new Vector2(0f, -110f), new Vector2(480f, 46f), 16);
             UiBuilder.Button(left.transform, "SETTINGS & CONTROLS", () => Flow.OpenSettings(),
-                new Vector2(0f, -110f), new Vector2(480f, 50f), 18);
+                new Vector2(0f, -166f), new Vector2(480f, 50f), 18);
             UiBuilder.Button(left.transform, "QUIT", () => Flow.Quit(),
-                new Vector2(0f, -168f), new Vector2(480f, 46f), 16);
+                new Vector2(0f, -224f), new Vector2(480f, 42f), 15);
 
             // Right: operator identity and honest build information.
             Image right = UiBuilder.Panel(Root, "RightPanel", new Color(0.05f, 0.06f, 0.07f, 0.55f),
