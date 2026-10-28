@@ -128,6 +128,8 @@ namespace Kordon.Core.Settings
             string value = displayName.Trim();
             switch (value.ToLowerInvariant())
             {
+                case "unbound":
+                case "none": return KeyCodeNone;
                 case "tab": return KeyCodeTab;
                 case "enter": return KeyCodeReturn;
                 case "esc":
@@ -147,6 +149,10 @@ namespace Kordon.Core.Settings
                 case "mouse1": return KeyCodeMouse1;
                 case "mmb":
                 case "mouse2": return KeyCodeMouse2;
+                case "mouse 4":
+                case "mouse3": return KeyCodeMouse3;
+                case "mouse 5":
+                case "mouse4": return KeyCodeMouse4;
             }
 
             if (value.Length == 1)

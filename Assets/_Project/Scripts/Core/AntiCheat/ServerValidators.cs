@@ -242,13 +242,14 @@ namespace Kordon.Core.AntiCheat
         /// <summary>A resupply request that is not allowed by the current match rule.</summary>
         public static ValidationVerdict ValidateResupplyRequest(Kordon.Core.Ammo.ResupplyRule rule, bool duringLife)
         {
-            if (duringLife && rule != Kordon.Core.Ammo.ResupplyRule.NeverWithinRound)
+            if (duringLife)
             {
-                // Within a life there is never any resupply, whichever rule is configured.
+                // Within a life there is never any resupply, whichever rule is configured:
+                // no ammo crates, no ground pickups, no sharing between operators.
                 return ValidationVerdict.Reject(ViolationKind.ResupplyExploit, "resupply-during-life", 2f);
             }
 
-            if (!duringLife && rule == Kordon.Core.Ammo.ResupplyRule.NeverWithinRound)
+            if (rule == Kordon.Core.Ammo.ResupplyRule.NeverWithinRound)
             {
                 return ValidationVerdict.Reject(ViolationKind.ResupplyExploit, "resupply-forbidden-this-round", 1f);
             }

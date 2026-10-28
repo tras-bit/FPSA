@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Kordon.Core.Ballistics;
+using Kordon.Core.Combat;
 using Kordon.Core.Data;
 using Kordon.Core.Loadout;
 using Xunit;
@@ -443,8 +445,18 @@ namespace Kordon.Core.Tests
             Assert.Equal(4, heavy.GetZone(Combat.HitZone.Thorax).ArmorClass);
             Assert.Equal(3, heavy.GetZone(Combat.HitZone.Head).ArmorClass);
             Assert.Equal(0, light.GetZone(Combat.HitZone.Head).ArmorClass);
-            Assert.False(light.HasCoverage(Combat.HitZone.Head));
-            Assert.True(heavy.HasCoverage(Combat.HitZone.Head));
+            Combat.ArmorState lightState = new Combat.ArmorState(light);
+            Combat.ArmorState heavyState = new Combat.ArmorState(heavy);
+            Assert.Same(light, lightState.Kit);
+            Assert.False(lightState.HasCoverage(Combat.HitZone.Head));
+            Assert.True(heavyState.HasCoverage(Combat.HitZone.Head));
+            Assert.Equal(0, lightState.ArmorClass(Combat.HitZone.Head));
+            Assert.Equal(3, heavyState.ArmorClass(Combat.HitZone.Head));
+            Assert.True(heavyState.Coverage(Combat.HitZone.Thorax) > 0.9f);
+            lightState.ApplyDurabilityDamage(Combat.HitZone.Thorax, 1000f);
+            Assert.True(lightState.IsExhausted(Combat.HitZone.Thorax));
+            lightState.Reset();
+            Assert.False(lightState.IsExhausted(Combat.HitZone.Thorax));
         }
 
         [Fact]

@@ -70,7 +70,7 @@ namespace Kordon.Core.Voice
                     Audible = true,
                     Gain = RadioGain,
                     Channel = channel,
-                    Distance = distance,
+                    DistanceM = distance,
                     Occluded = false
                 };
             }
@@ -97,7 +97,7 @@ namespace Kordon.Core.Voice
                 Audible = gain > 0.01f,
                 Gain = gain,
                 Channel = channel,
-                Distance = distance,
+                DistanceM = distance,
                 Occluded = occluded
             };
         }

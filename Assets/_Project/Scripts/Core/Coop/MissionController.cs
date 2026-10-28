@@ -632,6 +632,13 @@ namespace Kordon.Core.Coop
                 return;
             }
 
+            if (_operators.Count == 0)
+            {
+                // Everybody left: the operation is abandoned rather than left running.
+                Fail(MissionFailReason.Abandoned, now);
+                return;
+            }
+
             bool anybodyActive = false;
             foreach (OperatorState op in _operators.Values)
             {
@@ -642,7 +649,7 @@ namespace Kordon.Core.Coop
                 }
             }
 
-            if (!anybodyActive && _operators.Count > 0)
+            if (!anybodyActive)
             {
                 Fail(MissionFailReason.AllOperatorsDown, now);
             }
@@ -678,19 +685,8 @@ namespace Kordon.Core.Coop
 
             EvaluateTeamState(now);
 
-            // Hold objectives accumulate while somebody is standing on them.
-            foreach (string id in _objectiveOrder)
-            {
-                ObjectiveDefinition definition = Definition.GetObjective(id);
-                ObjectiveState state = _objectives[id];
-                if (definition.Kind != ObjectiveKind.Hold ||
-                    (state.Status != ObjectiveStatus.Active && state.Status != ObjectiveStatus.InProgress))
-                {
-                    continue;
-                }
-
-                state.HoldTimer = Math.Min(definition.HoldSeconds, state.HoldTimer + 0f);
-            }
+            // Hold objectives are advanced by TickHoldObjective(), which the server calls
+            // once per tick with the occupancy test result for the hold volume.
 
             // Time limit.
             if (Definition.TimeLimitSeconds > 0f && !float.IsNaN(StartedAt) &&

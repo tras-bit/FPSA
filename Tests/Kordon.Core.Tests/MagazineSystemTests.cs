@@ -226,10 +226,12 @@ namespace Kordon.Core.Tests
             }
 
             // The only exact numbers are the inspection pair, and they stay null.
-            PropertyInfo rounds = typeof(AmmoHudSnapshot).GetProperty("InspectedRounds");
-            PropertyInfo capacity = typeof(AmmoHudSnapshot).GetProperty("InspectedCapacity");
-            Assert.Equal(typeof(int?), rounds.PropertyType);
-            Assert.Equal(typeof(int?), capacity.PropertyType);
+            FieldInfo rounds = typeof(AmmoHudSnapshot).GetField("InspectedRounds");
+            FieldInfo capacity = typeof(AmmoHudSnapshot).GetField("InspectedCapacity");
+            Assert.NotNull(rounds);
+            Assert.NotNull(capacity);
+            Assert.Equal(typeof(int?), rounds.FieldType);
+            Assert.Equal(typeof(int?), capacity.FieldType);
         }
 
         [Fact]
