@@ -36,6 +36,11 @@ namespace Kordon.Core.Tests
             Assert.True(match.BeginCountdown(now));
             Assert.True(match.BeginLive(now));
             match.InitialSpawn(_ => 0, now);
+
+            // Initial spawn grants spawn protection; every test in this file is about
+            // what happens once the match is really contested, so move the clock past
+            // the protection window before handing the match over.
+            match.Tick(now + config.SpawnProtectionSeconds + 0.5f);
             return match;
         }
 
