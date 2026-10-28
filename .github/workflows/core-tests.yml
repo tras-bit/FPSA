@@ -141,6 +141,23 @@ jobs:
           path: docs/reports/syntax-report.md
           if-no-files-found: error
 
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify the structural design rules
+        run: python3 Tools/verify/policy_check.py
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-policy
+          path: docs/reports/policy.md
+          if-no-files-found: error
+
   game:
     runs-on: ubuntu-latest
     steps:
@@ -195,7 +212,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    needs: [core, syntax, game]
+    needs: [core, syntax, policy, game]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -213,7 +230,7 @@ jobs:
           cp -f /tmp/reports/*.md docs/reports/ 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/reports/core-tests.md docs/reports/syntax-report.md docs/reports/game-compile.md
+          git add docs/reports/core-tests.md docs/reports/syntax-report.md docs/reports/game-compile.md docs/reports/policy.md
           if ! git diff --cached --quiet; then
             git commit -m "docs: refresh core test and syntax reports"
             git pull --rebase origin "${GITHUB_REF_NAME}"

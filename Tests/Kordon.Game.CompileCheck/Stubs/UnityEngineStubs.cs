@@ -951,6 +951,13 @@ namespace UnityEngine
         public static Vector2 mouseScrollDelta => Vector2.zero;
     }
 
+    public enum ColorSpace
+    {
+        Uninitialized = -1,
+        Gamma = 0,
+        Linear = 1,
+    }
+
     public static class QualitySettings
     {
         public static int GetQualityLevel() => 2;

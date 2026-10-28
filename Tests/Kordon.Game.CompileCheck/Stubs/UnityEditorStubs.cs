@@ -118,3 +118,76 @@ namespace UnityEditor.SceneManagement
         public static int sceneCount => 1;
     }
 }
+
+namespace UnityEditor.Build.Reporting
+{
+    public enum BuildResult
+    {
+        Unknown = 0,
+        Succeeded = 1,
+        Failed = 2,
+        Cancelled = 3,
+    }
+
+    public struct BuildSummary
+    {
+        public BuildResult result;
+        public int totalErrors;
+        public ulong totalSize;
+        public string outputPath;
+    }
+
+    public class BuildReport
+    {
+        public BuildSummary summary;
+    }
+}
+
+namespace UnityEditor
+{
+    public enum BuildTarget
+    {
+        StandaloneWindows64 = 19,
+        StandaloneLinux64 = 24,
+        StandaloneOSX = 2,
+    }
+
+    public enum BuildTargetGroup
+    {
+        Standalone = 1,
+    }
+
+    [Flags]
+    public enum BuildOptions
+    {
+        None = 0,
+        Development = 1,
+        AutoRunPlayer = 4,
+    }
+
+    public struct BuildPlayerOptions
+    {
+        public string[] scenes;
+        public string locationPathName;
+        public BuildTarget target;
+        public BuildOptions options;
+        public BuildTargetGroup targetGroup;
+    }
+
+    public static class BuildPipeline
+    {
+        public static Build.Reporting.BuildReport BuildPlayer(BuildPlayerOptions options) =>
+            new Build.Reporting.BuildReport();
+    }
+
+    public static class PlayerSettings
+    {
+        public static string productName { get; set; }
+        public static string companyName { get; set; }
+        public static ColorSpace colorSpace { get; set; }
+
+        public static void SetApplicationIdentifier(BuildTargetGroup targetGroup, string identifier)
+        {
+        }
+    }
+}
