@@ -28,7 +28,16 @@ namespace UnityEngine
         }
 
         public static Vector2 zero => new Vector2(0f, 0f);
+        public static Vector2 one => new Vector2(1f, 1f);
         public float magnitude => (float)Math.Sqrt(x * x + y * y);
+        public Vector2 normalized => magnitude > 0f ? this / magnitude : zero;
+
+        public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);
+        public static Vector2 operator -(Vector2 a, Vector2 b) => new Vector2(a.x - b.x, a.y - b.y);
+        public static Vector2 operator -(Vector2 a) => new Vector2(-a.x, -a.y);
+        public static Vector2 operator *(Vector2 a, float d) => new Vector2(a.x * d, a.y * d);
+        public static Vector2 operator *(float d, Vector2 a) => a * d;
+        public static Vector2 operator /(Vector2 a, float d) => new Vector2(a.x / d, a.y / d);
     }
 
     public struct Vector3
@@ -81,6 +90,13 @@ namespace UnityEngine
             new Vector3(a.x * d, a.y * d, a.z * d);
 
         public static Vector3 operator *(float d, Vector3 a) => a * d;
+        public static Vector3 operator /(Vector3 a, float d) =>
+            new Vector3(a.x / d, a.y / d, a.z / d);
+        public static Vector3 operator -(Vector3 a) => new Vector3(-a.x, -a.y, -a.z);
+        public static Vector3 operator +(Vector3 a, Vector3 b) =>
+            new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
+        public static Vector3 operator -(Vector3 a, Vector3 b) =>
+            new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
 
         public static bool operator ==(Vector3 a, Vector3 b) =>
             Math.Abs(a.x - b.x) < 1e-5 && Math.Abs(a.y - b.y) < 1e-5 &&
@@ -195,6 +211,8 @@ namespace UnityEngine
         public static float Cos(float f) => (float)Math.Cos(f);
         public static float Tan(float f) => (float)Math.Tan(f);
         public static float Atan2(float y, float x) => (float)Math.Atan2(y, x);
+        public static float Exp(float power) => (float)System.Math.Exp(power);
+
         public static float Pow(float f, float p) => (float)Math.Pow(f, p);
         public static float Min(float a, float b) => Math.Min(a, b);
         public static int Min(int a, int b) => Math.Min(a, b);
@@ -227,6 +245,7 @@ namespace UnityEngine
 
     public static class Time
     {
+        public static float timeScale { get; set; } = 1f;
         public static float deltaTime = 1f / 60f;
         public static float fixedDeltaTime = 1f / 50f;
         public static float time;
@@ -350,6 +369,9 @@ namespace UnityEngine
         public Quaternion localRotation { get; set; } = Quaternion.identity;
         public Vector3 localScale { get; set; } = Vector3.one;
         public Vector3 lossyScale => Vector3.one;
+        public Vector3 forward { get; set; } = new Vector3(0f, 0f, 1f);
+        public Vector3 up { get; set; } = new Vector3(0f, 1f, 0f);
+        public Vector3 right { get; set; } = new Vector3(1f, 0f, 0f);
         public Vector3 eulerAngles { get; set; }
         public Vector3 localEulerAngles { get; set; }
         public Transform parent { get; private set; }
@@ -364,6 +386,8 @@ namespace UnityEngine
         }
 
         public Transform GetChild(int index) => _children[index];
+
+        public Transform Find(string path) => null;
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {
             this.position = position;
@@ -410,9 +434,10 @@ namespace UnityEngine
 
         public void SetActive(bool value) => activeSelf = value;
 
-        public T AddComponent<T>() where T : Component, new()
+        public T AddComponent<T>() where T : Component
         {
-            T component = new T { gameObject = this };
+            T component = System.Activator.CreateInstance<T>();
+            component.gameObject = this;
             _components.Add(component);
             return component;
         }

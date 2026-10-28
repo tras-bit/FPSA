@@ -255,7 +255,7 @@ namespace Kordon.Game.Player
 
             _footstepTimer = 0f;
             NoiseEmitted?.Invoke(NoiseModel.MakeFootstep(
-                Gait, GroundSurface, MapSpace.ToCore(transform.position), GearMassKg));
+                Gait, GroundSurface, MapSpace.ToCore(transform.position), GearMassKg, 1f));
         }
 
         private void UpdateAnchor(float dt)

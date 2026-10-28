@@ -301,7 +301,7 @@ namespace Kordon.Game.Weapons
                 return null;
             }
 
-            return Loadout.Library.GetMagazine(kit.Chambered.DefinitionId);
+            return Library.GetMagazine(kit.Chambered.DefinitionId);
         }
 
         public static HitZone ZoneFromHit(PlayerController target, Vector3 unityPoint)
