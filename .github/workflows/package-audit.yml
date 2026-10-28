@@ -103,21 +103,23 @@ jobs:
           PY
           cat docs/reports/package-audit.md
 
-      - name: Fail when a pinned version does not exist
-        run: |
-          if grep -q "^## FAILURES" docs/reports/package-audit.md; then
-            echo "One or more pinned package versions are not available."
-            exit 1
-          fi
-
-      - name: Commit report
+      - name: Commit report (always, CI logs are not readable from the authoring sandbox)
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/reports/package-audit.md
+          SUMMARY=$(grep -E "^\| \`com" docs/reports/package-audit.md | head -30 | tr "\n" ";" || true)
           if ! git diff --cached --quiet; then
-            git commit -m "docs: refresh Unity package audit report"
+            git commit -m "docs: Unity package audit report" -m "$SUMMARY"
             git push origin HEAD:${GITHUB_REF_NAME}
           else
             echo "report unchanged"
+          fi
+
+      - name: Fail when a pinned version does not exist
+        run: |
+          if grep -q "^## FAILURES" docs/reports/package-audit.md; then
+            echo "One or more pinned package versions are not available - see docs/reports/package-audit.md"
+            exit 1
           fi
