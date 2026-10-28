@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
+using Kordon.Core.Ballistics;
 using Kordon.Core.AntiCheat;
 using Kordon.Core.Combat;
 using Kordon.Core.Coop;
@@ -11,6 +12,7 @@ using Kordon.Core.Nav;
 using Kordon.Core.Utility;
 using Kordon.Game.Ai;
 using Kordon.Game.Maps;
+using Kordon.Game.Match;
 using Kordon.Game.Player;
 using Unity.Netcode;
 using UnityEngine;
@@ -602,22 +604,33 @@ namespace Kordon.Net
             }
 
             agent.Configure(_graph, targets.ToArray(), _random, node.Id);
-            agent.ShotOperator += (hostile, victim, result) => OnHostileHit(hostile, victim, result);
+            agent.DamageApplier = ApplyHostileHit;
             agent.Died += _ => _hostilesRemoved++;
             _hostiles.Add(agent);
             Mission.NoteHostileSpawned(1);
         }
 
-        private void OnHostileHit(HostileAgent hostile, PlayerController victim, DamageResult result)
+        /// <summary>Hostile rounds land on the server's copy of the operator, then replicate.</summary>
+        private bool ApplyHostileHit(Transform target, DamageResult result)
         {
             foreach (ServerOperator op in _operators.Values)
             {
-                if (op.Body != null && op.Body.transform == victim.transform.parent?.parent)
+                if (op.Body != null && op.Body.transform == target)
                 {
-                    op.Vitals.ApplyDamage(result, DeathCause.Gunfire);
-                    return;
+                    bool died = op.Vitals.ApplyDamage(result, DeathCause.Gunfire);
+                    if (died)
+                    {
+                        NoticeClientRpc("an operator is down", new ClientRpcParams
+                        {
+                            Send = new ClientRpcSendParams { TargetClientIds = null },
+                        });
+                    }
+
+                    return true;
                 }
             }
+
+            return false;
         }
 
         private void UpdateOperatorDeath(float now)

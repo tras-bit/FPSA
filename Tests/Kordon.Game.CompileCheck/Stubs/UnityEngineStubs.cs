@@ -143,6 +143,11 @@ namespace UnityEngine
 
         public static Quaternion Lerp(Quaternion a, Quaternion b, float t) => Slerp(a, b, t);
 
+        public static Quaternion LookRotation(Vector3 forward) => identity;
+        public static Quaternion LookRotation(Vector3 forward, Vector3 upwards) => identity;
+
+        public static Quaternion RotateTowards(Quaternion from, Quaternion to, float maxDegrees) => to;
+
         public static Quaternion AngleAxis(float angle, Vector3 axis) =>
             new Quaternion(axis.x, axis.y, axis.z, angle);
 
@@ -156,6 +161,9 @@ namespace UnityEngine
 
     public struct Color
     {
+        public static Color operator *(Color a, float b) =>
+            new Color(a.r * b, a.g * b, a.b * b, a.a * b);
+
         public static Color Lerp(Color a, Color b, float t) =>
             new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t,
                       a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
@@ -519,6 +527,10 @@ namespace UnityEngine
         {
         }
 
+        public void CopyPropertiesFromMaterial(Material source)
+        {
+        }
+
         public void SetColor(string name, Color value)
         {
         }
@@ -812,6 +824,7 @@ namespace UnityEngine
 
     public struct RaycastHit
     {
+        public Transform transform => collider != null ? collider.transform : null;
         public Vector3 point;
         public Vector3 normal;
         public float distance;

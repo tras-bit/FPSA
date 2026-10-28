@@ -92,7 +92,8 @@ namespace Kordon.Net
                 return;
             }
 
-            Material instance = new Material(baseMaterial);
+            Material instance = new Material(baseMaterial.shader);
+            instance.CopyPropertiesFromMaterial(baseMaterial);
             float tint = (ClientId % 7) / 7f;
             instance.color = Color.Lerp(new Color(0.32f, 0.35f, 0.29f, 1f),
                 new Color(0.44f, 0.32f, 0.2f, 1f), tint) * brightness;

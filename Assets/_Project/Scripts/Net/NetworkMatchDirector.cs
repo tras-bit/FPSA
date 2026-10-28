@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
+using Kordon.Core.Ballistics;
 using Kordon.Core.AntiCheat;
 using Kordon.Core.Combat;
 using Kordon.Core.Data;
@@ -211,7 +212,7 @@ namespace Kordon.Net
                 Vitals = new PlayerVitals(),
                 Armor = new ArmorState(_database.Definitions.GetArmorKit(
                     string.IsNullOrEmpty(armorId) ? "standard" : armorId)),
-                Position = SpawnPosition(clientId % 20),
+                Position = SpawnPosition((int)(clientId % 20UL)),
                 Yaw = 0f,
                 LoadoutAccepted = true,
             };
