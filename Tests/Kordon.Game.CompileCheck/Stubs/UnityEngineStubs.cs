@@ -715,6 +715,11 @@ namespace UnityEngine
         public int frequency { get; set; }
     }
 
+    public class AudioListener : Behaviour
+    {
+        public static float volume { get; set; } = 1f;
+    }
+
     public class AudioSource : Behaviour
     {
         public AudioClip clip { get; set; }
@@ -936,6 +941,27 @@ namespace UnityEngine
     public class ScriptableObject : Object
     {
         public static T CreateInstance<T>() where T : ScriptableObject, new() => new T();
+    }
+
+    public enum RuntimeInitializeLoadType
+    {
+        AfterSceneLoad = 0,
+        BeforeSceneLoad = 1,
+        AfterAssembliesLoaded = 2,
+        BeforeSplashScreen = 3,
+        SubsystemRegistration = 4,
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class RuntimeInitializeOnLoadMethodAttribute : Attribute
+    {
+        public RuntimeInitializeOnLoadMethodAttribute()
+        {
+        }
+
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType loadType)
+        {
+        }
     }
 
     [AttributeUsage(AttributeTargets.Field)]

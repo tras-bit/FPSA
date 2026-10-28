@@ -21,7 +21,7 @@ namespace Kordon.Game.Player
         public Transform CameraAnchor;
 
         /// <summary>Set by the match bootstrap; may be null on the practice range.</summary>
-        public Weapons.WeaponController Weapons;
+        public Kordon.Game.Weapons.WeaponController Weapons;
 
         public MovementModel Movement { get; private set; }
         public StaminaModel Stamina { get; } = new StaminaModel();
@@ -208,7 +208,7 @@ namespace Kordon.Game.Player
                         {
                             Accepted = true,
                             Damage = damage,
-                            Zone = HitZone.Legs,
+                            Zone = HitZone.LeftLeg,
                         }, DeathCause.Fall);
                     }
 

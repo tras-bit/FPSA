@@ -47,9 +47,9 @@ namespace Kordon.Game.Weapons
         public bool IsAiming => _aimBlend > 0.6f;
         public float AimBlend => _aimBlend;
         public float GearMassKg => Loadout != null ? Loadout.TotalMassKg : 9f;
-        public float MobilityMultiplier => ActiveWeapon != null
-            ? ActiveWeapon.MobilityMultiplier * (1f - HandlingPenalty)
-            : 1f;
+
+        public bool IsSealed => Loadout != null && Loadout.IsSealed;
+        public float MobilityMultiplier => Loadout != null ? Loadout.MobilityMultiplier : 1f;
 
         public event Action<AmmoHudSnapshot> HudChanged;
         public event Action<ShotInfo> ShotFired;
@@ -68,30 +68,15 @@ namespace Kordon.Game.Weapons
         private float _handlingPenalty;
         public float HandlingPenalty => _handlingPenalty;
 
-        public WeaponDefinition ActiveWeapon
-        {
-            get
-            {
-                if (Loadout == null)
-                {
-                    return null;
-                }
+        public WeaponDefinition ActiveWeapon => Loadout != null ? Loadout.ActiveWeapon : null;
 
-                string id = Loadout.Active == ActiveSlot.Secondary
-                    ? Loadout.Selection.SecondaryWeaponId
-                    : Loadout.Selection.PrimaryWeaponId;
-                return Library != null ? Library.GetWeapon(id) : null;
-            }
-        }
+        public AmmoKit ActiveKit => Loadout != null ? Loadout.ActiveAmmoKit : null;
 
         public DefinitionLibrary Library => ActiveKit != null ? ActiveKit.Library : null;
 
-        public AmmoKit ActiveKit =>
-            Loadout == null ? null : (Loadout.Active == ActiveSlot.Secondary ? Loadout.Secondary : Loadout.Primary);
-
         public void Equip(LoadoutSelection selection, DefinitionLibrary library, ulong seed)
         {
-            Loadout = new LoadoutKit(selection, library);
+            Loadout = new LoadoutKit(selection, library, null, new DeterministicRandom(seed ^ 0xA5A5UL));
             Loadout.Seal();
             if (Body != null)
             {
@@ -138,15 +123,15 @@ namespace Kordon.Game.Weapons
         private void UpdateSlotSwitch()
         {
             ActiveSlot want = Loadout.Active;
-            if (Input.KeyPressedOnce(KeyCode.Alpha1))
+            if (KeyInput.Pressed(KeyCode.Alpha1))
             {
                 want = ActiveSlot.Primary;
             }
-            else if (Input.KeyPressedOnce(KeyCode.Alpha2))
+            else if (KeyInput.Pressed(KeyCode.Alpha2))
             {
                 want = ActiveSlot.Secondary;
             }
-            else if (Input.KeyPressedOnce(KeyCode.Alpha4))
+            else if (KeyInput.Pressed(KeyCode.Alpha3))
             {
                 want = ActiveSlot.Grenade;
             }
@@ -293,7 +278,10 @@ namespace Kordon.Game.Weapons
                 return;
             }
 
-            BulletDefinition bullet = Library.ResolveBullet(weapon, ChamberedMagazine());
+            MagazineDefinition magazine = ChamberedMagazine();
+            BulletDefinition bullet = magazine != null
+                ? Library.ResolveBullet(weapon, magazine)
+                : Library.GetBullet(weapon.DefaultBulletId);
             DamageRequest request = DamageRequest.Direct(
                 bullet, ZoneFromHit(target, hit.point), target.Armor,
                 (hit.point - origin).magnitude, Random);
@@ -370,8 +358,8 @@ namespace Kordon.Game.Weapons
     /// Unity's Input is only touched by KordonInput; this tiny helper exists so the
     /// weapon layer can read digit keys without repeating the alias dance.
     /// </summary>
-    internal static class Input
+    internal static class KeyInput
     {
-        public static bool KeyPressedOnce(KeyCode key) => UnityEngine.Input.GetKeyDown(key);
+        public static bool Pressed(KeyCode key) => UnityEngine.Input.GetKeyDown(key);
     }
 }

@@ -1,0 +1,282 @@
+using System;
+using System.Collections.Generic;
+using Kordon.Core.Data;
+using Kordon.Core.Loadout;
+using Kordon.Core.Rules;
+using Kordon.Game.Input;
+using Kordon.Game.Maps;
+using Kordon.Game.Settings;
+using Kordon.Game.Ui;
+using UnityEngine;
+
+namespace Kordon.Game.Match
+{
+    /// <summary>
+    /// The application: owns the content database, settings, bindings and the
+    /// current match, and is the only object that moves the player between menu,
+    /// prep, match and results.  Screens never talk to each other directly.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public sealed class GameFlow : MonoBehaviour
+    {
+        public static GameFlow Instance { get; private set; }
+
+        public GameDatabase Database { get; private set; }
+        public GameSettings Settings { get; private set; }
+        public InputBindings Bindings { get; private set; }
+        public UiDirector Director { get; private set; }
+        public LoadoutSelection Loadout { get; set; }
+        public PracticeMatch Practice { get; private set; }
+
+        /// <summary>Set by the network stage once a client/server can be created.</summary>
+        public Func<IMatchConnector> ConnectorFactory;
+        public IMatchConnector Connector { get; private set; }
+        public string StatusLine { get; private set; } = string.Empty;
+
+        public event Action StatusChanged;
+
+        public static readonly string[] MapIds = { "ffa_zavod7", "coop_silent_kiln" };
+        public static readonly string[] MapTitles =
+        {
+            "ZAVOD-7  (Free-for-All)",
+            "OPERATION SILENT KILN  (Co-op)",
+        };
+
+        private Transform _worldRoot;
+        private bool _bootstrapped;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            Bootstrap();
+        }
+
+        private void Bootstrap()
+        {
+            if (_bootstrapped)
+            {
+                return;
+            }
+
+            _bootstrapped = true;
+            Settings = GameSettings.Load();
+            Settings.Apply();
+            Bindings = InputBindings.Load();
+            KordonInput.Rebind(Bindings);
+
+            Database = GameDatabase.Load(ContentPaths.DataRoot);
+            Loadout = PracticeMatch.DefaultLoadout(Database.Definitions);
+
+            GameObject directorObject = new GameObject("UiDirector");
+            directorObject.transform.SetParent(transform, false);
+            Director = directorObject.AddComponent<UiDirector>();
+            UiBuilder.EnsureEventSystem();
+
+            BuildScreens();
+            Director.Push("main");
+        }
+
+        private void BuildScreens()
+        {
+            Create<MainMenuScreen>("main");
+            Create<ConnectScreen>("connect");
+            Create<PrepScreen>("prep");
+            Create<SettingsScreen>("settings");
+            Create<ResultsScreen>("results");
+            Create<PauseScreen>("pause");
+        }
+
+        private void Create<T>(string name) where T : UiScreenBase
+        {
+            GameObject go = new GameObject("Screen_" + name);
+            go.transform.SetParent(transform, false);
+            T screen = go.AddComponent<T>();
+            screen.Init(this);
+            Director.Register(screen);
+        }
+
+        private void Update()
+        {
+            if (Director == null || !Director.InMatch)
+            {
+                return;
+            }
+
+            if (!KordonInput.Pressed(Kordon.Game.Input.InputAction.Pause))
+            {
+                return;
+            }
+
+            // Esc opens the pause overlay; Esc again closes it (PauseScreen handles that).
+            if (!AnyMenuOpen)
+            {
+                Director.Push("pause");
+            }
+        }
+
+        private bool AnyMenuOpen
+        {
+            get
+            {
+                PauseScreen pause = Director.Get<PauseScreen>("pause");
+                return pause != null && pause.Root.gameObject.activeSelf;
+            }
+        }
+
+        // ------------------------------------------------------------- lifecycle
+
+        public void ShowMainMenu()
+        {
+            LeaveWorld();
+            Director.Clear();
+            Director.LeaveMatch();
+            Director.Push("main");
+        }
+
+        public void OpenPrep()
+        {
+            Director.Push("prep");
+        }
+
+        public void OpenSettings()
+        {
+            Director.Push("settings");
+        }
+
+        public void OpenConnect()
+        {
+            Director.Push("connect");
+        }
+
+        public void Back()
+        {
+            Director.Pop();
+        }
+
+        public void SetStatus(string status)
+        {
+            StatusLine = status ?? string.Empty;
+            StatusChanged?.Invoke();
+        }
+
+        public void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        // --------------------------------------------------------------- matches
+
+        /// <summary>Offline practice on the FFA map, with the real magazine and recoil rules.</summary>
+        public void StartPractice()
+        {
+            LeaveWorld();
+            Director.EnterMatch();
+            _worldRoot = new GameObject("PracticeWorld").transform;
+            Practice = _worldRoot.gameObject.AddComponent<PracticeMatch>();
+            Practice.MatchFinished += OnPracticeFinished;
+            Practice.Begin(Database, "ffa_zavod7", Loadout, _worldRoot);
+            Practice.Hud.gameObject.SetActive(true);
+        }
+
+        private void OnPracticeFinished()
+        {
+            MatchResults results = Practice.Match.BuildResults();
+            ShowResults(results, "PRACTICE");
+        }
+
+        public void StartNetworkMatch(string address, int port, bool host, string regionId)
+        {
+            if (ConnectorFactory == null)
+            {
+                SetStatus("Network transport unavailable in this build.");
+                return;
+            }
+
+            LeaveWorld();
+            Connector = ConnectorFactory();
+            Connector.Status += SetStatus;
+            Connector.MatchEnded += results => ShowResults(results, "ONLINE");
+            Connector.Begin(address, port, host, regionId, Loadout, PlayerProfile.Name);
+            SetStatus(host ? "hosting on " + address + ":" + port : "connecting to " + address + ":" + port);
+        }
+
+        public void ShowResults(MatchResults results, string modeLabel)
+        {
+            ResultsScreen screen = Director.Get<ResultsScreen>("results");
+            if (screen == null)
+            {
+                return;
+            }
+
+            screen.Fill(results, modeLabel);
+            Director.Push("results");
+        }
+
+        public void Rematch()
+        {
+            LeaveWorld();
+            Director.Clear();
+            Director.Push("prep");
+        }
+
+        public void LeaveWorld()
+        {
+            if (Connector != null)
+            {
+                Connector.Shutdown();
+                Connector = null;
+            }
+
+            if (Practice != null)
+            {
+                Practice.Stop();
+                Practice = null;
+            }
+
+            if (_worldRoot != null)
+            {
+                Destroy(_worldRoot.gameObject);
+                _worldRoot = null;
+            }
+        }
+
+        /// <summary>Called by the pause screen: back to the safety of the menu.</summary>
+        public void LeaveMatch()
+        {
+            LeaveWorld();
+            Director.Clear();
+            Director.LeaveMatch();
+            Director.Push("main");
+        }
+
+        public List<string> DatabaseProblems => Database != null
+            ? Database.Validate()
+            : new List<string> { "database not loaded" };
+    }
+
+    /// <summary>
+    /// The seam the network stage implements.  Screens and GameFlow only ever see
+    /// this, so the transport can be swapped (dedicated server, listen server,
+    /// offline) without touching the UI.
+    /// </summary>
+    public interface IMatchConnector
+    {
+        event Action<string> Status;
+        event Action<MatchResults> MatchEnded;
+
+        void Begin(string address, int port, bool host, string regionId,
+            LoadoutSelection loadout, string displayName);
+        void Shutdown();
+    }
+}
