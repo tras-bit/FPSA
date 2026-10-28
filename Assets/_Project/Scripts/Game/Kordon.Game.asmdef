@@ -1,0 +1,16 @@
+{
+    "name": "Kordon.Game",
+    "rootNamespace": "Kordon.Game",
+    "references": [
+        "Kordon.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

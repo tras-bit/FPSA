@@ -36,7 +36,10 @@ from PIL import Image
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TEXTURE_DIR = os.path.join(REPO_ROOT, "Assets", "_Project", "Art", "Textures")
-MATERIAL_DIR = os.path.join(REPO_ROOT, "Assets", "_Project", "Art", "Materials")
+# Materials live in a Resources folder: MapBuilder resolves them at runtime
+# by surface name (Resources.Load<Material>("Kordon/Materials/M_<surface>")).
+MATERIAL_DIR = os.path.join(REPO_ROOT, "Assets", "_Project", "Art", "Resources",
+                            "Kordon", "Materials")
 DATA_DIR = os.path.join(REPO_ROOT, "Assets", "StreamingAssets", "Data", "Art")
 SIZE = 512
 SEED = 20261028
