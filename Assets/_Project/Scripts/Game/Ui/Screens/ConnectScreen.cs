@@ -19,6 +19,7 @@ namespace Kordon.Game.Ui
         private InputField _port;
         private Text _regionLabel;
         private Text _status;
+        private Text _kitLabel;
         private int _regionIndex;
 
         protected override void Build()
@@ -67,10 +68,9 @@ namespace Kordon.Game.Ui
             UiBuilder.LabelAt(panel.transform, "KitLabel", "KIT", 16, UiBuilder.Dim,
                 new Vector2(0.5f, 0f), new Vector2(-300f, 108f), new Vector2(200f, 22f),
                 TextAnchor.MiddleLeft);
-            Text kit = UiBuilder.LabelAt(panel.transform, "Kit", "", 18, UiBuilder.Paper,
+            _kitLabel = UiBuilder.LabelAt(panel.transform, "Kit", "", 18, UiBuilder.Paper,
                 new Vector2(0.5f, 0f), new Vector2(70f, 108f), new Vector2(620f, 24f),
                 TextAnchor.MiddleLeft);
-            kit.name = "KitSummary";
             UiBuilder.Button(panel.transform, "CHANGE KIT", () => Flow.OpenPrep(),
                 new Vector2(-230f, 30f), new Vector2(240f, 48f), 18);
 
@@ -124,13 +124,12 @@ namespace Kordon.Game.Ui
 
         private void RefreshKit()
         {
-            Text kit = (Text)Root.Find("Panel/KitSummary");
-            if (kit == null)
+            if (_kitLabel == null)
             {
                 return;
             }
 
-            kit.text = Flow.Loadout.PrimaryWeaponId.ToUpperInvariant() + " + " +
+            _kitLabel.text = Flow.Loadout.PrimaryWeaponId.ToUpperInvariant() + " + " +
                        Flow.Loadout.SecondaryWeaponId.ToUpperInvariant() + "   " +
                        Flow.Loadout.TotalMagazines() + " magazines   " +
                        Flow.Loadout.ArmorKitId + " plates   (locked at round start)";
