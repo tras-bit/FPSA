@@ -10,6 +10,7 @@ using Kordon.Game.Maps;
 using Kordon.Game.Match;
 using Kordon.Game.Player;
 using Kordon.Game.Ui;
+using Kordon.Game.Weapons;
 using Unity.Netcode;
 using UnityEngine;
 
