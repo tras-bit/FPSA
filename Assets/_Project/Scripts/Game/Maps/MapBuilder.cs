@@ -21,6 +21,13 @@ namespace Kordon.Game.Maps
 
         public static Quaternion ToUnityYaw(float yawDegrees) =>
             Quaternion.Euler(0f, -yawDegrees, 0f);
+
+        /// <summary>Unity world direction/velocity back into authored map space.</summary>
+        public static KordonVec3 ToCore(Vector3 unity) => new KordonVec3(unity.x, unity.z, unity.y);
+
+        /// <summary>Horizontal heading in authored degrees (north = +Y = Unity +Z).</summary>
+        public static float YawDegrees(Vector3 unityDirection) =>
+            -Mathf.Atan2(unityDirection.x, unityDirection.z) * Mathf.Rad2Deg;
     }
 
     /// <summary>StreamingAssets layout, independent of the editor or a build target.</summary>
@@ -38,6 +45,9 @@ namespace Kordon.Game.Maps
             Path.Combine(StreamingAssets, "Data", "Art", "kit_manifest.json");
 
         public static string Definitions => Path.Combine(StreamingAssets, "Data", "Definitions");
+
+        /// <summary>Root expected by Kordon.Core.GameDatabase.Load (holds Definitions/Nav/Config).</summary>
+        public static string DataRoot => Path.Combine(StreamingAssets, "Data");
 
         public static string Read(string path)
         {

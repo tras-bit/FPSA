@@ -125,6 +125,12 @@ namespace UnityEngine
         public static Quaternion Euler(float x, float y, float z) =>
             new Quaternion(x, y, z, 0f); // structural stub: angles only
 
+        public static Quaternion Slerp(Quaternion a, Quaternion b, float t) =>
+            new Quaternion(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t,
+                           a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
+
+        public static Quaternion Lerp(Quaternion a, Quaternion b, float t) => Slerp(a, b, t);
+
         public static Quaternion AngleAxis(float angle, Vector3 axis) =>
             new Quaternion(axis.x, axis.y, axis.z, angle);
 
@@ -322,6 +328,15 @@ namespace UnityEngine
     public class MonoBehaviour : Behaviour
     {
         public static void print(object message) => Debug.Log(message);
+
+        public Coroutine StartCoroutine(System.Collections.IEnumerator routine) => new Coroutine();
+        public void StopCoroutine(Coroutine routine)
+        {
+        }
+
+        public void Invoke(string methodName, float time)
+        {
+        }
     }
 
     public class Transform : Component, IEnumerable
@@ -332,6 +347,8 @@ namespace UnityEngine
         public Quaternion localRotation { get; set; } = Quaternion.identity;
         public Vector3 localScale { get; set; } = Vector3.one;
         public Vector3 lossyScale => Vector3.one;
+        public Vector3 eulerAngles { get; set; }
+        public Vector3 localEulerAngles { get; set; }
         public Transform parent { get; private set; }
         public int childCount => _children.Count;
 
@@ -497,6 +514,28 @@ namespace UnityEngine
         public int height { get; set; }
     }
 
+    public class RenderTexture : Texture
+    {
+        public RenderTexture(int width, int height, int depth)
+        {
+            this.width = width;
+            this.height = height;
+        }
+
+        public static RenderTexture active { get; set; }
+        public void Release()
+        {
+        }
+    }
+
+    public class Light : Component
+    {
+        public Color color { get; set; } = Color.white;
+        public float intensity { get; set; } = 1f;
+        public float range { get; set; } = 10f;
+        public float spotAngle { get; set; } = 30f;
+    }
+
     public class Texture2D : Texture
     {
         public Texture2D(int width, int height)
@@ -607,6 +646,18 @@ namespace UnityEngine
         Below = 4,
     }
 
+    public static class Graphics
+    {
+        public static void Blit(Texture source, RenderTexture destination)
+        {
+        }
+
+        public static void Blit(Texture source, RenderTexture destination, Material material,
+            int pass = -1)
+        {
+        }
+    }
+
     public static class Resources
     {
         public static T Load<T>(string path) where T : Object => null;
@@ -659,6 +710,9 @@ namespace UnityEngine
         public float farClipPlane { get; set; } = 1000f;
         public Transform transform => base.transform;
 
+        public float depth { get; set; }
+        public int cullingMask { get; set; } = -1;
+        public RenderTexture targetTexture { get; set; }
         public Vector3 ScreenPointToRay(Vector3 pos) => Vector3.zero;
         public Vector3 WorldToScreenPoint(Vector3 position) => position;
         public Vector3 ScreenToWorldPoint(Vector3 position) => position;
@@ -718,18 +772,78 @@ namespace UnityEngine
         }
     }
 
+    public enum KeyCode
+    {
+        None = 0,
+        Space = 32,
+        Tab = 9,
+        Escape = 27,
+        Return = 13,
+        Backspace = 8,
+        Alpha1 = 49,
+        Alpha2 = 50,
+        Alpha3 = 51,
+        Alpha4 = 52,
+        Alpha5 = 53,
+        A = 97,
+        B = 98,
+        C = 99,
+        D = 100,
+        E = 101,
+        F = 102,
+        G = 103,
+        H = 104,
+        I = 105,
+        J = 106,
+        K = 107,
+        L = 108,
+        M = 109,
+        N = 110,
+        O = 111,
+        P = 112,
+        Q = 113,
+        R = 114,
+        S = 115,
+        T = 116,
+        U = 117,
+        V = 118,
+        W = 119,
+        X = 120,
+        Y = 121,
+        Z = 122,
+        UpArrow = 273,
+        DownArrow = 274,
+        LeftArrow = 275,
+        RightArrow = 276,
+        LeftShift = 304,
+        RightShift = 303,
+        LeftControl = 306,
+        RightControl = 305,
+        LeftAlt = 308,
+        RightAlt = 307,
+        Mouse0 = 323,
+        Mouse1 = 324,
+        Mouse2 = 325,
+    }
+
     public static class Input
     {
         public static bool GetKey(string name) => false;
         public static bool GetKeyDown(string name) => false;
         public static bool GetKeyUp(string name) => false;
+        public static bool GetKey(KeyCode key) => false;
+        public static bool GetKeyDown(KeyCode key) => false;
+        public static bool GetKeyUp(KeyCode key) => false;
         public static bool GetButton(string name) => false;
         public static bool GetButtonDown(string name) => false;
         public static bool GetButtonUp(string name) => false;
+        public static bool GetMouseButton(int button) => false;
+        public static bool GetMouseButtonDown(int button) => false;
+        public static bool GetMouseButtonUp(int button) => false;
         public static float GetAxis(string name) => 0f;
         public static float GetAxisRaw(string name) => 0f;
         public static Vector3 mousePosition => Vector3.zero;
-        public static float mouseScrollDelta => 0f;
+        public static Vector2 mouseScrollDelta => Vector2.zero;
     }
 
     public static class Screen
