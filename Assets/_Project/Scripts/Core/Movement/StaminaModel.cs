@@ -14,7 +14,7 @@ namespace Kordon.Core.Movement
 
         public float DrainPerSecondSprinting = 24f;
         public float DrainPerSecondAimingSprint = 28f;
-        public float RegenPerSecond = 15f;
+        public const float RegenPerSecond = 15f;
         public float RegenDelayAfterSprint = 1.15f;
         public float ExhaustedBelow = 6f;
         public float RecoveredAbove = 32f;

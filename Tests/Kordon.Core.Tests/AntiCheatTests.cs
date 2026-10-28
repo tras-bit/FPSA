@@ -4,6 +4,7 @@ using Kordon.Core.AntiCheat;
 using Kordon.Core.Ballistics;
 using Kordon.Core.Combat;
 using Kordon.Core.Data;
+using Kordon.Core.Loadout;
 using Kordon.Core.Movement;
 using Kordon.Core.Rules;
 using Kordon.Core.Utility;

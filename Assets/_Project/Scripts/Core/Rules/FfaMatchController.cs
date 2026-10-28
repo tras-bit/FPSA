@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Kordon.Core.Combat;
 using Kordon.Core.Data;
+using Kordon.Core.Serialization;
 using Kordon.Core.Loadout;
 using Kordon.Core.Utility;
 

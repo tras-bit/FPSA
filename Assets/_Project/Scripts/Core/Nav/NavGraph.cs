@@ -419,8 +419,8 @@ namespace Kordon.Core.Nav
     /// <summary>Minimal binary heap for A*, ordered by (fScore, nodeIndex) for determinism.</summary>
     internal sealed class BinaryHeap
     {
-        private readonly int[] _items;
-        private readonly float[] _priorities;
+        private int[] _items;
+        private float[] _priorities;
         private int _count;
 
         public BinaryHeap(int capacity)

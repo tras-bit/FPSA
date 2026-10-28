@@ -157,7 +157,9 @@ namespace Kordon.Core.Combat
             ArmorKitDefinition kit = request.Armor?.Kit;
             ZoneArmor plate = request.Armor == null
                 ? new ZoneArmor(request.Zone, 0, 0f, 0f)
-                : request.Armor.GetZone(request.Zone);
+                : new ZoneArmor(request.Zone, request.Armor.ArmorClass(request.Zone),
+                                request.Armor.Coverage(request.Zone),
+                                request.Armor.Durability(request.Zone));
 
             // An exhausted plate stops protecting.
             int armorClass = plate.Durability <= 0f ? 0 : plate.ArmorClass;

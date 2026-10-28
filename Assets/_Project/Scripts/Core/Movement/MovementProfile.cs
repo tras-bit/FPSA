@@ -20,39 +20,39 @@ namespace Kordon.Core.Movement
         public const float StrafeMultiplier = 0.86f;
 
         /// <summary>Ground acceleration - low values give the heavy, inertial feel.</summary>
-        public float GroundAcceleration = 11f;
-        public float GroundDeceleration = 17f;
+        public const float GroundAcceleration = 11f;
+        public const float GroundDeceleration = 17f;
 
         /// <summary>Air control is intentionally weak so bunny hopping is not a movement option.</summary>
-        public float AirControlMultiplier = 0.16f;
-        public float AirDragPerSecond = 0.12f;
+        public const float AirControlMultiplier = 0.16f;
+        public const float AirDragPerSecond = 0.12f;
 
-        public float JumpUpVelocity = 3.4f;
-        public float Gravity = 19.6f;
-        public float CrouchJumpVelocityMultiplier = 0.62f;
+        public const float JumpUpVelocity = 3.4f;
+        public const float Gravity = 19.6f;
+        public const float CrouchJumpVelocityMultiplier = 0.62f;
 
-        public float StanceTransitionSeconds = 0.42f;
-        public float ProneTransitionSeconds = 0.85f;
+        public const float StanceTransitionSeconds = 0.42f;
+        public const float ProneTransitionSeconds = 0.85f;
 
-        public float LeanAngleDeg = 42f;
-        public float LeanTransitionSeconds = 0.28f;
+        public const float LeanAngleDeg = 42f;
+        public const float LeanTransitionSeconds = 0.28f;
 
         /// <summary>Weapon control while airborne (used by recoil/spread and the viewmodel).</summary>
-        public float AirborneWeaponControlPenalty = 2.6f;
+        public const float AirborneWeaponControlPenalty = 2.6f;
 
         /// <summary>Sprint cannot be started below this stamina fraction.</summary>
-        public float SprintStaminaFloor = 0.08f;
+        public const float SprintStaminaFloor = 0.08f;
 
         /// <summary>Camera height per stance, metres.</summary>
-        public float StandEyeHeight = 1.62f;
-        public float CrouchEyeHeight = 1.06f;
-        public float ProneEyeHeight = 0.48f;
+        public const float StandEyeHeight = 1.62f;
+        public const float CrouchEyeHeight = 1.06f;
+        public const float ProneEyeHeight = 0.48f;
 
         /// <summary>Mass of the reference kit (weapon + armour + magazines) in kilograms.</summary>
-        public float ReferenceGearMassKg = 14f;
+        public const float ReferenceGearMassKg = 14f;
 
         /// <summary>Speed penalty per kilogram above the reference mass.</summary>
-        public float SpeedPenaltyPerExtraKg = 0.012f;
+        public const float SpeedPenaltyPerExtraKg = 0.012f;
 
         public float MaxSpeedFor(Stance stance, bool aiming, bool sprinting,
             float mobilityMultiplier = 1f, float gearMassKg = 0f, float armorMobility = 1f)
