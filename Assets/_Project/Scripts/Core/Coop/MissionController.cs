@@ -183,7 +183,7 @@ namespace Kordon.Core.Coop
 
             if (_operators.Count < Definition.MinPlayers)
             {
-                Log($"briefing-rejected: need {Definition.MinPlayers} operators, have {_operators.Count}");
+                AddLog($"briefing-rejected: need {Definition.MinPlayers} operators, have {_operators.Count}");
                 return false;
             }
 
@@ -191,7 +191,7 @@ namespace Kordon.Core.Coop
             StartedAt = now;
             Now = now;
             CurrentSubtitle = Definition.BriefingTitle;
-            Log("briefing-started");
+            AddLog("briefing-started");
             return true;
         }
 
@@ -232,7 +232,7 @@ namespace Kordon.Core.Coop
             Now = now;
             ActivateObjectives(now);
             Phase = MissionPhase.ObjectivesActive;
-            Log("infiltration-started");
+            AddLog("infiltration-started");
             return true;
         }
 
@@ -288,7 +288,7 @@ namespace Kordon.Core.Coop
             ObjectiveState state = GetObjective(objectiveId);
             if (definition == null || state == null)
             {
-                Log($"unknown-objective:{objectiveId}");
+                AddLog($"unknown-objective:{objectiveId}");
                 return false;
             }
 
@@ -355,7 +355,7 @@ namespace Kordon.Core.Coop
             state.Status = ObjectiveStatus.Completed;
             state.Progress = definition.RequiredProgress;
             Now = now;
-            Log($"objective-completed:{objectiveId}");
+            AddLog($"objective-completed:{objectiveId}");
             ActivateObjectives(now);
 
             ObjectiveDefinition next = FirstActiveObjective();
@@ -382,7 +382,7 @@ namespace Kordon.Core.Coop
             }
 
             state.Status = ObjectiveStatus.Failed;
-            Log($"objective-failed:{objectiveId}");
+            AddLog($"objective-failed:{objectiveId}");
             if (definition.IsCritical)
             {
                 Fail(MissionFailReason.CriticalObjectiveFailed, now);
@@ -450,7 +450,7 @@ namespace Kordon.Core.Coop
 
             if (!ExtractionAvailable())
             {
-                Log("extraction-denied: objectives incomplete");
+                AddLog("extraction-denied: objectives incomplete");
                 return false;
             }
 
@@ -459,7 +459,7 @@ namespace Kordon.Core.Coop
             Now = now;
             RaiseAlarm(now, "extraction-inbound");
             CurrentSubtitle = "Extraction inbound";
-            Log("extraction-called");
+            AddLog("extraction-called");
             return true;
         }
 
@@ -475,7 +475,7 @@ namespace Kordon.Core.Coop
             BoardingStartedAt = now;
             Now = now;
             CurrentSubtitle = "Board the extraction";
-            Log("boarding-started");
+            AddLog("boarding-started");
             return true;
         }
 
@@ -495,7 +495,7 @@ namespace Kordon.Core.Coop
             op.IsExtracted = true;
             op.IsDowned = false;
             Now = now;
-            Log($"extracted:{clientId}");
+            AddLog($"extracted:{clientId}");
 
             foreach (OperatorState other in _operators.Values)
             {
@@ -535,7 +535,7 @@ namespace Kordon.Core.Coop
             Phase = MissionPhase.Completed;
             Now = now;
             CurrentSubtitle = Definition.DebriefText;
-            Log("mission-completed");
+            AddLog("mission-completed");
             return true;
         }
 
@@ -549,7 +549,7 @@ namespace Kordon.Core.Coop
             Phase = MissionPhase.Failed;
             FailReason = reason;
             Now = now;
-            Log($"mission-failed:{reason}");
+            AddLog($"mission-failed:{reason}");
         }
 
         // ------------------------------------------------------------ operators
@@ -573,7 +573,7 @@ namespace Kordon.Core.Coop
             }
 
             Now = now;
-            Log($"downed:{clientId}");
+            AddLog($"downed:{clientId}");
             EvaluateTeamState(now);
             return true;
         }
@@ -589,7 +589,7 @@ namespace Kordon.Core.Coop
             op.IsDowned = false;
             op.IsDead = true;
             Now = now;
-            Log($"killed:{clientId}");
+            AddLog($"killed:{clientId}");
             EvaluateTeamState(now);
             return true;
         }
@@ -607,7 +607,7 @@ namespace Kordon.Core.Coop
             target.DownedAt = float.NaN;
             medic.RevivesGiven++;
             Now = now;
-            Log($"revived:{targetId}-by-{byClientId}");
+            AddLog($"revived:{targetId}-by-{byClientId}");
             return true;
         }
 
@@ -622,7 +622,7 @@ namespace Kordon.Core.Coop
 
             AlarmRaised = true;
             Now = now;
-            Log($"alarm-raised:{reason}");
+            AddLog($"alarm-raised:{reason}");
         }
 
         private void EvaluateTeamState(float now)
@@ -661,7 +661,7 @@ namespace Kordon.Core.Coop
         {
             if (now < Now)
             {
-                Log("clock-went-backwards");
+                AddLog("clock-went-backwards");
                 return;
             }
 
@@ -679,7 +679,7 @@ namespace Kordon.Core.Coop
                 {
                     op.IsDowned = false;
                     op.IsDead = true;
-                    Log($"bled-out:{op.ClientId}");
+                    AddLog($"bled-out:{op.ClientId}");
                 }
             }
 
@@ -788,7 +788,7 @@ namespace Kordon.Core.Coop
             return status;
         }
 
-        private void Log(string message)
+        private void AddLog(string message)
         {
             _log.Add(string.Format(CultureInfo.InvariantCulture, "[{0:F1}] {1}", Now, message));
             while (_log.Count > 256)
