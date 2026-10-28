@@ -1,0 +1,206 @@
+{
+  "editor_version_pinned": "6000.0.32f1",
+  "packages": {
+    "com.unity.modules.animation": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.audio": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.imageconversion": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.imgui": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.jsonserialize": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.particlesystem": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.physics": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.ui": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.uielements": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.unitywebrequest": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.modules.unitywebrequestaudio": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
+    "com.unity.netcode.gameobjects": {
+      "pinned": "2.2.0",
+      "available_tail": [
+        "1.2.0",
+        "1.1.0",
+        "1.0.2",
+        "1.0.1",
+        "1.0.0",
+        "1.0.0-pre.10",
+        "1.0.0-pre.9",
+        "1.0.0-pre.8",
+        "1.0.0-pre.7",
+        "1.0.0-pre.6",
+        "1.0.0-pre.5",
+        "1.0.0-pre.4",
+        "1.0.0-pre.3",
+        "1.0.0-pre.2"
+      ],
+      "dist_tags": {
+        "latest": "3.1.0"
+      },
+      "status": "OK",
+      "requires_unity": "6000.0",
+      "requires_unity_release": null,
+      "dependencies": {
+        "com.unity.transport": "2.4.0",
+        "com.unity.nuget.mono-cecil": "1.11.4"
+      }
+    },
+    "com.unity.test-framework": {
+      "pinned": "1.4.5",
+      "available_tail": [
+        "1.1.1",
+        "1.1.0",
+        "1.0.18",
+        "1.0.17",
+        "1.0.16",
+        "1.0.14",
+        "1.0.13",
+        "1.0.12",
+        "1.0.11",
+        "1.0.9",
+        "1.0.7",
+        "1.0.0",
+        "0.0.29-preview",
+        "0.0.4-preview"
+      ],
+      "dist_tags": {
+        "latest": "1.4.6"
+      },
+      "status": "OK",
+      "requires_unity": "2019.4",
+      "requires_unity_release": "0a10",
+      "dependencies": {
+        "com.unity.ext.nunit": "2.0.3",
+        "com.unity.modules.imgui": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      }
+    },
+    "com.unity.ugui": {
+      "pinned": "2.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    }
+  },
+  "failures": [],
+  "editor_releases": {
+    "unity6_lts": [
+      "6000.0.0f1",
+      "6000.0.1f1",
+      "6000.0.2f1",
+      "6000.0.3f1",
+      "6000.0.4f1",
+      "6000.0.5f1",
+      "6000.0.7f1",
+      "6000.0.8f1",
+      "6000.0.9f1",
+      "6000.0.10f1",
+      "6000.0.11f1",
+      "6000.0.12f1",
+      "6000.0.13f1",
+      "6000.0.14f1",
+      "6000.0.15f1",
+      "6000.0.16f1",
+      "6000.0.17f1",
+      "6000.0.18f1",
+      "6000.0.19f1",
+      "6000.0.20f1",
+      "6000.0.21f1",
+      "6000.0.22f1",
+      "6000.0.23f1",
+      "6000.0.24f1",
+      "6000.0.25f1",
+      "6000.0.26f1",
+      "6000.0.27f1",
+      "6000.0.28f1",
+      "6000.0.29f1",
+      "6000.0.30f1",
+      "6000.0.31f1",
+      "6000.0.32f1",
+      "6000.0.33f1",
+      "6000.0.34f1",
+      "6000.0.35f1",
+      "6000.0.36f1",
+      "6000.0.37f1",
+      "6000.0.38f1",
+      "6000.0.39f1",
+      "6000.0.40f1",
+      "6000.0.41f1",
+      "6000.0.42f1",
+      "6000.0.43f1",
+      "6000.0.44f1",
+      "6000.0.45f1",
+      "6000.0.46f1",
+      "6000.0.47f1",
+      "6000.0.48f1",
+      "6000.0.49f1",
+      "6000.0.50f1",
+      "6000.0.51f1",
+      "6000.0.52f1",
+      "6000.0.53f1",
+      "6000.0.54f1",
+      "6000.0.55f1",
+      "6000.0.56f1",
+      "6000.0.57f1",
+      "6000.0.58f1",
+      "6000.0.58f2",
+      "6000.0.59f2",
+      "6000.0.60f1",
+      "6000.0.61f1",
+      "6000.0.62f1",
+      "6000.0.63f1",
+      "6000.0.64f1",
+      "6000.0.65f1",
+      "6000.0.66f1",
+      "6000.0.66f2",
+      "6000.0.67f1",
+      "6000.0.68f1",
+      "6000.0.69f1",
+      "6000.0.70f1",
+      "6000.0.71f1",
+      "6000.0.72f1",
+      "6000.0.73f1",
+      "6000.0.74f1",
+      "6000.0.75f1",
+      "6000.0.76f1",
+      "6000.0.77f1",
+      "6000.0.78f1",
+      "6000.0.79f1",
+      "6000.0.80f1",
+      "6000.0.81f1",
+      "6000.0.82f1",
+      "6000.0.83f1",
+      "6000.0.84f1",
+      "6000.0.85f1"
+    ],
+    "unity2022_lts": [],
+    "raw_hits": 87
+  }
+}
