@@ -69,6 +69,7 @@ namespace Kordon.Core.Settings
         public const int KeyCodeLeftControl = 306;
         public const int KeyCodeRightControl = 307;
         public const int KeyCodeLeftAlt = 308;
+        public const int KeyCodeRightAlt = 307;
         public const int KeyCodeMouse0 = 323;
         public const int KeyCodeMouse1 = 324;
         public const int KeyCodeMouse2 = 325;
@@ -93,6 +94,7 @@ namespace Kordon.Core.Settings
                 case KeyCodeLeftControl: return "L-Ctrl";
                 case KeyCodeRightControl: return "R-Ctrl";
                 case KeyCodeLeftAlt: return "L-Alt";
+                case KeyCodeRightAlt: return "R-Alt";
                 case KeyCodeMouse0: return "LMB";
                 case KeyCodeMouse1: return "RMB";
                 case KeyCodeMouse2: return "MMB";
