@@ -1,3 +1,4 @@
+using Kordon.Core.Settings;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
 using Kordon.Game.Input;

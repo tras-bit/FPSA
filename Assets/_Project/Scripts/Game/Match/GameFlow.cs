@@ -113,7 +113,7 @@ namespace Kordon.Game.Match
                 return;
             }
 
-            if (!KordonInput.Pressed(Kordon.Game.Input.InputAction.Pause))
+            if (!KordonInput.Pressed(InputAction.Pause))
             {
                 return;
             }

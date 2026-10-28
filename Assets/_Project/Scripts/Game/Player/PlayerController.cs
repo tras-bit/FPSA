@@ -1,3 +1,4 @@
+using Kordon.Core.Settings;
 using System;
 using Kordon.Core.Combat;
 using Kordon.Core.Movement;
