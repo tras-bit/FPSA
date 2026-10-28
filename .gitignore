@@ -1,0 +1,51 @@
+# ---- Unity ----
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+sysinfo.txt
+*.stackdump
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+crashlytics-build.properties
+/[Aa]ssets/AssetStoreTools*
+/[Aa]ssets/Plugins/Editor/JetBrains*
+/[Aa]ssets/StreamingAssets/aa.meta
+/[Aa]ssets/StreamingAssets/aa/*
+
+# ---- IDE / OS ----
+.idea/
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.unityproj
+*.booproj
+ExportedObj/
+.consulo/
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.DS_Store
+Thumbs.db
+
+# The dotnet harness generates its own csproj under Tests/; keep the committed one.
+!Tests/Kordon.Core.Tests/*.csproj
+
+# ---- Python / tooling ----
+__pycache__/
+*.pyc
+.venv/
+Tools/**/out/
+ArtSource/Blender/*.blend1
