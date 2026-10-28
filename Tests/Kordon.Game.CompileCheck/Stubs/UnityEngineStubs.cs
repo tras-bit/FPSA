@@ -156,6 +156,10 @@ namespace UnityEngine
 
     public struct Color
     {
+        public static Color Lerp(Color a, Color b, float t) =>
+            new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t,
+                      a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
+
         public float r;
         public float g;
         public float b;
@@ -397,6 +401,16 @@ namespace UnityEngine
         public IEnumerator GetEnumerator() => _children.GetEnumerator();
     }
 
+    public enum PrimitiveType
+    {
+        Sphere = 0,
+        Capsule = 1,
+        Cylinder = 2,
+        Cube = 3,
+        Plane = 4,
+        Quad = 5,
+    }
+
     public class GameObject : Object
     {
         public Transform transform { get; } = new Transform();
@@ -429,6 +443,8 @@ namespace UnityEngine
         }
 
         public void SetActive(bool value) => activeSelf = value;
+
+        public static GameObject CreatePrimitive(PrimitiveType type) => new GameObject("primitive");
 
         public T AddComponent<T>() where T : Component
         {

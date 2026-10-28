@@ -85,32 +85,14 @@ namespace Kordon.Game.Match
 
         private void BuildLocalPlayer(Transform parent, MapLayout layout)
         {
-            GameObject go = new GameObject("LocalPlayer");
-            go.transform.SetParent(parent, false);
-            Player = go.AddComponent<PlayerController>();
+            LocalOperator op = LocalOperatorFactory.Build(parent, this, _database.Definitions,
+                LocalLoadout, 0x51E5D5EEDUL, false);
+            Player = op.Body;
+            Rig = op.Rig;
+            Weapons = op.Weapons;
+            Hud = op.Hud;
             Player.NoiseEmitted += noise => WorldNoise?.Invoke(noise);
-
-            GameObject cam = new GameObject("Bodycam");
-            cam.transform.SetParent(Player.CameraAnchor, false);
-            Rig = cam.AddComponent<BodycamRig>();
-            Rig.Body = Player;
-
-            GameObject viewObject = new GameObject("Viewmodel");
-            viewObject.transform.SetParent(cam.transform, false);
-            WeaponViewmodel viewmodel = viewObject.AddComponent<WeaponViewmodel>();
-            viewmodel.Body = Player;
-            viewmodel.Rig = Rig;
-
-            Weapons = go.AddComponent<WeaponController>();
-            Weapons.Body = Player;
-            Weapons.Rig = Rig;
-            Weapons.Viewmodel = viewmodel;
-            Weapons.Equip(LocalLoadout, _database.Definitions, 0x51E5D5EEDUL);
             Weapons.PlayerHit += OnLocalHit;
-            Player.Weapons = Weapons;
-
-            Hud = gameObject.AddComponent<HudScreen>();
-            Hud.Weapons = Weapons;
             Hud.SetObjective("PRACTICE - no server, no bots. Learn the kit, the map and the magazine rules.");
         }
 

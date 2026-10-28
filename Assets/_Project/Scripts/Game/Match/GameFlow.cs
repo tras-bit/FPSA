@@ -206,6 +206,7 @@ namespace Kordon.Game.Match
             LeaveWorld();
             Connector = ConnectorFactory();
             Connector.Status += SetStatus;
+
             Connector.MatchEnded += results => ShowResults(results, "ONLINE");
             Connector.Begin(address, port, host, regionId, Loadout, PlayerProfile.Name);
             SetStatus(host ? "hosting on " + address + ":" + port : "connecting to " + address + ":" + port);

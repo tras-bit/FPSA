@@ -28,6 +28,7 @@
     <Compile Include="Stubs/**/*.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Core/**/*.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Game/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Net/**/*.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Editor/**/*.cs" />
   </ItemGroup>
 

@@ -49,6 +49,12 @@ namespace Kordon.Game.Weapons
         public float GearMassKg => Loadout != null ? Loadout.TotalMassKg : 9f;
 
         public bool IsSealed => Loadout != null && Loadout.IsSealed;
+
+        /// <summary>
+        /// When true the local hitscan is presentation only: the server resolves the
+        /// hit and the client waits for its confirmation. Set by the online session.
+        /// </summary>
+        public bool ServerAuthoritativeHits;
         public float MobilityMultiplier => Loadout != null ? Loadout.MobilityMultiplier : 1f;
 
         public event Action<AmmoHudSnapshot> HudChanged;
@@ -260,7 +266,10 @@ namespace Kordon.Game.Weapons
                 ShotIndex = shot.ShotIndex,
             });
 
-            ResolveHitscan(weapon, origin, unityDirection);
+            if (!ServerAuthoritativeHits)
+            {
+                ResolveHitscan(weapon, origin, unityDirection);
+            }
         }
 
         private void ResolveHitscan(WeaponDefinition weapon, Vector3 origin, Vector3 direction)
