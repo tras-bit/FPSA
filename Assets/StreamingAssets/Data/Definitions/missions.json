@@ -1,0 +1,46 @@
+{
+  "comment": "Co-operative operations. Two to four operators, AI opposition, server authoritative objectives and an extraction. The co-op mode never touches the rules of the free-for-all mode.",
+  "missions": [
+    {
+      "id": "silent_kiln",
+      "name": "Operation Silent Kiln",
+      "mapSceneName": "COOP_SilentKiln",
+      "briefingTitle": "Kiln Site 12, Veransk Corridor",
+      "briefingText": "Kiln Site 12 keeps producing while the corridor is supposed to be quiet. Militia crews run the rotary kiln at night and use the control room to relay traffic for the whole sector. We are not taking the plant: we are stopping it and taking the traffic logs.\n\nInfiltrate from the rail spur, breach the yard gate, put two charges on the kiln fuel line, pull the logs from the control room terminal and hold the kiln hall while the charges arm. Extraction lands on the north pad when you call it. Expect a full shift of militia and a reaction force once the alarm goes.\n\nOperators stay together. A downed operator who is not picked up bleeds out in under a minute.",
+      "debriefText": "Kiln Site 12 is dark and the logs are out of the corridor. Extract clean.",
+      "minPlayers": 2,
+      "maxPlayers": 4,
+      "difficulty": "Standard",
+      "timeLimitSeconds": 1500,
+      "extractionWaitSeconds": 75,
+      "extractionBoardSeconds": 40,
+      "maxSimultaneousHostiles": 8,
+      "totalHostileBudget": 34,
+      "alarmReinforcements": 10,
+      "downAndRevive": true,
+      "downedBleedOutSeconds": 45,
+      "objectives": [
+        { "id": "reach_yard", "kind": "Reach", "title": "Reach the rail spur", "description": "Move from the insertion point to the rail spur south of the plant yard.",
+          "requiredProgress": 1, "locationId": "nav_rail_spur", "interactionRadiusM": 6, "isCritical": true, "dependsOn": [] },
+        { "id": "breach_gate", "kind": "Sabotage", "title": "Breach the yard gate", "description": "Cut the chain on the yard gate. It is loud; the shift will hear it.",
+          "requiredProgress": 1, "locationId": "nav_yard_gate", "interactionRadiusM": 3.5, "isCritical": true,
+          "dependsOn": ["reach_yard"] },
+        { "id": "sabotage_fuel_line", "kind": "Sabotage", "title": "Charge the kiln fuel line", "description": "Plant two charges on the fuel line feeding the rotary kiln.",
+          "requiredProgress": 2, "locationId": "nav_fuel_line", "interactionRadiusM": 4, "isCritical": true,
+          "dependsOn": ["breach_gate"] },
+        { "id": "retrieve_intel", "kind": "Retrieve", "title": "Pull the traffic logs", "description": "Download the relay logs from the control room terminal and carry the drive out.",
+          "requiredProgress": 1, "locationId": "nav_control_room", "interactionRadiusM": 3, "isCritical": true,
+          "dependsOn": ["breach_gate"] },
+        { "id": "hold_kiln_hall", "kind": "Hold", "title": "Hold the kiln hall", "description": "Defend the kiln hall for 45 seconds while the charges arm. Clearing this makes the extraction available.",
+          "requiredProgress": 45, "holdSeconds": 45, "locationId": "nav_kiln_hall", "interactionRadiusM": 14,
+          "isCritical": true, "unlocksExtraction": true, "dependsOn": ["sabotage_fuel_line", "retrieve_intel"] },
+        { "id": "reach_extraction", "kind": "Reach", "title": "Move to the north pad", "description": "Get the team to the north extraction pad and call the aircraft in.",
+          "requiredProgress": 1, "locationId": "nav_extraction_pad", "interactionRadiusM": 8, "isCritical": true,
+          "dependsOn": ["hold_kiln_hall"] },
+        { "id": "extract", "kind": "Extract", "title": "Extract", "description": "Board the extraction aircraft before it leaves without you.",
+          "requiredProgress": 1, "locationId": "nav_extraction_pad", "interactionRadiusM": 8, "isCritical": false,
+          "unlocksExtraction": false, "dependsOn": ["reach_extraction"] }
+      ]
+    }
+  ]
+}

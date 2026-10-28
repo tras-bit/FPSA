@@ -40,8 +40,9 @@ ExportedObj/
 .DS_Store
 Thumbs.db
 
-# The dotnet harness generates its own csproj under Tests/; keep the committed one.
+# The dotnet harness generates its own csproj under Tests/; keep the committed ones.
 !Tests/Kordon.Core.Tests/*.csproj
+!Tests/Kordon.SyntaxCheck/*.csproj
 
 # ---- Python / tooling ----
 __pycache__/

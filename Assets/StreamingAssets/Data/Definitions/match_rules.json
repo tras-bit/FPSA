@@ -1,0 +1,26 @@
+{
+  "comment": "Main PvP mode: free-for-all, 20 human slots, no teams, first operator to personally reach 50 eliminations wins. All of it is enforced by the server.",
+  "mode": "FreeForAll",
+  "maxPlayers": 20,
+  "killTarget": 50,
+  "minPlayersToStartLive": 2,
+  "loadoutPhaseSeconds": 45,
+  "countdownSeconds": 8,
+  "timeLimitSeconds": 0,
+  "respawnDelaySeconds": 5,
+  "spawnProtectionSeconds": 2.5,
+  "reconnectGraceSeconds": 90,
+  "allowBots": false,
+  "maxBotsInPractice": 19,
+  "maxKillsPerMinute": 24,
+  "minSecondsBetweenKills": 0.55,
+  "resupply": "OnRespawnOnly",
+  "creditAssists": false,
+  "practicePreset": {
+    "comment": "Offline practice range only. Bots are always flagged as BOTS in every UI surface and never join a network match.",
+    "mode": "PracticeRange",
+    "killTarget": 15,
+    "allowBots": true,
+    "minPlayersToStartLive": 1
+  }
+}

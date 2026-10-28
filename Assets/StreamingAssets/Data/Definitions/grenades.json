@@ -1,0 +1,16 @@
+{
+  "comment": "Thrown equipment. These are the only physical projectiles in the game: an arc, a bounce and a timed fuze cannot be a hitscan ray.",
+  "grenades": [
+    { "id": "frag_f1", "displayName": "F-1 Oskolok", "kind": "Fragmentation", "weightKg": 0.6, "throwSpeed": 14,
+      "fuseSeconds": 3.4, "cookableMinFuse": 0.8, "damageAtCenter": 115, "lethalRadiusM": 4.5, "damageRadiusM": 13,
+      "suppressionRadiusM": 22, "lineOfSightRequired": true, "allowCooking": true },
+    { "id": "smoke_rdg", "displayName": "RDG-2 Smoke", "kind": "Smoke", "weightKg": 0.45, "throwSpeed": 13,
+      "fuseSeconds": 1.6, "cookableMinFuse": 0.5, "damageAtCenter": 0, "lethalRadiusM": 0, "damageRadiusM": 0,
+      "suppressionRadiusM": 0, "lineOfSightRequired": false, "effectRadiusM": 8, "effectDurationSeconds": 26,
+      "allowCooking": false },
+    { "id": "flash_zarya", "displayName": "Zarya Flashbang", "kind": "Flashbang", "weightKg": 0.35, "throwSpeed": 15,
+      "fuseSeconds": 1.8, "cookableMinFuse": 0.6, "damageAtCenter": 0, "lethalRadiusM": 0, "damageRadiusM": 0,
+      "suppressionRadiusM": 12, "lineOfSightRequired": true, "effectRadiusM": 9, "effectDurationSeconds": 4.5,
+      "allowCooking": false }
+  ]
+}

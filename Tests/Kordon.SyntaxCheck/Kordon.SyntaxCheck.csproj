@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Roslyn based syntax/structure gate for every C# file in the project,
+    including the assemblies that reference UnityEngine (which cannot be
+    compiled without an editor + licence).  It cannot do semantic analysis of
+    Unity APIs, but it does catch the class of mistakes that break a project on
+    import: syntax errors, unbalanced braces, duplicate type names, wrong
+    namespace, missing asmdef coverage, Editor code outside an Editor assembly.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>Kordon.SyntaxCheck</AssemblyName>
+    <RootNamespace>Kordon.SyntaxCheck</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+  </ItemGroup>
+
+</Project>

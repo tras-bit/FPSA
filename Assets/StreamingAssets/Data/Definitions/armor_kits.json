@@ -1,0 +1,24 @@
+{
+  "comment": "Armour kits. All three are available to everyone from the first match: they trade mobility and noise for protection, none is strictly better.",
+  "armorKits": [
+    { "id": "light", "displayName": "Light Chest Rig", "weightKg": 3.2, "mobilityMultiplier": 1.0, "noiseMultiplier": 1.0,
+      "zones": [
+        { "zone": "Thorax", "armorClass": 2, "coverage": 0.75, "durability": 45 },
+        { "zone": "Abdomen", "armorClass": 2, "coverage": 0.6, "durability": 35 }
+      ] },
+    { "id": "standard", "displayName": "Standard Plate Carrier", "weightKg": 6.5, "mobilityMultiplier": 0.96, "noiseMultiplier": 1.1,
+      "zones": [
+        { "zone": "Thorax", "armorClass": 3, "coverage": 0.9, "durability": 70 },
+        { "zone": "Abdomen", "armorClass": 3, "coverage": 0.75, "durability": 55 },
+        { "zone": "Pelvis", "armorClass": 2, "coverage": 0.5, "durability": 35 }
+      ] },
+    { "id": "heavy", "displayName": "Assault Armour Set", "weightKg": 11.4, "mobilityMultiplier": 0.9, "noiseMultiplier": 1.25,
+      "zones": [
+        { "zone": "Head", "armorClass": 3, "coverage": 0.85, "durability": 60 },
+        { "zone": "Neck", "armorClass": 2, "coverage": 0.4, "durability": 25 },
+        { "zone": "Thorax", "armorClass": 4, "coverage": 0.95, "durability": 95 },
+        { "zone": "Abdomen", "armorClass": 4, "coverage": 0.85, "durability": 80 },
+        { "zone": "Pelvis", "armorClass": 3, "coverage": 0.6, "durability": 45 }
+      ] }
+  ]
+}

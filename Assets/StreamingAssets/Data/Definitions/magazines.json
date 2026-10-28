@@ -1,0 +1,62 @@
+{
+  "comment": "Magazines. Before a round the player chooses how many magazines and of which type/size to carry; the kit is then locked. Variants differ by capacity, ammunition type, mass and handling cost.",
+  "magazines": [
+    { "id": "mag_545_30_ps", "displayName": "30-rnd 5.45 box (PS)", "caliber": "5.45x39", "ammoVariantId": "545x39_ps",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.72, "emptyWeightKg": 0.24, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["vk74"] },
+    { "id": "mag_545_45_ps", "displayName": "45-rnd 5.45 extended (PS)", "caliber": "5.45x39", "ammoVariantId": "545x39_ps",
+      "capacity": 45, "kind": "Extended", "loadedWeightKg": 1.05, "emptyWeightKg": 0.34, "reloadTimeMultiplier": 1.28,
+      "handlingPenalty": 0.06, "fumbleChance": 0.02, "allowedWeaponIds": ["vk74"] },
+    { "id": "mag_545_30_bp", "displayName": "30-rnd 5.45 box (BP armour piercing)", "caliber": "5.45x39", "ammoVariantId": "545x39_bp",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.74, "emptyWeightKg": 0.24, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["vk74"] },
+
+    { "id": "mag_762_30_ps", "displayName": "30-rnd 7.62 box (PS)", "caliber": "7.62x39", "ammoVariantId": "762x39_ps",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.94, "emptyWeightKg": 0.3, "reloadTimeMultiplier": 1.02,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["tr30"] },
+    { "id": "mag_762_45_drum", "displayName": "45-rnd 7.62 drum", "caliber": "7.62x39", "ammoVariantId": "762x39_ps",
+      "capacity": 45, "kind": "Drum", "loadedWeightKg": 1.55, "emptyWeightKg": 0.62, "reloadTimeMultiplier": 1.45,
+      "handlingPenalty": 0.14, "fumbleChance": 0.035, "allowedWeaponIds": ["tr30"] },
+    { "id": "mag_762_30_bp", "displayName": "30-rnd 7.62 box (BP armour piercing)", "caliber": "7.62x39", "ammoVariantId": "762x39_bp",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.93, "emptyWeightKg": 0.3, "reloadTimeMultiplier": 1.02,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["tr30"] },
+
+    { "id": "mag_9x19_20_pst", "displayName": "20-rnd 9x19 box (PST)", "caliber": "9x19", "ammoVariantId": "9x19_pst",
+      "capacity": 20, "kind": "Box", "loadedWeightKg": 0.42, "emptyWeightKg": 0.16, "reloadTimeMultiplier": 0.92,
+      "handlingPenalty": 0.0, "fumbleChance": 0.008, "allowedWeaponIds": ["vs9"] },
+    { "id": "mag_9x19_30_pst", "displayName": "30-rnd 9x19 box (PST)", "caliber": "9x19", "ammoVariantId": "9x19_pst",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.6, "emptyWeightKg": 0.2, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.02, "fumbleChance": 0.01, "allowedWeaponIds": ["vs9"] },
+    { "id": "mag_9x19_30_ap", "displayName": "30-rnd 9x19 box (PBP armour piercing)", "caliber": "9x19", "ammoVariantId": "9x19_ap",
+      "capacity": 30, "kind": "Box", "loadedWeightKg": 0.59, "emptyWeightKg": 0.2, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.02, "fumbleChance": 0.01, "allowedWeaponIds": ["vs9"] },
+
+    { "id": "mag_54r_10_lps", "displayName": "10-rnd 7.62x54R box (LPS)", "caliber": "7.62x54R", "ammoVariantId": "762x54r_lps",
+      "capacity": 10, "kind": "Box", "loadedWeightKg": 0.42, "emptyWeightKg": 0.18, "reloadTimeMultiplier": 0.95,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["dmr14"] },
+    { "id": "mag_54r_10_snb", "displayName": "10-rnd 7.62x54R box (SNB armour piercing)", "caliber": "7.62x54R", "ammoVariantId": "762x54r_sniper",
+      "capacity": 10, "kind": "Box", "loadedWeightKg": 0.44, "emptyWeightKg": 0.18, "reloadTimeMultiplier": 0.95,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["dmr14"] },
+
+    { "id": "mag_338_5", "displayName": "5-rnd .338 box", "caliber": "8.6x70", "ammoVariantId": "338_lapua",
+      "capacity": 5, "kind": "Box", "loadedWeightKg": 0.5, "emptyWeightKg": 0.22, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.0, "fumbleChance": 0.01, "allowedWeaponIds": ["sr338"] },
+
+    { "id": "tube_12ga_6_buck", "displayName": "6-shell 12ga tube (buckshot)", "caliber": "12ga", "ammoVariantId": "12ga_buckshot",
+      "capacity": 6, "kind": "Tube", "loadedWeightKg": 0.62, "emptyWeightKg": 0.1, "reloadTimeMultiplier": 1.9,
+      "handlingPenalty": 0.05, "fumbleChance": 0.025, "allowedWeaponIds": ["k870"] },
+    { "id": "tube_12ga_6_slug", "displayName": "6-shell 12ga tube (slugs)", "caliber": "12ga", "ammoVariantId": "12ga_slug",
+      "capacity": 6, "kind": "Tube", "loadedWeightKg": 0.72, "emptyWeightKg": 0.1, "reloadTimeMultiplier": 1.9,
+      "handlingPenalty": 0.05, "fumbleChance": 0.025, "allowedWeaponIds": ["k870"] },
+    { "id": "tube_12ga_8_buck", "displayName": "8-shell 12ga extended tube (buckshot)", "caliber": "12ga", "ammoVariantId": "12ga_buckshot",
+      "capacity": 8, "kind": "Tube", "loadedWeightKg": 0.82, "emptyWeightKg": 0.14, "reloadTimeMultiplier": 2.25,
+      "handlingPenalty": 0.1, "fumbleChance": 0.03, "allowedWeaponIds": ["k870"] },
+
+    { "id": "mag_9x19_15_pst", "displayName": "15-rnd 9x19 pistol box (PST)", "caliber": "9x19", "ammoVariantId": "9x19_pst",
+      "capacity": 15, "kind": "Box", "loadedWeightKg": 0.32, "emptyWeightKg": 0.12, "reloadTimeMultiplier": 0.9,
+      "handlingPenalty": 0.0, "fumbleChance": 0.008, "allowedWeaponIds": ["p9"] },
+    { "id": "mag_9x19_17_ap", "displayName": "17-rnd 9x19 pistol box (PBP armour piercing)", "caliber": "9x19", "ammoVariantId": "9x19_ap",
+      "capacity": 17, "kind": "Extended", "loadedWeightKg": 0.36, "emptyWeightKg": 0.14, "reloadTimeMultiplier": 1.0,
+      "handlingPenalty": 0.02, "fumbleChance": 0.01, "allowedWeaponIds": ["p9"] }
+  ]
+}

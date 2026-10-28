@@ -1,0 +1,33 @@
+{
+  "comment": "Every unlock is cosmetic. There is no numeric gameplay field anywhere in this file and the validator in CosmeticCatalog.ValidateNoGameplayEffects fails CI if one is ever added. Combat tools are available to everybody on equal terms.",
+  "cosmetics": [
+    { "id": "finish_factory_green", "displayName": "Factory Green", "category": "WeaponFinish",
+      "description": "Standard issue plant maintenance enamel.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "finish_worn_black", "displayName": "Worn Black", "category": "WeaponFinish",
+      "description": "Oiled steel with the finish rubbed off the contact points.", "unlockRequirement": "complete-tutorial" },
+    { "id": "finish_veransk_olive", "displayName": "Veransk Olive", "category": "WeaponFinish",
+      "description": "Corridor militia surplus.", "unlockRequirement": "play-10-matches" },
+    { "id": "finish_kiln_soot", "displayName": "Kiln Soot", "category": "WeaponFinish",
+      "description": "Carbon staining from a night inside a working plant.", "unlockRequirement": "complete-silent-kiln" },
+    { "id": "reticle_amber", "displayName": "Amber Reticle", "category": "SightReticleColor",
+      "description": "Easier to read against cold concrete.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "reticle_white", "displayName": "White Reticle", "category": "SightReticleColor",
+      "description": "Neutral reference colour.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "reticle_cyan", "displayName": "Cyan Reticle", "category": "SightReticleColor",
+      "description": "High contrast for dusty interiors.", "unlockRequirement": "complete-tutorial" },
+    { "id": "patch_kom_observer", "displayName": "KOM Observer Patch", "category": "OperatorPatch",
+      "description": "Kordon Oversight Mission, unarmed observer cadre.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "patch_zavod_crew", "displayName": "Zavod Crew Patch", "category": "OperatorPatch",
+      "description": "Recovered from a locker at Ferroalloy Plant No. 7.", "unlockRequirement": "play-25-matches" },
+    { "id": "callsign_stamped_steel", "displayName": "Stamped Steel Callsign Plate", "category": "CallsignPlate",
+      "description": "Machine stamped aluminium, edges still sharp.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "callsign_etched_brass", "displayName": "Etched Brass Callsign Plate", "category": "CallsignPlate",
+      "description": "Chemically etched, reads well under a torch.", "unlockRequirement": "first-match-win" },
+    { "id": "camo_plant_dust", "displayName": "Plant Dust Helmet Camo", "category": "HelmetCamo",
+      "description": "Grey mineral dust, the colour of everything in the corridor.", "unlockRequirement": "default", "availableByDefault": true },
+    { "id": "camo_night_shift", "displayName": "Night Shift Helmet Camo", "category": "HelmetCamo",
+      "description": "Dark olive with soot banding.", "unlockRequirement": "complete-silent-kiln-veteran" },
+    { "id": "flourish_quiet_line", "displayName": "Quiet Line kill feed flourish", "category": "KillFeedFlourish",
+      "description": "A thin rule drawn under your eliminations in the feed.", "unlockRequirement": "reach-50-eliminations-in-one-match" }
+  ]
+}

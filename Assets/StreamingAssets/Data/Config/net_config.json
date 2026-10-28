@@ -1,0 +1,34 @@
+{
+  "comment": [
+    "Network configuration. Nothing here is hardcoded in gameplay code.",
+    "REGION ADDRESSES ARE DELIBERATELY EMPTY. Deploying a server costs money and requires",
+    "an account with an infrastructure provider, so no hosted endpoint is shipped and none is",
+    "created by the project. Put the address of your own dedicated server into the region you",
+    "use, or connect by typing an address in the multiplayer menu, or use LAN discovery.",
+    "The first supported region is Europe (eu-central). The client refuses loopback addresses",
+    "unless allowLoopbackForDevelopment is set to true - see docs/04_NETWORKING.md."
+  ],
+  "serverPort": 27015,
+  "queryPort": 27016,
+  "maxPlayers": 20,
+  "serverTickRate": 30,
+  "clientTimeoutSeconds": 20,
+  "reconnectGraceSeconds": 90,
+  "maxReconnectAttempts": 5,
+  "reconnectRetryDelaySeconds": 2.5,
+  "defaultRegionId": "eu-central",
+  "lanDiscoveryPort": 47780,
+  "lanDiscoveryEnabled": true,
+  "allowLoopbackForDevelopment": false,
+  "serverPasswordHash": "",
+  "regions": [
+    { "id": "eu-central", "displayName": "EU Central", "countryCode": "DE", "address": "", "port": 27015, "statusUrl": "" },
+    { "id": "eu-west", "displayName": "EU West", "countryCode": "NL", "address": "", "port": 27015, "statusUrl": "" },
+    { "id": "eu-north", "displayName": "EU North", "countryCode": "SE", "address": "", "port": 27015, "statusUrl": "" }
+  ],
+  "serverCommandLine": {
+    "comment": "How the shipped dedicated server build is started; see docs/04_NETWORKING.md and docs/10_BUILD_AND_RUN.md.",
+    "windows": "KordonServer.exe -batchmode -nographics -kordon.mode ffa -kordon.map FFA_Zavod7 -kordon.port 27015 -kordon.maxplayers 20",
+    "linux": "./KordonServer.x86_64 -batchmode -nographics -kordon.mode ffa -kordon.map FFA_Zavod7 -kordon.port 27015 -kordon.maxplayers 20"
+  }
+}
