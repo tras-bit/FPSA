@@ -1,0 +1,30 @@
+name: env-probe
+on: push
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unity package registry versions
+        run: |
+          for pkg in com.unity.netcode.gameobjects com.unity.transport com.unity.test-framework com.unity.ugui com.unity.nuget.newtonsoft-json com.unity.inputsystem com.unity.ai.navigation com.unity.cinemachine com.unity.timeline com.unity.shadergraph com.unity.render-pipelines.universal com.unity.textmeshpro; do
+            echo "=== $pkg ==="
+            curl -s -m 25 "https://packages.unity.com/$pkg" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+except Exception as e:
+    print('  parse-error', e); sys.exit()
+vs=list(d.get('versions',{}).keys())
+print('  latest:', d.get('dist-tags',{}))
+print('  last 12:', vs[-12:])
+"
+          done
+      - name: Unity editor LTS versions
+        run: |
+          echo "=== unity releases json ==="
+          curl -s -m 25 "https://services.unity.com/api/v1/releases?platform=linux" | head -c 600 || true
+          echo
+          curl -s -m 25 "https://public-cdn.cloud.unity3d.com/linux/editor-releases/" | head -c 300 || true
+          echo
+          echo "=== archive page grep ==="
+          curl -sL -m 40 "https://unity.com/releases/editor/archive" | grep -oE "6000\.[0-9]+\.[0-9]+[fp][0-9]+" | sort -u | tail -25
