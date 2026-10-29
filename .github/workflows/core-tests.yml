@@ -24,8 +24,13 @@ name: core-tests
 on:
   push:
     paths:
+      # The policy job reads the package manifest and the verification tools, so a
+      # change to either must re-run the checks it guards.
       - "Assets/_Project/Scripts/**"
       - "Assets/StreamingAssets/**"
+      - "Packages/manifest.json"
+      - "ProjectSettings/ProjectVersion.txt"
+      - "Tools/**"
       - "Tests/**"
       - ".github/workflows/core-tests.yml"
   pull_request:
