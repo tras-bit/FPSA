@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (268 tests) | **268 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **106 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (273 tests) | **273 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **108 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -106,6 +106,33 @@ silhouettes; the geometry and the icon rasteriser are what was verified.
 What this does not prove: how the HUD looks in game. Font rendering, sprite
 filtering and the real 1280x720 output need the Unity editor.
 
+## 1.0.8 ammunition privacy and weapon rebuild (executed here)
+
+The user's rule, in their words: rounds must not be displayed without taking the
+magazine out.  The previous HUD printed a pouch count next to every weapon and drew
+the whole pouch permanently, so this was a rule the game stated and then broke.
+
+* **The rule is code, not a convention.** `Kordon.Core.Ui.HudAmmoPolicy` answers
+  three questions - is the pouch visible, is the exact count visible, how many
+  magazine icons may be drawn - and `HudAmmoPolicyTests` (5 tests) pins all three,
+  including the case that matters: an inspect flag without a magazine in hand, or a
+  round count without an inspection, must leak nothing.
+* **The HUD cannot bypass it.** `HudScreen` hides the magazine rows, their captions,
+  the pouch summary on the loadout card and the inspect readout through that policy.
+  `Tools/verify/policy_check.py` fails the build if the HUD stops routing the exact
+  count or the pouch through it, or if `HudAmmoPolicy` stops gating on
+  `MayShowExactCount`.  Verified by watching the check fail on the previous commit.
+* **The weapons are renders of the real geometry.** `Tools/blender/render_weapons.py`
+  renders every weapon from the same `build_weapon()` the FBX export uses;
+  `docs/art/weapons-lineup.png` and `docs/art/weapons-detail.png` are those renders.
+  The build re-imports each FBX and compares its bounding box with the authored one,
+  which is what proves the exported asset is the model that was rendered.
+
+What this does not prove: how any of it looks and feels in the game.  The renders
+show geometry from a fixed camera, not a viewmodel in motion; the HUD mock shows
+layout, not a live canvas.  A first-person play test in the Unity editor is still
+the verification this environment cannot perform.
+
 ## What was verified by generation (executed here)
 
 * Kit: 60 modules, 203k triangles, FBX exported, both `.blend` files saved.
@@ -114,8 +141,8 @@ filtering and the real 1280x720 output need the Unity editor.
   for connectivity by the nav generator.
 * Textures: 17 surface sets + hazard + 2 emissives = 51 PNGs, 19 materials.
 * Weapons and thrown equipment: 7 first person weapon models + 3 grenades,
-  68 636 triangles (1.0.6 detail pass, was 22 484), FBX re-imported and bounding
-  boxes verified; 79 synthesised
+  85 736 triangles (1.0.8 profile rebuild, was 68 636 after the 1.0.6 detail pass
+  and 22 484 before it), FBX re-imported and bounding boxes verified; 79 synthesised
   WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
   smoke hiss, flashbang).
 
@@ -203,7 +230,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 268 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 273 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity

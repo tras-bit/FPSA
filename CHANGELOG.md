@@ -3,6 +3,68 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.8 - 2026-10-29
+
+Ammunition is no longer on screen until a magazine is out of the weapon, the
+bottom right block is a designed card instead of a cramped black box, and the
+weapons were rebuilt from profiles instead of boxes.
+
+### Changed
+
+* **No ammunition on screen until you check it.** This is the rule the game is
+  built on, and the HUD was breaking it by printing `4 MAG` next to every weapon
+  and drawing the whole pouch permanently. The rule now lives in one tested place,
+  `Kordon.Core.Ui.HudAmmoPolicy`: with the weapon in hands the block shows only the
+  three slots and the grenade count - no magazine icons, no pouch size, no round
+  count, just `R  check magazine`. Holding R pulls a magazine out, and only then do
+  the pouch rows appear together with the exact count (`VK-74 30 ROUND  14 / 30`).
+* **Loadout card redesigned.** Rounded panel, header rule, one row per slot with a
+  key chip on a raised surface, the weapon name in bold, the active row lit with a
+  left pip, and the grenade row doubling as the live fuze readout. The card is
+  sized from `HudLayout` (360 x 116 px, 12 px corner radius) and everything inside
+  it is anchored inside that rectangle - the previous build scaled the whole block
+  with the window and broke the layout.
+* **Magazine icons.** Curved silhouettes with a floor plate, feed lips and ribs,
+  generated at runtime by `HudIcons` (rounded nine-sliced panels, magazines, discs)
+  and cached, so no extra image files ship.
+
+### Rebuilt
+
+* **Weapons modelled from profiles.** The weapons were assemblies of axis aligned
+  boxes; several parts were also attached in the wrong place (the stock grew
+  forward into the receiver, the handguard hung above the barrel, the trigger guard
+  floated off the grip, the pistol carried its magazine forward of the trigger).
+  The generator now has a profile modeller - `octagon()` and `rounded()` cross
+  sections extruded by `loft()` with a scale and an offset per section, and
+  `cut_away()` for real boolean holes:
+  * receivers are octagonal with a chamfered nose, a dust cover and a magwell flare;
+  * grips are raked, tapering ovals with finger grooves and a three-bar trigger
+    guard around the trigger;
+  * stocks are a hinge block, a tapering body, a cheek riser and a raked butt pad;
+  * handguards are vented tubes with holes cut through both cheeks and slots on top;
+  * magazines are one lofted curved body instead of stacked rotated boxes;
+  * iron sights are separate rear and front assemblies, each standing on the part
+    that carries it (receiver and gas block) instead of sharing one height;
+  * the sidearm has a slide with serrations, and its magazine sits inside the grip.
+  Triangles: 68 636 -> 85 736 across seven weapons and three grenades; sight
+  heights and overall lengths are unchanged, so the aim pose and the ballistics
+  data are untouched.
+* **Review renders** `docs/art/weapons-lineup.png` and `docs/art/weapons-detail.png`
+  are Cycles renders of the exported geometry, produced by
+  `Tools/blender/render_weapons.py`.
+
+### Verified
+
+* 273 core tests pass (268 -> 273): five new tests pin `HudAmmoPolicy` - the pouch,
+  the icons and the exact count are all absent with the weapon in hands, appear
+  together on inspection, and a null snapshot reveals nothing.
+* The design-rule checker now verifies the rule where it lives: the HUD must route
+  both the exact count and the pouch through `HudAmmoPolicy`, and the policy must
+  gate the count on `MayShowExactCount`.
+* `docs/art/ui-hud-layout.png` draws both states side by side from the same numbers
+  (`HudLayout` for geometry, `HudAmmoPolicy` for visibility). It is labelled as a
+  layout reference: there is no Unity editor here, so no in-game screenshot exists.
+
 ## 1.0.7 - 2026-10-29
 
 The HUD is redesigned. 1.0.6 moved the magazines into the lower right but drew them
