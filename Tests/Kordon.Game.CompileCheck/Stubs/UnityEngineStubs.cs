@@ -276,6 +276,13 @@ namespace UnityEngine
             t = Clamp01((t - a) / (b - a));
             return t * t * (3f - 2f * t);
         }
+
+        /// <summary>Shortest signed angle from "from" to "to", in degrees.</summary>
+        public static float DeltaAngle(float from, float to)
+        {
+            float delta = Repeat(to - from + 180f, 360f) - 180f;
+            return delta;
+        }
     }
 
     public static class Random
@@ -461,6 +468,7 @@ namespace UnityEngine
         public Vector3 TransformDirection(Vector3 direction) => direction;
         public Vector3 InverseTransformDirection(Vector3 direction) => direction;
         public Vector3 TransformPoint(Vector3 point) => point;
+        public Vector3 InverseTransformPoint(Vector3 point) => point;
 
         public IEnumerator GetEnumerator() => _children.GetEnumerator();
     }

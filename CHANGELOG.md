@@ -3,6 +3,81 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.9 - 2026-10-29
+
+The first person weapon stopped being a lerp and became an animation system, and
+the weapons were modelled a second time - this time from the shapes the real parts
+are made of, with the game's own textures on them.
+
+### Animation
+
+* **`ViewmodelAnimator` (engine free, `Kordon.Core.Weapons`).** The old viewmodel
+  smoothed one position toward one target, which is why the weapon slid between
+  poses, the magazine snapped and the muzzle never settled. The new core composes
+  six layers every frame and is deterministic, so it is unit tested like a rule:
+  * **state pose** - hip, sights, sprint, magazine out, magazine in, charging,
+    inspect, fumble and empty each own a pose, blended by an exponential approach
+    with a per state rate (sights come up in ~120 ms, a reload settles slowly);
+  * **sway** - the look rate from the bodycam drives a critically damped spring, so
+    the weapon lags behind a fast turn and returns to centre on its own;
+  * **bob** - a figure eight tied to the footfall phase, scaled by speed and damped
+    to 15 percent while aiming;
+  * **breathing** - a slow drift that grows with the stamina model's breath value,
+    which is the visible half of the stamina -> aim contract;
+  * **recoil** - an impulse that kicks the weapon back and up, then a spring with
+    real overshoot brings it down; `AddBoltCycle` cycles the carrier per shot;
+  * **landing** - a dip and a muzzle climb on touchdown, fed by `PlayerController.Landed`.
+* **Magazine timeline.** Dropping (quadratic fall and a roll), hidden, then the fresh
+  magazine rising with an overshoot before it seats exactly at zero offset. Inspect
+  pulls it out, turns it 62 degrees towards the eye and keeps it there, which is the
+  beat the HUD is allowed to show a round count on.
+* **`WeaponViewmodel` rewritten as an adapter.** It reads aim, sprint, speed, breath,
+  look rate and landing from the player, forwards every `AmmoEvent` beat, measures the
+  loaded FBX (sight height, length) so each weapon aims down its own sights, and writes
+  the pose onto the weapon root, the magazine prop and the bolt.
+
+### Art
+
+* **Second modelling pass.** Receivers are lofted shells with a domed dust cover;
+  trigger guards are swept along a spline instead of three boxes; grips have a palm
+  swell, three finger grooves and stippled panels; magazines are curved bodies with
+  stamped ribs, a floor plate that overhangs and feed lips; handguards are ferruled
+  wood, free float tubes with cut M-LOK slots, or a ribbed pump; new parts include
+  the AK rear sight block, hooded front sight, gas block and cleaning rod, the AR
+  forward assist, brass deflector, ejection port door and bolt carrier, sling swivels
+  on every long gun, a folded bipod on the bolt gun, and optics: a red dot on the
+  carbine, a prism scope on the marksman rifle, a three turret scope on the sniper.
+* **Real shading.** Every weapon mesh is beveled, shaded smooth with split normals at
+  34 degrees and UV unwrapped; the previous flat shading is what kept a beveled shape
+  looking like a CAD block. The weapon maps repeat 4-5 times per UV island, because a
+  wall texture at 1:1 on a receiver reads as hammered cast iron.
+* **Five weapon surfaces** (`gun_metal`, `gun_bare`, `gun_wood`, `gun_olive`,
+  `gun_polymer`) with their own generated texture sets, so a phosphated receiver is not
+  galvanised sheet, machined steel is not paint, and oiled walnut is not pallet wood.
+  24 surfaces, 66 texture sets.
+* **Render sheet rebuilt** around the real textures: three quarter framing solved
+  from the projected bounding box, a warm key / cool fill / hard rim studio, AgX, and
+  denoising. `docs/art/weapons-lineup.png`, `docs/art/weapons-detail.png`.
+* 200 434 triangles across seven weapons and three grenades (was 85 736).
+
+### Fixed
+
+* Texture sidecars lost `textureType: 1` on normal maps when regenerated, which would
+  have sampled every normal map as colour; the generator now writes it.
+* `WeaponViewmodel` bound the player's landing event in `Awake`, before the operator
+  had assigned the player, so the event never fired; it is bound in `Start`.
+
+### Tests
+
+* 16 new tests (273 -> 289) pin the animation contract: hip pose at rest, sights on
+  the camera axis, aim blend in and out, sprint only taking over when nothing else is
+  happening, recoil kicking and settling, recoil staying bounded under abuse, the
+  magazine dropping out and disappearing, the fresh magazine rising and seating at
+  exactly zero, inspect lifting and turning the magazine, the charging handle racking
+  and running home, sway following the look and returning to centre, bob following the
+  feet and damping while aiming, the landing dip, determinism, and zero/negative/long
+  frame safety.
+
 ## 1.0.8 - 2026-10-29
 
 Ammunition is no longer on screen until a magazine is out of the weapon, the

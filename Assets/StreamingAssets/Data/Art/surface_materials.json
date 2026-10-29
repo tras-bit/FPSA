@@ -257,6 +257,71 @@
       "metsmo": "Textures/T_hazard_metsmo.png",
       "transparent": false,
       "emissive": false
+    },
+    "gun_wood": {
+      "surface": "gun_wood",
+      "kind": "Wood",
+      "material": "M_gun_wood",
+      "tiling": 1.6,
+      "roughness": 0.45,
+      "metallic": 0.0,
+      "albedo": "Textures/T_gunwood_albedo.png",
+      "normal": "Textures/T_gunwood_normal.png",
+      "metsmo": "Textures/T_gunwood_metsmo.png",
+      "transparent": false,
+      "emissive": false
+    },
+    "gun_metal": {
+      "surface": "gun_metal",
+      "kind": "Steel",
+      "material": "M_gun_metal",
+      "tiling": 5.0,
+      "roughness": 0.32,
+      "metallic": 0.92,
+      "albedo": "Textures/T_gunmetal_albedo.png",
+      "normal": "Textures/T_gunmetal_normal.png",
+      "metsmo": "Textures/T_gunmetal_metsmo.png",
+      "transparent": false,
+      "emissive": false
+    },
+    "gun_olive": {
+      "surface": "gun_olive",
+      "kind": "Steel",
+      "material": "M_gun_olive",
+      "tiling": 4.5,
+      "roughness": 0.55,
+      "metallic": 0.12,
+      "albedo": "Textures/T_gunolive_albedo.png",
+      "normal": "Textures/T_gunolive_normal.png",
+      "metsmo": "Textures/T_gunolive_metsmo.png",
+      "transparent": false,
+      "emissive": false
+    },
+    "gun_polymer": {
+      "surface": "gun_polymer",
+      "kind": "Rubber",
+      "material": "M_gun_polymer",
+      "tiling": 5.0,
+      "roughness": 0.62,
+      "metallic": 0.0,
+      "albedo": "Textures/T_gunpolymer_albedo.png",
+      "normal": "Textures/T_gunpolymer_normal.png",
+      "metsmo": "Textures/T_gunpolymer_metsmo.png",
+      "transparent": false,
+      "emissive": false
+    },
+    "gun_bare": {
+      "surface": "gun_bare",
+      "kind": "Steel",
+      "material": "M_gun_bare",
+      "tiling": 4.0,
+      "roughness": 0.3,
+      "metallic": 1.0,
+      "albedo": "Textures/T_gunbare_albedo.png",
+      "normal": "Textures/T_gunbare_normal.png",
+      "metsmo": "Textures/T_gunbare_metsmo.png",
+      "transparent": false,
+      "emissive": false
     }
   }
 }

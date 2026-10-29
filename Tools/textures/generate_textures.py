@@ -285,6 +285,102 @@ def _plain(base, rng, smooth_value, speckle=0.1):
     return colour, height, np.zeros_like(height), np.full_like(height, smooth_value)
 
 
+def _gun_steel(base, rng):
+    """Parkerised or blued steel, as a real metal rather than grey paint.
+
+    The 1.0.8 weapon textures returned a metallic mask of zero and one constant
+    smoothness, which is why the models read as moulded plastic no matter how the
+    studio was lit: nothing was reflecting anything. A receiver is metal - it
+    mirrors the room, it is only slightly rough, and the finish is scuffed where
+    hands, slings and holsters have been over it - so the mask now carries metal,
+    the smoothness follows the oil and wear patches, and a scratch shows bare,
+    brighter steel under the finish.
+    """
+    grain = value_noise(rng, 240)                       # bead blast / machining
+    blotch = fbm(rng, 6, 4)                             # oil film and handling
+    scratches = np.clip(ridge(rng, 52, 3) - 0.84, 0.0, 1.0) * 5.0
+    pits = np.clip(value_noise(rng, 300) - 0.86, 0.0, 1.0) * 5.0
+    wear = np.clip(scratches * 0.90 + pits * 0.55, 0.0, 1.0)
+
+    colour = tint(base) * (0.80 + 0.44 * blotch[..., None])
+    colour *= (0.93 + 0.14 * grain[..., None])
+    colour = mix(colour, tint((0.36, 0.36, 0.37)) * (0.55 + 0.45 * grain[..., None]), wear * 0.55)
+    metallic = np.clip(0.80 + 0.16 * blotch - 0.30 * wear, 0.0, 1.0)
+    smooth = np.clip(0.44 + 0.18 * (blotch - 0.5) + 0.28 * wear - 0.12 * pits, 0.16, 0.90)
+    height = 0.30 * grain + 0.16 * blotch - 0.34 * wear
+    return colour, height, metallic, smooth
+
+
+def _gun_bare(base, rng):
+    """Machined steel: bolt carriers, pins, crowns and the exposed barrel.
+
+    Weapon parts that are not finished are brighter and much smoother than the
+    receiver around them - that contrast is most of what makes a gun read as a gun
+    rather than as one grey object, and the previous build got it by pointing those
+    parts at a map texture that rendered as a white block.
+    """
+    grain = value_noise(rng, 300)                       # turning / milling marks
+    lines = np.clip(ridge(rng, 130, 2) - 0.72, 0.0, 1.0) * 3.2
+    blotch = fbm(rng, 7, 3)
+
+    colour = tint(base) * (0.90 + 0.22 * blotch[..., None]) * (0.94 + 0.12 * grain[..., None])
+    colour = mix(colour, tint((0.55, 0.55, 0.56)) * (0.7 + 0.3 * grain[..., None]), lines * 0.35)
+    metallic = np.clip(0.96 + 0.04 * blotch, 0.0, 1.0)
+    smooth = np.clip(0.62 + 0.14 * (blotch - 0.5) - 0.16 * lines, 0.34, 0.92)
+    height = 0.22 * grain + 0.10 * blotch - 0.18 * lines
+    return colour, height, metallic, smooth
+
+
+def _gun_polymer(base, rng):
+    """Glass filled nylon: matte, stippled, never shiny and never metal."""
+    pebble = fbm(rng, 48, 4)
+    blotch = fbm(rng, 8, 4)
+    scuff = np.clip(fbm(rng, 96, 3) - 0.58, 0.0, 1.0) * 4.0
+    colour = tint(base) * (0.88 + 0.30 * blotch[..., None])
+    colour *= (0.95 + 0.12 * pebble[..., None])
+    colour = mix(colour, tint((0.20, 0.20, 0.205)), scuff * 0.40)
+    smooth = np.clip(0.28 + 0.10 * (blotch - 0.5) + 0.08 * scuff, 0.12, 0.58)
+    height = 0.55 * pebble + 0.20 * blotch - 0.22 * scuff
+    return colour, height, np.zeros_like(height), smooth
+
+
+def _gun_paint(base, rng):
+    """Olive drab enamel over an alloy chassis, chipped down to bare metal."""
+    blotch = fbm(rng, 5, 4)
+    grain = value_noise(rng, 210)
+    chips = np.clip(fbm(rng, 42, 4) - 0.56, 0.0, 1.0) * 5.0
+
+    colour = tint(base) * (0.86 + 0.28 * blotch[..., None])
+    colour *= (0.95 + 0.10 * grain[..., None])
+    colour = mix(colour, tint((0.30, 0.30, 0.31)), chips * 0.85)
+    metallic = chips * 0.9
+    smooth = np.clip(0.36 + 0.10 * (blotch - 0.5) + 0.26 * chips, 0.14, 0.84)
+    height = 0.22 * grain + 0.14 * blotch - 0.50 * chips
+    return colour, height, metallic, smooth
+
+
+def _gun_wood(base, rng):
+    """Oiled walnut with a straight grain.
+
+    The map recipe cuts wood into planks with dark seams, which on a rifle stock
+    reads as a crate bolted to the receiver. A stock is one piece of timber: rings
+    that run the length of it, dark pores across the grain and a thin varnish that
+    lifts the highlights without making the whole part shine.
+    """
+    yy, _xx = np.mgrid[0:SIZE, 0:SIZE].astype(float) / SIZE
+    warp = fbm(rng, 6, 3)
+    rings = np.sin((yy * 34.0 + warp * 7.0) * np.pi) * 0.5 + 0.5
+    figure = fbm(rng, 12, 4)
+    pores = value_noise(rng, 300)
+    colour = tint(base) * (0.76 + 0.30 * rings[..., None])
+    colour *= (0.92 + 0.20 * figure[..., None])
+    colour *= (1.0 - 0.22 * np.clip(pores - 0.52, 0.0, 1.0)[..., None])
+    height = rings * 0.10 + pores * 0.04
+    smooth = np.clip(0.32 + 0.12 * figure - 0.10 * np.clip(pores - 0.5, 0.0, 1.0),
+                     0.10, 0.62)
+    return colour, height, np.zeros_like(height), smooth
+
+
 RECIPES = {
     "concrete_raw": lambda base, rng: _concrete(base, rng),
     "concrete_painted": lambda base, rng: _concrete(base, rng, painted=True),
@@ -303,6 +399,13 @@ RECIPES = {
     "sand": lambda base, rng: _gravel(base, rng, sandy=True),
     "ceramic": lambda base, rng: _plain(base, rng, 0.6, speckle=0.05),
     "hazard": _hazard,
+    # Weapon surfaces get their own texture names: they reuse the map recipes, but
+    # writing them under the map's file names would darken every wall and crate too.
+    "gunmetal": _gun_steel,
+    "gunwood": _gun_wood,
+    "gunolive": _gun_paint,
+    "gunpolymer": _gun_polymer,
+    "gunbare": _gun_bare,
 }
 
 TILING = {
@@ -310,6 +413,9 @@ TILING = {
     "steel_painted": 1.5, "steel_dark": 1.5, "steel_rust": 1.5, "sheet_metal": 1.5,
     "grating": 3.0, "hardened_steel": 1.0, "wood_crate": 1.0, "rubber": 1.5,
     "glass": 1.0, "gravel": 3.0, "sand": 3.0, "ceramic": 1.0, "hazard": 1.0,
+    # Weapon maps repeat several times across a viewmodel sized UV island: at 1.0 the
+    # blotches of a wall texture read as hammered cast iron on an anodised receiver.
+    "gunmetal": 5.0, "gunwood": 1.6, "gunolive": 4.5, "gunpolymer": 5.0, "gunbare": 4.0,
 }
 
 
@@ -322,6 +428,7 @@ TextureImporter:
   internalIDToNameTable: []
   externalObjects: {{}}
   serializedVersion: 13
+  textureType: {texture_type}
   mipmaps:
     mipMapMode: 0
     enableMipMap: 1
@@ -518,6 +625,13 @@ def main() -> int:
         metsmo_ref = "{fileID: 0}"
         if texture_name in RECIPES:
             albedo, height, metallic, smooth = RECIPES[texture_name](base, rng)
+            # Per surface shade: the weapon surfaces reuse the map recipes (so the
+            # whole project still ships twenty two generated surfaces) but need a
+            # much darker value than a wall or a crate, otherwise a phosphated
+            # receiver renders as galvanised sheet.
+            shade = float(spec.get("shade", 1.0))
+            if abs(shade - 1.0) > 1e-6:
+                albedo = np.clip(albedo * shade, 0.0, 1.0)
             maps = {
                 "albedo": (albedo, True),
                 "normal": (normal_from_height(height), False),
@@ -529,7 +643,8 @@ def main() -> int:
                 to_png(os.path.join(TEXTURE_DIR, file_name), array, srgb)
                 write_text(os.path.join(TEXTURE_DIR, file_name + ".meta"),
                            TEXTURE_META.format(guid=guid_of(file_name),
-                                               srgb=1 if srgb else 0))
+                                               srgb=1 if srgb else 0,
+                                               texture_type=1 if suffix == "normal" else 0))
                 entry[suffix] = f"Textures/{file_name}"
             albedo_ref = texture_ref(guid_of(f"T_{texture_name}_albedo.png"))
             bump_ref = texture_ref(guid_of(f"T_{texture_name}_normal.png"))

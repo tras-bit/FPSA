@@ -1,143 +1,143 @@
 {
-  "comment": "First person weapon models built by Tools/blender/build_weapons.py. Dimensions are metres; sightHeightM is the top of the iron sights above the grip, which is what the viewmodel uses to align the aim pose.",
+  "comment": "First person weapon models built by Tools/blender/build_weapons.py. Dimensions are metres; sightHeightM is the top of the sights above the grip, which is what the viewmodel uses to align the aim pose.",
   "weapons": [
     {
       "id": "dmr14",
       "model": "Kordon/Weapons/dmr14",
-      "triangles": 12868,
-      "bytes": 188668,
-      "lengthM": 1.05,
-      "sightHeightM": 0.0692,
+      "triangles": 40794,
+      "bytes": 1065228,
+      "lengthM": 1.053,
+      "sightHeightM": 0.1448,
       "sizeM": [
-        0.089,
-        1.05,
-        0.291
+        0.063,
+        1.053,
+        0.342
       ],
       "hasMagazine": true
     },
     {
       "id": "grenade_flash",
       "model": "Kordon/Weapons/grenade_flash",
-      "triangles": 2248,
-      "bytes": 44236,
-      "lengthM": 0.144,
+      "triangles": 1832,
+      "bytes": 60748,
+      "lengthM": 0.142,
       "sightHeightM": 0.0,
       "sizeM": [
-        0.064,
-        0.058,
-        0.144
+        0.079,
+        0.057,
+        0.142
       ],
       "hasMagazine": false
     },
     {
       "id": "grenade_frag",
       "model": "Kordon/Weapons/grenade_frag",
-      "triangles": 2140,
-      "bytes": 46940,
-      "lengthM": 0.134,
+      "triangles": 2804,
+      "bytes": 91884,
+      "lengthM": 0.132,
       "sightHeightM": 0.0,
       "sizeM": [
+        0.083,
         0.066,
-        0.069,
-        0.134
+        0.132
       ],
       "hasMagazine": false
     },
     {
       "id": "grenade_smoke",
       "model": "Kordon/Weapons/grenade_smoke",
-      "triangles": 1924,
-      "bytes": 41036,
-      "lengthM": 0.171,
+      "triangles": 2264,
+      "bytes": 73196,
+      "lengthM": 0.17,
       "sightHeightM": 0.0,
       "sizeM": [
-        0.07,
-        0.068,
-        0.171
+        0.086,
+        0.065,
+        0.17
       ],
       "hasMagazine": false
     },
     {
       "id": "k870",
       "model": "Kordon/Weapons/k870",
-      "triangles": 10588,
-      "bytes": 157212,
-      "lengthM": 1.015,
-      "sightHeightM": 0.0696,
+      "triangles": 7946,
+      "bytes": 229548,
+      "lengthM": 1.044,
+      "sightHeightM": 0.0912,
       "sizeM": [
-        0.07,
-        1.015,
-        0.213
+        0.055,
+        1.044,
+        0.128
       ],
       "hasMagazine": false
     },
     {
       "id": "p9",
       "model": "Kordon/Weapons/p9",
-      "triangles": 7780,
-      "bytes": 121372,
-      "lengthM": 0.249,
-      "sightHeightM": 0.0676,
+      "triangles": 10812,
+      "bytes": 310460,
+      "lengthM": 0.186,
+      "sightHeightM": 0.0708,
       "sizeM": [
-        0.057,
-        0.249,
-        0.177
+        0.035,
+        0.186,
+        0.151
       ],
       "hasMagazine": true
     },
     {
       "id": "sr338",
       "model": "Kordon/Weapons/sr338",
-      "triangles": 12896,
-      "bytes": 186732,
-      "lengthM": 1.19,
-      "sightHeightM": 0.07,
+      "triangles": 47044,
+      "bytes": 1213036,
+      "lengthM": 1.242,
+      "sightHeightM": 0.1467,
       "sizeM": [
-        0.067,
-        1.19,
-        0.264
+        0.093,
+        1.242,
+        0.316
       ],
       "hasMagazine": true
     },
     {
       "id": "tr30",
       "model": "Kordon/Weapons/tr30",
-      "triangles": 11964,
-      "bytes": 174924,
-      "lengthM": 0.955,
-      "sightHeightM": 0.0687,
+      "triangles": 37608,
+      "bytes": 991468,
+      "lengthM": 0.863,
+      "sightHeightM": 0.1358,
       "sizeM": [
-        0.067,
-        0.955,
-        0.284
+        0.059,
+        0.863,
+        0.333
       ],
       "hasMagazine": true
     },
     {
       "id": "vk74",
       "model": "Kordon/Weapons/vk74",
-      "triangles": 12464,
-      "bytes": 182412,
-      "lengthM": 0.89,
-      "sightHeightM": 0.0678,
+      "triangles": 20142,
+      "bytes": 546796,
+      "lengthM": 0.966,
+      "sightHeightM": 0.1038,
       "sizeM": [
-        0.067,
-        0.89,
-        0.29
+        0.061,
+        0.966,
+        0.305
       ],
       "hasMagazine": true
     },
     {
       "id": "vs9",
       "model": "Kordon/Weapons/vs9",
-      "triangles": 10864,
-      "bytes": 159548,
-      "lengthM": 0.62,
-      "sightHeightM": 0.067,
+      "triangles": 29188,
+      "bytes": 781436,
+      "lengthM": 0.561,
+      "sightHeightM": 0.088,
       "sizeM": [
-        0.067,
-        0.62,
-        0.272
+        0.061,
+        0.561,
+        0.276
       ],
       "hasMagazine": true
     }

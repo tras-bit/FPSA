@@ -64,7 +64,8 @@ namespace Kordon.Game.Player
             op.Grenades.Weapons = op.Weapons;
             op.Grenades.Body = op.Body;
             op.Grenades.Rig = op.Rig;
-            op.Viewmodel.Grenades = op.Grenades;
+            // The viewmodel hides itself while slot 3 is active; it reads that from
+            // the loadout, so it does not need a reference to the thrower.
 
             op.Hud = host.gameObject.AddComponent<HudScreen>();
             op.Hud.Weapons = op.Weapons;

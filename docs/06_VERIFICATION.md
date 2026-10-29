@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (273 tests) | **273 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **108 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (289 tests) | **289 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **109 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -133,16 +133,67 @@ show geometry from a fixed camera, not a viewmodel in motion; the HUD mock shows
 layout, not a live canvas.  A first-person play test in the Unity editor is still
 the verification this environment cannot perform.
 
+## 1.0.9 weapon animation and art (executed here)
+
+The previous viewmodel smoothed a single position toward a single target. That is
+why the weapon slid between poses, the magazine teleported and the muzzle never
+settled. The behaviour now lives in `Kordon.Core.Weapons.ViewmodelAnimator`, an
+engine free class, and is covered by 16 tests (273 -> 289 in the suite):
+
+| Behaviour | What the test pins |
+|---|---|
+| Hip pose | rests at the same hand position, `State == Ready` |
+| Sights | `AimBlend > 0.95` after two seconds and the sights land on the camera axis within 2 cm |
+| Aim release | blend returns below 0.1, so the weapon never stays glued to the eye |
+| State ownership | a reload owns the weapon; sprint only takes over when nothing else is happening |
+| Recoil | kicks back and up on the first frame, settles inside 1 cm and 1.5 degrees in one second |
+| Recoil bounds | 600 frames of maximum impulse under long frames never produce NaN or runaway travel |
+| Magazine out | visible while dropping, hidden after 0.24 s |
+| Magazine in | rises within two frames and seats at exactly zero offset, rotation included |
+| Inspect | magazine lifts above the well, turns more than 30 degrees, and the animator reports it out (the HUD contract) |
+| Charging handle | racks to 1.0 and runs home below 0.02 |
+| Sway | a 220 deg/s turn moves the weapon more than 0.4 degrees and it returns to centre |
+| Bob | 2.5 cm of motion at a run, damped below 60 percent of that while aiming |
+| Landing | dips more than 8 mm and climbs more than a degree |
+| Determinism | two animators on identical input produce identical poses |
+| Frame safety | zero, negative and 0.1 s frames stay finite and inside the hip envelope |
+
+What this does not prove: how it feels under a mouse. The tests fix the numbers a
+human would otherwise have to judge from a video - settling times, overshoot,
+whether the magazine leaves the well before the hand moves - but a first person
+play test in the editor is still the verification this environment cannot perform.
+
+Art, generated here and verified by re-import:
+
+* seven weapons rebuilt from lofted profiles with swept trigger guards, domed dust
+  covers, curved magazines with stamped ribs, recessed M-LOK panels cut into the
+  handguard, iron sights or optics (red dot / prism / three turret scope), gas tube,
+  sling swivels, a folded bipod and a rebuilt sidearm; 200 434 triangles including
+  grenades;
+* every mesh beveled, shaded smooth with split normals at 34 degrees and UV
+  unwrapped, so the generated textures have somewhere to land;
+* five weapon surfaces (`gun_metal`, `gun_bare`, `gun_wood`, `gun_olive`,
+  `gun_polymer`) with their own texture recipes, 24 surfaces and 66 texture sets;
+* `docs/art/weapons-lineup.png` and `docs/art/weapons-detail.png` rendered from the
+  exported geometry wearing those textures (Cycles, CPU).
+
+A defect this round found and fixed: regenerating the texture set silently dropped
+`textureType: 1` from every normal map `.meta`, which would have imported all 60
+normal maps as plain colour. The generator now writes it, and the policy check that
+found it stays in place.
+
 ## What was verified by generation (executed here)
 
 * Kit: 60 modules, 203k triangles, FBX exported, both `.blend` files saved.
 * Maps: Zavod-7 (732 kit instances, 190 nav nodes / 738 links, 20 spawns) and
   Silent Kiln (480 instances, 188 nodes / 1270 links, 6 spawns), both validated
   for connectivity by the nav generator.
-* Textures: 17 surface sets + hazard + 2 emissives = 51 PNGs, 19 materials.
+* Textures: 24 surfaces -> 66 texture sets (albedo, normal, metallic/smoothness) and
+  24 Unity materials, all generated from seeded noise.
 * Weapons and thrown equipment: 7 first person weapon models + 3 grenades,
-  85 736 triangles (1.0.8 profile rebuild, was 68 636 after the 1.0.6 detail pass
-  and 22 484 before it), FBX re-imported and bounding boxes verified; 79 synthesised
+  200 434 triangles (1.0.9 third modelling pass; 85 736 in 1.0.8, 68 636 after the
+  1.0.6 detail pass, 22 484 before it), every mesh UV unwrapped and shaded with
+  split normals, FBX re-imported and bounding boxes verified; 79 synthesised
   WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
   smoke hiss, flashbang).
 
@@ -230,7 +281,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 273 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 289 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity

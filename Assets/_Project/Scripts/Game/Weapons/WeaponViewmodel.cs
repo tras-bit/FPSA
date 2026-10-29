@@ -1,5 +1,5 @@
 using Kordon.Core.Ammo;
-using Kordon.Core.Movement;
+using Kordon.Core.Weapons;
 using Kordon.Game.Camera;
 using Kordon.Game.Maps;
 using Kordon.Game.Player;
@@ -7,28 +7,22 @@ using UnityEngine;
 
 namespace Kordon.Game.Weapons
 {
-    /// <summary>Handling state of the first person weapon, driven by ammo events.</summary>
-    public enum HandlingState
-    {
-        Ready,
-        Sprinting,
-        Aiming,
-        ReloadMagOut,
-        ReloadMagIn,
-        Charging,
-        Inspecting,
-        Fumble,
-        Empty,
-    }
-
     /// <summary>
-    /// First person weapon presentation.  The pose graph is procedural on purpose:
-    /// every transition length comes from the weapon definition (reload tactical
-    /// vs dry, inspect, charge), every state change is announced by a real ammo
-    /// event from the Core AmmoKit, and the magazine prop is hidden and shown at
-    /// the exact MagazineOut / MagazineIn beats, so what you see is what the
-    /// magazine system did - no desynced canned clips, no random misfire theatre.
-    /// Weapon meshes attach under <see cref="WeaponRoot"/> in the art pass.
+    /// First person weapon presentation.
+    ///
+    /// All of the motion lives in <see cref="ViewmodelAnimator"/> - the engine free
+    /// core class that is unit tested against fixed inputs, because a spring that
+    /// diverges or a magazine that never seats would be visible in every frame and
+    /// cannot be seen in this build environment.  This component is the adapter:
+    ///
+    /// * it reads the player (aim state, sprint, speed, breath, look rate, landing)
+    ///   and feeds it to the animator;
+    /// * it forwards the ammo system's beats (<see cref="OnAmmoEvent"/>) so the pose
+    ///   and the magazine follow what the magazine system actually did;
+    /// * it loads the authored FBX per weapon and measures it, so every weapon aims
+    ///   down its own sights and is held at its own distance;
+    /// * it writes the resulting pose onto the transforms, with the magazine and the
+    ///   charging handle as separate props.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class WeaponViewmodel : MonoBehaviour
@@ -39,58 +33,42 @@ namespace Kordon.Game.Weapons
         /// <summary>Child of the bodycam; weapon art parents under it.</summary>
         public Transform WeaponRoot;
 
-        /// <summary>Detachable magazine prop, toggled by handling beats.</summary>
+        /// <summary>Detachable magazine prop, animated by the handling timeline.</summary>
         public Transform MagazineProp;
 
         /// <summary>Bolt/charging handle prop, cycled on BoltRelease.</summary>
         public Transform BoltProp;
 
-        /// <summary>Grenade handling: while the grenade slot is out the weapon is lowered out of frame.</summary>
-        public GrenadeThrower Grenades;
-
         /// <summary>The authored FBX currently in the hands (null until the art is loaded).</summary>
         public GameObject ModelInstance => _modelInstance;
 
-        public HandlingState State { get; private set; } = HandlingState.Ready;
+        /// <summary>The handling state the animator is in, for anything that wants to react.</summary>
+        public ViewmodelState State => _animator != null ? _animator.State : ViewmodelState.Ready;
 
-        private Vector3 _position;
-        private Vector3 _positionTarget;
-        private Quaternion _rotation = Quaternion.identity;
-        private Quaternion _rotationTarget = Quaternion.identity;
-        private float _kick;
-        private float _stateTime;
-        private float _bobPhase;
-        private Vector3 _boltLocal;
-        private Vector3 _magLocal;
+        /// <summary>0 at the hip, 1 with the sights up; the camera can use this for FOV.</summary>
+        public float AimBlend => _animator != null ? _animator.Pose.AimBlend : 0f;
 
-        /// <summary>
-        /// Magazine handling animation. The magazine is a separate child object, so a
-        /// reload can actually pull it out of the well and push the new one in - the
-        /// previous version only toggled its visibility on the frame of the event,
-        /// which read as the magazine teleporting.
-        /// </summary>
-        private enum MagState
-        {
-            Seated,
-            Dropping,
-            Inserting,
-        }
+        private ViewmodelAnimator _animator;
+        private ViewmodelConfig _config = ViewmodelConfig.Default;
 
-        private MagState _magState = MagState.Seated;
-        private float _magTime;
+        private Vector3 _magSeat;
+        private Vector3 _boltSeat;
 
-        private const float MagDropSeconds = 0.26f;
-        private const float MagInsertSeconds = 0.32f;
-        private static readonly Vector3 MagDropOffset = new Vector3(0.015f, -0.22f, -0.02f);
         private GameObject _modelInstance;
         private string _modelWeaponId;
-        private float _sightHeight = 0.06f;
-        private float _modelLength = 0.6f;
+        private float _sightHeight = 0.068f;
+        private float _modelLength = 0.9f;
 
-        private static readonly Vector3 PoseReady = new Vector3(0.16f, -0.19f, 0.46f);
-        private static readonly Vector3 PoseSprint = new Vector3(0.11f, -0.26f, 0.36f);
-        private static readonly Vector3 PoseMagOut = new Vector3(0.13f, -0.24f, 0.40f);
-        private static readonly Vector3 PoseInspect = new Vector3(0.10f, -0.22f, 0.42f);
+        // look rate, derived from the camera yaw/pitch between frames
+        private float _lastYaw;
+        private float _lastPitch;
+        private bool _hasLookSample;
+        private float _yawRate;
+        private float _pitchRate;
+
+        // landing impulse, taken from the player's touchdown event
+        private float _pendingLanding;
+        private bool _landedSubscribed;
 
         private void Awake()
         {
@@ -101,52 +79,229 @@ namespace Kordon.Game.Weapons
                 WeaponRoot = root.transform;
             }
 
-            _position = HipPose;
-            WeaponRoot.localPosition = _position;
+            _animator = new ViewmodelAnimator(_config);
             if (MagazineProp != null)
             {
-                _magLocal = MagazineProp.localPosition;
+                _magSeat = MagazineProp.localPosition;
             }
 
             if (BoltProp != null)
             {
-                _boltLocal = BoltProp.localPosition;
+                _boltSeat = BoltProp.localPosition;
             }
         }
 
-        /// <summary>
-        /// Hip pose, scaled by the actual model length: a pistol is held close to the
-        /// camera, a sniper rifle further out. Falls back to the rifle pose until the
-        /// authored model is in place.
-        /// </summary>
-        private Vector3 HipPose
+        // Awake runs before the operator has assigned Body (it is set right after
+        // AddComponent), so the player events are bound in Start.
+        private void Start()
         {
-            get
+            SubscribeToBody();
+        }
+
+        private void SubscribeToBody()
+        {
+            if (_landedSubscribed || Body == null)
             {
-                float t = Mathf.Clamp01(_modelLength / 0.9f);
-                return new Vector3(Mathf.Lerp(0.13f, 0.17f, t), Mathf.Lerp(-0.13f, -0.20f, t),
-                                   Mathf.Lerp(0.30f, 0.46f, t));
+                return;
+            }
+
+            Body.Landed += OnLanded;
+            _landedSubscribed = true;
+        }
+
+        // ------------------------------------------------------------- events
+
+        /// <summary>Ammo system beat.  The pose and the magazine follow it exactly.</summary>
+        public void OnAmmoEvent(AmmoEvent ammoEvent)
+        {
+            if (_animator == null)
+            {
+                return;
+            }
+
+            switch (ammoEvent.Kind)
+            {
+                case AmmoEventKind.MagazineOut:
+                    _animator.Notify(ViewmodelEvent.MagazineOut);
+                    break;
+                case AmmoEventKind.MagazineIn:
+                    _animator.Notify(ViewmodelEvent.MagazineIn);
+                    break;
+                case AmmoEventKind.BoltRelease:
+                case AmmoEventKind.ChamberRound:
+                    _animator.Notify(ViewmodelEvent.BoltRelease);
+                    break;
+                case AmmoEventKind.InspectStart:
+                    _animator.Notify(ViewmodelEvent.InspectStart);
+                    break;
+                case AmmoEventKind.InspectEnd:
+                    _animator.Notify(ViewmodelEvent.InspectEnd);
+                    break;
+                case AmmoEventKind.FumbleStart:
+                    _animator.Notify(ViewmodelEvent.FumbleStart);
+                    break;
+                case AmmoEventKind.FumbleRecovered:
+                    _animator.Notify(ViewmodelEvent.FumbleRecovered);
+                    break;
+                case AmmoEventKind.ReloadComplete:
+                    _animator.Notify(ViewmodelEvent.ReloadComplete);
+                    break;
+                case AmmoEventKind.OutOfAmmunition:
+                    _animator.Notify(ViewmodelEvent.OutOfAmmunition);
+                    break;
             }
         }
 
-        /// <summary>
-        /// Aim pose: the top of the iron sights is put on the camera axis, measured from
-        /// the model itself, so every weapon aims down its own sights.
-        /// </summary>
-        private Vector3 AimPose
+        /// <summary>Recoil impulse from a shot, 0..1.</summary>
+        public void Kick(float visualKick)
         {
-            get
-            {
-                float t = Mathf.Clamp01(_modelLength / 0.9f);
-                return new Vector3(0f, -_sightHeight + 0.004f,
-                                   Mathf.Lerp(0.22f, 0.34f, t));
-            }
+            _animator?.AddRecoil(visualKick);
+            _animator?.AddBoltCycle(0.35f + Mathf.Clamp01(visualKick) * 0.4f);
         }
+
+        // --------------------------------------------------------------- tick
+
+        private void LateUpdate()
+        {
+            if (Body == null || _animator == null)
+            {
+                return;
+            }
+
+            float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.1f);
+            SubscribeToBody();
+            EnsureModel();
+
+            // Slot 3 puts the weapon away and the hand comes up; it comes back the
+            // moment the grenade leaves the hand or the slot changes.
+            bool grenadeOut = Body.Weapons != null && Body.Weapons.Loadout != null &&
+                              Body.Weapons.Loadout.Active == ActiveSlot.Grenade;
+            if (WeaponRoot != null && WeaponRoot.gameObject.activeSelf == grenadeOut)
+            {
+                WeaponRoot.gameObject.SetActive(!grenadeOut);
+            }
+
+            if (grenadeOut)
+            {
+                return;
+            }
+
+            SampleLook(dt);
+            ViewmodelInput input = BuildInput();
+
+            _animator.Tick(dt, input);
+            Apply(_animator.Pose);
+        }
+
+        private void SampleLook(float dt)
+        {
+            if (Rig == null)
+            {
+                _yawRate = 0f;
+                _pitchRate = 0f;
+                return;
+            }
+
+            float yaw = Rig.Yaw;
+            float pitch = Rig.Pitch;
+            if (!_hasLookSample)
+            {
+                _lastYaw = yaw;
+                _lastPitch = pitch;
+                _hasLookSample = true;
+                return;
+            }
+
+            if (dt > 0.0001f)
+            {
+                // shortest way round, so a wrap from 359 to 1 does not swing the weapon
+                float deltaYaw = Mathf.DeltaAngle(_lastYaw, yaw);
+                _yawRate = deltaYaw / dt;
+                _pitchRate = (pitch - _lastPitch) / dt;
+            }
+
+            _lastYaw = yaw;
+            _lastPitch = pitch;
+        }
+
+        /// <summary>Touchdown: the heavier the drop, the deeper the weapon dips.</summary>
+        private void OnLanded(float fallHeight)
+        {
+            _pendingLanding = Mathf.Clamp01(fallHeight / 4f);
+        }
+
+        private ViewmodelInput BuildInput()
+        {
+            bool grounded = Body.Grounded;
+            float landing = _pendingLanding;
+            _pendingLanding = 0f;
+
+            float speed01 = Mathf.Clamp01(Body.Speed / 5.2f);
+            bool aiming = Rig != null && Rig.IsAiming;
+
+            return new ViewmodelInput
+            {
+                Aiming = aiming,
+                Sprinting = Body.Sprinting && !aiming,
+                Grounded = grounded,
+                Speed01 = speed01,
+                Breath01 = Mathf.Clamp01(Body.Stamina.BreathIntensity),
+                YawRate = _yawRate,
+                PitchRate = _pitchRate,
+                LandingImpulse = landing,
+            };
+        }
+
+        private void Apply(ViewmodelPose pose)
+        {
+            if (WeaponRoot == null)
+            {
+                return;
+            }
+
+            // The charging handle is part of the joined weapon mesh, so the bolt beat
+            // is read as the whole weapon being worked: pulled back and rolled a
+            // little, which is what a rack actually looks like in the hands.
+            float boltRoll = pose.BoltTravel * 4f;
+            float boltPitch = pose.BoltTravel * -2f;
+
+            WeaponRoot.localPosition = new Vector3(pose.X + pose.BoltTravel * 0.004f,
+                                                   pose.Y - pose.BoltTravel * 0.002f,
+                                                   pose.Z - pose.BoltTravel * 0.010f);
+            WeaponRoot.localRotation = Quaternion.Euler(pose.Pitch + boltPitch,
+                                                        pose.Yaw, pose.Roll + boltRoll);
+
+            if (MagazineProp != null)
+            {
+                if (MagazineProp.gameObject.activeSelf != pose.MagazineVisible)
+                {
+                    MagazineProp.gameObject.SetActive(pose.MagazineVisible);
+                }
+
+                if (pose.MagazineVisible)
+                {
+                    // the drop is the animation's local Y, which maps onto the
+                    // weapon's own down axis whatever pose the weapon is in
+                    MagazineProp.localPosition = _magSeat +
+                        new Vector3(pose.MagazineX, pose.MagazineY, pose.MagazineZ);
+                    MagazineProp.localRotation = Quaternion.Euler(pose.MagazinePitch, 0f,
+                        pose.MagazineRoll);
+                }
+            }
+
+            if (BoltProp != null)
+            {
+                BoltProp.localPosition = _boltSeat + new Vector3(0f, 0f, -pose.BoltTravel * 0.05f);
+            }
+
+        }
+
+        // --------------------------------------------------------------- model
 
         /// <summary>Load the authored model for the active weapon, once per weapon change.</summary>
         private void EnsureModel()
         {
-            string id = Body != null && Body.Weapons != null && Body.Weapons.ActiveWeapon != null
+            string id = Body.Weapons != null && Body.Weapons.ActiveWeapon != null
                 ? Body.Weapons.ActiveWeapon.Id
                 : null;
             if (id == _modelWeaponId)
@@ -162,8 +317,9 @@ namespace Kordon.Game.Weapons
             }
 
             MagazineProp = null;
-            _sightHeight = 0.06f;
-            _modelLength = 0.6f;
+            BoltProp = null;
+            _sightHeight = 0.068f;
+            _modelLength = 0.9f;
             if (string.IsNullOrEmpty(id) || WeaponRoot == null)
             {
                 return;
@@ -184,10 +340,23 @@ namespace Kordon.Game.Weapons
             if (magazine != null)
             {
                 MagazineProp = magazine;
-                _magLocal = magazine.localPosition;
+                _magSeat = magazine.localPosition;
             }
 
             MeasureModel(_modelInstance);
+
+            // The animator needs the real numbers, or a pistol would be held at rifle
+            // distance and the sights would aim above the camera axis.
+            _config = new ViewmodelConfig
+            {
+                SightHeight = _sightHeight,
+                Length = _modelLength,
+                MagazineDrop = Mathf.Max(0.16f, _modelLength * 0.22f),
+                MagazineDropSeconds = 0.24f,
+                MagazineInsertSeconds = 0.30f,
+                InspectHoldHeight = Mathf.Max(0.08f, _modelLength * 0.11f),
+            };
+            _animator = new ViewmodelAnimator(_config);
         }
 
         /// <summary>Read the sight height and the length straight from the mesh bounds.</summary>
@@ -203,8 +372,12 @@ namespace Kordon.Game.Weapons
                 }
 
                 Bounds bounds = filter.sharedMesh.bounds;
-                top = Mathf.Max(top, bounds.center.y + bounds.size.y * 0.5f);
-                forward = Mathf.Max(forward, bounds.center.z + bounds.size.z * 0.5f);
+                // measure in the model's own space, so a mesh nested under an
+                // imported armature root still reports the right height
+                Vector3 centre = model.transform.InverseTransformPoint(
+                    filter.transform.TransformPoint(bounds.center));
+                top = Mathf.Max(top, centre.y + bounds.size.y * 0.5f);
+                forward = Mathf.Max(forward, centre.z + bounds.size.z * 0.5f);
             }
 
             if (top > 0.01f)
@@ -218,245 +391,16 @@ namespace Kordon.Game.Weapons
             }
         }
 
-        public void OnAmmoEvent(AmmoEvent ammoEvent)
-        {
-            switch (ammoEvent.Kind)
-            {
-                case AmmoEventKind.MagazineOut:
-                    State = HandlingState.ReloadMagOut;
-                    if (MagazineProp != null)
-                    {
-                        // Drop the old magazine out of the well; it is hidden when it
-                        // has travelled clear, not on this frame.
-                        MagazineProp.gameObject.SetActive(true);
-                        MagazineProp.localPosition = _magLocal;
-                        _magState = MagState.Dropping;
-                        _magTime = 0f;
-                    }
-
-                    break;
-                case AmmoEventKind.MagazineIn:
-                    State = HandlingState.ReloadMagIn;
-                    if (MagazineProp != null)
-                    {
-                        // The new magazine comes up from below the weapon and seats.
-                        MagazineProp.gameObject.SetActive(true);
-                        MagazineProp.localPosition = _magLocal + MagDropOffset;
-                        _magState = MagState.Inserting;
-                        _magTime = 0f;
-                    }
-
-                    break;
-                case AmmoEventKind.BoltRelease:
-                case AmmoEventKind.ChamberRound:
-                    State = HandlingState.Charging;
-                    break;
-                case AmmoEventKind.InspectStart:
-                    State = HandlingState.Inspecting;
-                    if (MagazineProp != null)
-                    {
-                        MagazineProp.gameObject.SetActive(true);
-                        MagazineProp.localPosition = _magLocal;
-                        _magState = MagState.Seated;
-                    }
-
-                    break;
-                case AmmoEventKind.InspectEnd:
-                    if (MagazineProp != null && State == HandlingState.Inspecting)
-                    {
-                        MagazineProp.gameObject.SetActive(true);
-                    }
-
-                    State = HandlingState.Ready;
-                    break;
-                case AmmoEventKind.FumbleStart:
-                    State = HandlingState.Fumble;
-                    break;
-                case AmmoEventKind.FumbleRecovered:
-                case AmmoEventKind.ReloadComplete:
-                    State = HandlingState.Ready;
-                    break;
-                case AmmoEventKind.OutOfAmmunition:
-                    State = HandlingState.Empty;
-                    break;
-            }
-
-            _stateTime = 0f;
-        }
-
-        public void Kick(float visualKick) => _kick = Mathf.Clamp01(_kick + visualKick);
-
-        private void LateUpdate()
-        {
-            if (Body == null)
-            {
-                return;
-            }
-
-            float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.1f);
-            _stateTime += dt;
-
-            // Slot 3 puts the weapon away and the hand comes up; it comes back the
-            // moment the grenade leaves the hand or the slot changes.
-            EnsureModel();
-
-            bool grenadeOut = Body.Weapons != null && Body.Weapons.Loadout != null &&
-                              Body.Weapons.Loadout.Active == ActiveSlot.Grenade;
-            if (WeaponRoot != null && WeaponRoot.gameObject.activeSelf == grenadeOut)
-            {
-                WeaponRoot.gameObject.SetActive(!grenadeOut);
-            }
-
-            if (grenadeOut)
-            {
-                return;
-            }
-
-            UpdatePose(dt);
-            UpdateProps();
-        }
-
-        private void UpdatePose(float dt)
-        {
-            bool aiming = Rig != null && Rig.IsAiming;
-            Vector3 pose;
-            Quaternion tilt = Quaternion.identity;
-
-            if (Body.Sprinting && !aiming)
-            {
-                State = State == HandlingState.Ready ? HandlingState.Sprinting : State;
-                pose = PoseSprint;
-                tilt = Quaternion.Euler(12f, -14f, 22f);
-            }
-            else
-            {
-                if (State == HandlingState.Sprinting)
-                {
-                    State = HandlingState.Ready;
-                }
-
-                switch (State)
-                {
-                    case HandlingState.Aiming:
-                    default:
-                        pose = aiming ? AimPose : HipPose;
-                        break;
-                    case HandlingState.ReloadMagOut:
-                    case HandlingState.ReloadMagIn:
-                        pose = PoseMagOut;
-                        tilt = Quaternion.Euler(28f, 0f, -34f);
-                        break;
-                    case HandlingState.Inspecting:
-                        pose = PoseInspect;
-                        tilt = Quaternion.Euler(46f, 8f, -52f);
-                        break;
-                    case HandlingState.Charging:
-                        pose = PoseReady;
-                        tilt = Quaternion.Euler(6f, 0f, -8f);
-                        break;
-                    case HandlingState.Fumble:
-                        pose = PoseReady + new Vector3(0f, -0.03f, -0.02f);
-                        tilt = Quaternion.Euler(-6f, 10f, 8f);
-                        break;
-                    case HandlingState.Empty:
-                        pose = PoseReady;
-                        tilt = Quaternion.Euler(3f, 0f, -4f);
-                        break;
-                }
-            }
-
-            // Gait bob and breath sway ride on top of the handling pose.
-            _bobPhase += dt * (3f + Body.Speed * 1.6f);
-            float bobAmount = Body.Gait == Gait.Idle ? 0f : Mathf.Clamp01(Body.Speed / 5f);
-            pose += new Vector3(
-                Mathf.Sin(_bobPhase) * 0.012f * bobAmount,
-                Mathf.Abs(Mathf.Sin(_bobPhase * 2f)) * 0.009f * bobAmount,
-                Mathf.Cos(_bobPhase * 0.5f) * 0.006f * bobAmount);
-
-            float breath = Body.Stamina.BreathIntensity;
-            pose += new Vector3(Mathf.Sin(Time.time * 1.9f) * 0.0022f * breath,
-                                Mathf.Sin(Time.time * 2.6f) * 0.0026f * breath, 0f);
-
-            // Recoil kick: shove back and up, spring home.
-            _kick = Mathf.MoveTowards(_kick, 0f, dt * 7f);
-            pose += new Vector3(0f, _kick * 0.015f, _kick * 0.06f);
-            tilt = Quaternion.Euler(tilt.eulerAngles.x - _kick * 5f, tilt.eulerAngles.y,
-                                    tilt.eulerAngles.z);
-
-            _positionTarget = pose;
-            _rotationTarget = tilt;
-            _position = Vector3.Lerp(_position, _positionTarget, Mathf.Clamp01(dt * 18f));
-            _rotation = Quaternion.Slerp(_rotation, _rotationTarget, Mathf.Clamp01(dt * 16f));
-
-            WeaponRoot.localPosition = _position;
-            WeaponRoot.localRotation = _rotation;
-        }
-
         private void OnDestroy()
         {
+            if (_landedSubscribed && Body != null)
+            {
+                Body.Landed -= OnLanded;
+            }
+
             if (_modelInstance != null)
             {
                 Destroy(_modelInstance);
-            }
-        }
-
-        private void UpdateProps()
-        {
-            AnimateMagazine(Time.deltaTime);
-
-            if (BoltProp == null)
-            {
-                return;
-            }
-
-            Vector3 target = _boltLocal;
-            if (State == HandlingState.Charging && _stateTime < 0.22f)
-            {
-                target = _boltLocal + new Vector3(0f, 0f, -0.05f);
-            }
-
-            BoltProp.localPosition = Vector3.Lerp(BoltProp.localPosition, target,
-                                                  Mathf.Clamp01(Time.deltaTime * 22f));
-        }
-
-        /// <summary>Eased magazine travel: out of the well, then seat the fresh one.</summary>
-        private void AnimateMagazine(float dt)
-        {
-            if (MagazineProp == null || _magState == MagState.Seated)
-            {
-                return;
-            }
-
-            _magTime += Mathf.Max(0f, dt);
-            if (_magState == MagState.Dropping)
-            {
-                float t = Mathf.Clamp01(_magTime / MagDropSeconds);
-                float eased = t * t;
-                MagazineProp.localPosition = _magLocal + MagDropOffset * eased;
-                MagazineProp.localRotation = Quaternion.Euler(-26f * eased, 0f, 8f * eased);
-                if (t >= 1f)
-                {
-                    MagazineProp.gameObject.SetActive(false);
-                    MagazineProp.localRotation = Quaternion.identity;
-                    _magState = MagState.Seated;
-                }
-
-                return;
-            }
-
-            float insert = Mathf.Clamp01(_magTime / MagInsertSeconds);
-            // Overshoot slightly, then settle: the magazine clicks home.
-            float easedIn = 1f - Mathf.Pow(1f - insert, 3f);
-            float overshoot = Mathf.Sin(insert * Mathf.PI) * 0.012f;
-            MagazineProp.localPosition = _magLocal + MagDropOffset * (1f - easedIn) +
-                                         new Vector3(0f, overshoot, 0f);
-            MagazineProp.localRotation = Quaternion.Euler(-18f * (1f - easedIn), 0f,
-                6f * (1f - easedIn));
-            if (insert >= 1f)
-            {
-                MagazineProp.localPosition = _magLocal;
-                MagazineProp.localRotation = Quaternion.identity;
-                _magState = MagState.Seated;
             }
         }
     }

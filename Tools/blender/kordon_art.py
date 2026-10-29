@@ -82,6 +82,19 @@ SURFACES: Dict[str, dict] = {
                             tex="none", emissive=(1.6, 3.4, 2.4)),
     "hazard_paint": dict(kind="Steel", color=(0.72, 0.55, 0.08), rough=0.70, metal=0.20,
                          tex="hazard"),
+    # Weapon-specific surfaces.  A rifle in a render at this scale needs a darker,
+    # less saturated palette than a crate or a wall: oiled walnut instead of pallet
+    # wood, phosphated steel instead of galvanised sheet, painted chassis green.
+    "gun_wood": dict(kind="Wood", color=(0.105, 0.058, 0.028), rough=0.42, metal=0.0,
+                     tex="gunwood", shade=0.55),
+    "gun_metal": dict(kind="Steel", color=(0.155, 0.160, 0.170), rough=0.32, metal=0.92,
+                      tex="gunmetal", shade=0.32),
+    "gun_bare": dict(kind="Steel", color=(0.30, 0.305, 0.315), rough=0.30, metal=1.0,
+                     tex="gunbare", shade=0.30),
+    "gun_olive": dict(kind="Steel", color=(0.135, 0.150, 0.085), rough=0.55, metal=0.12,
+                      tex="gunolive", shade=0.32),
+    "gun_polymer": dict(kind="Rubber", color=(0.075, 0.076, 0.080), rough=0.70, metal=0.0,
+                        tex="gunpolymer", shade=0.55),
 }
 
 _MATERIAL_CACHE: Dict[str, bpy.types.Material] = {}
