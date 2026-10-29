@@ -3,6 +3,32 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.4 - 2026-10-29
+
+The player build got past the C# compiler and then failed in Netcode's ILPP code
+generator, which is a stage no static check reproduced. Fixed, and now checked.
+
+### Fixed
+
+* **`ScoreSnapshotClientRpc` took a `string[]`.** Netcode's generated serialiser
+  cannot handle it - "Don't know how to serialize System.String[]" - and the whole
+  player build fails in `NetworkBehaviourILPP` (with an ILPP crash stack on top).
+  Scoreboard names now travel as a single length prefixed string and are decoded on
+  the client (`Kordon.Core.Serialization.NameListWire`, 9 unit tests). The wire
+  format is length prefixed so a name may contain any character, including the
+  separator, and a truncated or corrupt payload yields empty names instead of
+  throwing on a client. Names are clipped to 32 characters and whitespace
+  collapsed, so one operator cannot pad the packet.
+* Name cleaning turned a newline into nothing, gluing words together
+  (`no\nnewline` -> `nonewline`). Control characters now collapse to a space.
+
+### Added
+
+* `Tools/verify/policy_check.py` now validates **every RPC parameter type** the way
+  the ILPP generator does: 143 parameters are checked, and a `string[]`, a `List<>`
+  or an unknown struct in an RPC signature fails the build with the exact file and
+  line. Verified by putting the old `string[]` back and watching it fail.
+
 ## 1.0.3 - 2026-10-29
 
 The build now compiles in Unity with **zero errors and zero warnings**. Every fix

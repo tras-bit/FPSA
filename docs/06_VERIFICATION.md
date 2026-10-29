@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (225 tests) | **225 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **102 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (234 tests) | **234 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **103 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -85,6 +85,13 @@ folder compiled by the type check, every content id referenced by code present i
   **0 errors, 0 warnings** (CS0618 obsolete API, CS0067 unused event, CS0414/CS0169
   dead fields all cleared).
 
+* RPC serialisation (1.0.4): the build failed in Netcode's ILPP code generator with
+  "Don't know how to serialize System.String[]" - a stage after the C# compiler that
+  neither the compiler nor the static checks exercised. Fixed by sending the
+  scoreboard names as one length prefixed string (`NameListWire`, 9 tests), and a
+  policy rule now checks all 143 RPC parameters against the types the generator
+  accepts. Verified by reintroducing the offending signature.
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no
@@ -116,7 +123,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 225 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 234 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity
