@@ -213,7 +213,10 @@ jobs:
 
   publish:
     needs: [core, syntax, policy, game]
-    if: always()
+    # Reports are committed to the branch.  A tag build verifies the same commit
+    # that was already green on the branch, and a tag ref cannot be pushed to, so
+    # publishing is skipped there instead of failing the release.
+    if: always() && github.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
