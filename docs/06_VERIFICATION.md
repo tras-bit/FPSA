@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (234 tests) | **234 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **103 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (243 tests) | **243 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **105 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -92,6 +92,13 @@ folder compiled by the type check, every content id referenced by code present i
   policy rule now checks all 143 RPC parameters against the types the generator
   accepts. Verified by reintroducing the offending signature.
 
+* Screen layout (1.0.5): the stacks are engine free and tested
+  (`UiLayoutTests`, 8 tests) - rows never overlap, overflow is reported, and the
+  real settings screen budget (18 rows on the left, 19 on the right) fits with
+  under 90 px to spare. The old hand-positioned layout is encoded as a test that
+  fails, which is what it did on screen: 16 rows at 44 px did not fit.
+  `docs/art/ui-settings-layout.png` draws the result from the same numbers.
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no
@@ -123,7 +130,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 234 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 243 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity

@@ -3,6 +3,48 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.5 - 2026-10-29
+
+The screens are laid out properly. This round is a UI pass: the settings screen on
+the screenshot was unreadable, and looking at it showed the same hand-positioning
+mistake on the connect, kit and tutorial screens.
+
+### Fixed
+
+* **Settings screen rebuilt on a stacked layout.** The old version placed elements
+  with independent offsets from a mixture of top, centre and bottom anchors, so the
+  sensitivity, volume and effects captions sat on top of the slider tracks, the
+  quality readout collided with the subtitles button, and the last control rows were
+  hidden behind the footer buttons. Two 860 px panels now hold two stacks whose
+  heights are derived from their content, and overflow is reported instead of drawn.
+* **Buttons look like buttons.** Every control used to be the same dark panel colour
+  as the screen, so nothing read as pressable. Controls now sit on a raised surface
+  with hover and pressed tints, centred labels, and the sliders have a track, an
+  orange fill and a handle - before, the fill was created and immediately resized to
+  zero, so sliders showed no value at all.
+* **Controls list fits.** Sixteen rebindable rows at 44 px with a fixed footer pushed
+  the last rows off the panel; rows are 33 px and the footer is part of the stack.
+  Each row is a button with the action on the left and the key in the accent colour
+  on the right, instead of one label with padding spaces.
+* **Connect screen:** the address field was anchored to the panel centre while its
+  caption was anchored to the top, so PORT and REGION captions floated below their
+  fields. Rebuilt as a stack: mode buttons, server block, kit block, host/join, and
+  the port field and region stepper on one aligned line. Buttons now report what
+  actually happened instead of saying "waiting for players" unconditionally.
+* **Kit screen:** the primary/secondary rows, magazine plan, equipment and footer
+  were at fixed offsets that overlapped the summary; rebuilt as a stack with the
+  presets and steppers in aligned button rows.
+* **Tutorial screen:** the 14 step list ran off the bottom of a 180 px box; the list
+  is now two columns and fits, with PREVIOUS/NEXT and BACK/START PRACTICE paired.
+
+### Added
+
+* `Kordon.Core.Ui.VerticalLayout`: the stack arithmetic, engine free and unit tested
+  (8 tests, including the real settings screen budget and a test that the old
+  44 px row spacing could not fit 16 rows).
+* `docs/art/ui-settings-layout.png`: the new settings screen drawn from the same
+  numbers the game uses, as a reference for what the layout should look like.
+
 ## 1.0.4 - 2026-10-29
 
 The player build got past the C# compiler and then failed in Netcode's ILPP code
