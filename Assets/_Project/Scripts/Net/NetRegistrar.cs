@@ -14,7 +14,7 @@ namespace Kordon.Net
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (Object.FindObjectOfType<NetRegistrar>() != null)
+            if (Object.FindFirstObjectByType<NetRegistrar>() != null)
             {
                 return;
             }

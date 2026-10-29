@@ -21,7 +21,7 @@ namespace Kordon.Game.Runtime
                 return;
             }
 
-            if (UnityEngine.Object.FindObjectOfType<GameFlow>() != null)
+            if (UnityEngine.Object.FindFirstObjectByType<GameFlow>() != null)
             {
                 return;
             }

@@ -38,8 +38,6 @@ namespace Kordon.Game.Match
         public string MapId { get; private set; } = "ffa_zavod7";
         public float Now => Time.time - _start;
 
-        /// <summary>Raised when the scoreboard content changed (throttled by the caller).</summary>
-        public event Action<List<ScoreRow>> ScoreboardChanged;
         public event Action MatchFinished;
         public event Action<string> Notice;
         public event Action<NoiseEvent> WorldNoise;

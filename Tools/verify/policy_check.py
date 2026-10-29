@@ -371,6 +371,109 @@ def check_imported_material_contract():
                      "material (the map and weapons never fall back to a grey import)")
 
 
+# Compiling every script into one assembly hides a whole class of error: our code
+# can use a namespace without the assembly reference that owns it, and the compiler
+# only complains inside Unity ("CS0012: type defined in an assembly that is not
+# referenced").  This project hit exactly that with UnityTransport/NetworkEndpoint.
+# So: every engine or package namespace used by a script must be referenced by the
+# asmdef that owns it.
+# Only namespaces that really need an explicit asmdef reference belong here.  The
+# engine's own assemblies (UnityEngine.UI, UnityEngine.EventSystems, the modules)
+# are available to every asmdef without one - the editor build proves it, because
+# Kordon.Game reports warnings while using UnityEngine.UI.  Package assemblies such
+# as Netcode's are not: that is what broke the build with CS0012 NetworkEndpoint.
+NAMESPACE_ASSEMBLIES = {
+    "Unity.Netcode": ["Unity.Netcode.Runtime"],
+    "Unity.Networking.Transport": ["Unity.Networking.Transport"],
+}
+
+
+def _asmdefs():
+    found = {}
+    for base, _, files in os.walk(os.path.join(ROOT, "Assets")):
+        for name in files:
+            if name.endswith(".asmdef"):
+                path = os.path.join(base, name)
+                try:
+                    data = json.loads(read(path))
+                except json.JSONDecodeError as error:
+                    failures.append(f"{os.path.relpath(path, ROOT)} is not valid JSON: {error}")
+                    continue
+                found[base] = (data.get("name", name), data.get("references", []),
+                               data.get("includePlatforms", []))
+    return found
+
+
+def _owning_asmdef(path, asmdefs):
+    folder = os.path.dirname(path)
+    while folder and folder != ROOT:
+        if folder in asmdefs:
+            return asmdefs[folder]
+        folder = os.path.dirname(folder)
+    return None
+
+
+def check_assembly_references():
+    asmdefs = _asmdefs()
+    if not asmdefs:
+        failures.append("no .asmdef found: the project has no assembly layout")
+        return
+
+    # Fully qualified usage counts too: KordonNetwork writes
+    # Unity.Netcode.Transports.UTP.UnityTransport without a using statement, and
+    # that is precisely the line that needed Unity.Networking.Transport.
+    qualified = {
+        "Unity.Netcode.Transports.UTP": ["Unity.Netcode.Runtime", "Unity.Networking.Transport"],
+        "Unity.Networking.Transport": ["Unity.Networking.Transport"],
+        "Unity.Netcode": ["Unity.Netcode.Runtime"],
+    }
+
+    problems = []
+    checked = 0
+    for path in walk():
+        owner = _owning_asmdef(path, asmdefs)
+        if owner is None:
+            continue
+        name, references, platforms = owner
+        text = read(path)
+        # Drop comments so documentation about a namespace is not a dependency.
+        code = "\n".join(line.split("//")[0] for line in text.splitlines())
+
+        used = set(re.findall(r"^\s*using\s+(UnityEngine\.[\w\.]+|Unity\.Netcode[\w\.]*|"
+                              r"Unity\.Networking\.Transport[\w\.]*|UnityEditor[\w\.]*)\s*;",
+                              code, re.MULTILINE))
+        for match in re.finditer(r"\bUnity\.Netcode(?:\.Transports\.UTP)?\b", code):
+            used.add(match.group())
+        for match in re.finditer(r"\bUnity\.Networking\.Transport\b", code):
+            used.add(match.group())
+
+        for namespace in sorted(used):
+            if namespace.startswith("UnityEditor"):
+                if "Editor" not in platforms:
+                    problems.append(f"{os.path.relpath(path, ROOT)} uses {namespace} but "
+                                    f"assembly {name} is not editor only")
+                continue
+            required = None
+            for prefix in sorted(qualified, key=len, reverse=True):
+                if namespace == prefix or namespace.startswith(prefix + "."):
+                    required = qualified[prefix]
+                    break
+            if required is None:
+                continue  # an engine assembly, always available to asmdefs
+            for assembly in required:
+                checked += 1
+                if assembly not in references:
+                    problems.append(f"{os.path.relpath(path, ROOT)} uses {namespace} but {name}"
+                                    f".asmdef does not reference {assembly}")
+
+    if problems:
+        failures.append("assembly references missing (the static checks flatten every script "
+                        "into one assembly, Unity does not):\n  " + "\n  ".join(problems))
+    else:
+        notes.append(f"{checked} package namespace uses are all backed by the assembly "
+                     "reference of the owning asmdef")
+
+
 def check_build_scene():
     scenes = os.path.join(ROOT, "Assets", "_Project", "Scenes")
     script = os.path.join(SCRIPTS, "Editor", "BuildScript.cs")
@@ -388,6 +491,7 @@ def main() -> int:
     check_todos()
     check_compile_coverage()
     check_content_ids()
+    check_assembly_references()
     check_build_scene()
     check_imported_material_contract()
     check_texture_import_settings()

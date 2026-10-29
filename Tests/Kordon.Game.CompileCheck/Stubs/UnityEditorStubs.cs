@@ -121,6 +121,16 @@ namespace UnityEditor.SceneManagement
     }
 }
 
+namespace UnityEditor.Build
+{
+    /// <summary>Unity 6 build target used by the non obsolete PlayerSettings API.</summary>
+    public struct NamedBuildTarget
+    {
+        public static NamedBuildTarget Standalone => new NamedBuildTarget();
+        public static NamedBuildTarget Server => new NamedBuildTarget();
+    }
+}
+
 namespace UnityEditor.Build.Reporting
 {
     public enum BuildResult
@@ -188,7 +198,7 @@ namespace UnityEditor
         public static string companyName { get; set; }
         public static ColorSpace colorSpace { get; set; }
 
-        public static void SetApplicationIdentifier(BuildTargetGroup targetGroup, string identifier)
+        public static void SetApplicationIdentifier(NamedBuildTarget buildTarget, string identifier)
         {
         }
     }

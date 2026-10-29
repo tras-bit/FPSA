@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -65,7 +66,7 @@ namespace Kordon.EditorTools
 
             PlayerSettings.productName = "KORDON";
             PlayerSettings.companyName = "Tras Bit";
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Standalone,
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone,
                 "com.trasbit.kordon");
             PlayerSettings.colorSpace = ColorSpace.Linear;
 

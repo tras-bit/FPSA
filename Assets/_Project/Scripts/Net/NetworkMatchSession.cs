@@ -188,7 +188,7 @@ namespace Kordon.Net
         {
             if (_director == null)
             {
-                _director = FindObjectOfType<NetworkMatchDirector>();
+                _director = FindFirstObjectByType<NetworkMatchDirector>();
                 if (_director == null)
                 {
                     return;

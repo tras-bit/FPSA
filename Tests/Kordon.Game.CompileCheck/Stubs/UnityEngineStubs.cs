@@ -355,8 +355,12 @@ namespace UnityEngine
         {
         }
 
-        public static T FindObjectOfType<T>() where T : Object => null;
-        public static Object FindObjectOfType(Type type) => null;
+        // Unity 6: the FindObjectOfType family is obsolete; the game uses the
+        // replacement API, so the stubs model exactly what the editor exposes.
+        public static T FindFirstObjectByType<T>() where T : Object => null;
+        public static T FindAnyObjectByType<T>() where T : Object => null;
+        public static T[] FindObjectsByType<T>(FindObjectsSortMode sortMode) where T : Object =>
+            new T[0];
 
         public static T Instantiate<T>(T original) where T : Object => original;
         public static T Instantiate<T>(T original, Transform parent) where T : Object => original;
@@ -791,6 +795,12 @@ namespace UnityEngine
             int pass = -1)
         {
         }
+    }
+
+    public enum FindObjectsSortMode
+    {
+        None = 0,
+        InstanceID = 1,
     }
 
     public static class Resources

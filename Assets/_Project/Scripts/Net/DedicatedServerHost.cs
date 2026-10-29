@@ -125,7 +125,7 @@ namespace Kordon.Net
                 return;
             }
 
-            if (UnityEngine.Object.FindObjectOfType<DedicatedServerHost>() != null)
+            if (UnityEngine.Object.FindFirstObjectByType<DedicatedServerHost>() != null)
             {
                 return;
             }

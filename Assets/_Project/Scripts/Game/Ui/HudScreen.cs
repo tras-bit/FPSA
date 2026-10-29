@@ -58,7 +58,6 @@ namespace Kordon.Game.Ui
         private float _damageFlashAt = -10f;
         private float _blindUntil = -10f;
         private float _blindStartedAt = -10f;
-        private int _scoreRowCount = -1;
         private string _lastCount = "";
         private int _lastScoreVersion = -1;
         private List<ScoreRow> _rows = new List<ScoreRow>();

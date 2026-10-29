@@ -220,7 +220,7 @@ namespace Kordon.Net
         {
             if (_director == null)
             {
-                _director = FindObjectOfType<CoopMissionDirector>();
+                _director = FindFirstObjectByType<CoopMissionDirector>();
                 if (_director == null)
                 {
                     return;
