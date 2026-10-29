@@ -1,3 +1,4 @@
+using System;
 using Kordon.Core.Characters;
 using Kordon.Core.Utility;
 using Xunit;
@@ -32,25 +33,27 @@ namespace Kordon.Core.Tests
         [Fact]
         public void CadenceFollowsSpeedOverStride()
         {
-            // A full cycle covers WalkStrideMeters.  At that stride and a speed of
-            // one stride per second the phase must have advanced exactly one turn.
+            // A full cycle covers the stride for the current blend.  The animated speed
+            // is damped, so settle first, then measure one second of phase.
             BodyGait gait = new BodyGait();
-            gait.Reset();
-            float speed = 1.4f; // speed below SprintSpeed, so blend = speed / sprint
-
-            float blend = MathUtil.Clamp01(speed / gait.SprintSpeedMps);
-            float stride = MathUtil.Lerp(gait.WalkStrideMeters, gait.SprintStrideMeters, blend);
-            float seconds = stride / speed;
-
-            int frames = (int)(seconds * 240f);
-            for (int frame = 0; frame < frames; frame++)
+            float speed = 1.4f;
+            for (int frame = 0; frame < 240; frame++)
             {
                 gait.Advance(speed, 1f / 240f);
             }
 
-            float expected = MathUtil.Repeat((speed / stride) * MathUtil.TwoPi * (frames / 240f),
+            float stride = MathUtil.Lerp(gait.WalkStrideMeters, gait.SprintStrideMeters,
+                gait.SpeedBlend01);
+            float before = gait.Phase;
+            for (int frame = 0; frame < 240; frame++)
+            {
+                gait.Advance(speed, 1f / 240f);
+            }
+
+            float advanced = MathUtil.Repeat(gait.Phase - before, MathUtil.TwoPi);
+            float expected = MathUtil.Repeat((gait.SmoothedSpeedMps / stride) * MathUtil.TwoPi,
                 MathUtil.TwoPi);
-            Assert.InRange(MathUtil.WrapAngle((gait.Phase - expected) * MathUtil.Rad2Deg), -2f, 2f);
+            Assert.InRange(Math.Abs(advanced - expected), 0f, 0.05f);
         }
 
         [Fact]
