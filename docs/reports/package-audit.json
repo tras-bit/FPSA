@@ -29,6 +29,10 @@
       "pinned": "1.0.0",
       "status": "built-in (shipped with the editor, not on the public registry)"
     },
+    "com.unity.modules.physics2d": {
+      "pinned": "1.0.0",
+      "status": "built-in (shipped with the editor, not on the public registry)"
+    },
     "com.unity.modules.ui": {
       "pinned": "1.0.0",
       "status": "built-in (shipped with the editor, not on the public registry)"
