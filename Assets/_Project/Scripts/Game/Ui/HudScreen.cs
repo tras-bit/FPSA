@@ -59,6 +59,8 @@ namespace Kordon.Game.Ui
         private readonly List<Image> _sidearmIcons = new List<Image>();
         private AmmoHudSnapshot _secondarySnapshot;
 
+        private Text _primaryCaption;
+        private Text _sidearmCaption;
         private Text _inspect;
         private Text _hint;
         private Text _matchLine;
@@ -236,7 +238,7 @@ namespace Kordon.Game.Ui
             primary.childControlHeight = false;
             primary.childForceExpandWidth = false;
             primary.childForceExpandHeight = false;
-            RowCaption(root, mags, "PRIMARY");
+            _primaryCaption = RowCaption(root, mags, "PRIMARY");
 
             HudRect sidearm = HudLayout.SidearmRow();
             _sidearmStrip = Panel(root, "SidearmMags", sidearm, null);
@@ -248,7 +250,7 @@ namespace Kordon.Game.Ui
             secondary.childControlHeight = false;
             secondary.childForceExpandWidth = false;
             secondary.childForceExpandHeight = false;
-            RowCaption(root, sidearm, "SIDEARM");
+            _sidearmCaption = RowCaption(root, sidearm, "SIDEARM");
 
             HudRect inspect = HudLayout.InspectLine();
             _inspect = UiBuilder.LabelAt(root, "Inspect", string.Empty, 22, UiBuilder.Accent,
@@ -285,13 +287,22 @@ namespace Kordon.Game.Ui
             return node;
         }
 
-        private void RowCaption(RectTransform root, HudRect rect, string caption)
+        private Text RowCaption(RectTransform root, HudRect rect, string caption)
         {
             Text label = UiBuilder.LabelAt(root, caption + " MAGS", caption + " MAGS",
                 11, new Color(0.62f, 0.66f, 0.64f, 0.78f), new Vector2(1f, 0f),
                 new Vector2(-rect.Right - rect.Width + 2f, rect.Bottom + 6f),
                 new Vector2(160f, 16f), TextAnchor.MiddleLeft);
             label.fontStyle = FontStyle.Bold;
+            return label;
+        }
+
+        private static void SetRowVisible(RectTransform row, bool visible)
+        {
+            if (row != null && row.gameObject.activeSelf != visible)
+            {
+                row.gameObject.SetActive(visible);
+            }
         }
 
         private static void Stretch(RectTransform rect, float horizontal, float vertical)
@@ -410,9 +421,21 @@ namespace Kordon.Game.Ui
             {
                 LoadoutKit loadout = Weapons.Loadout;
                 AmmoHudSnapshot snapshot = loadout.BuildHudSnapshot(now);
+                // The pouch is only on screen while a magazine is out of the weapon:
+                // see HudAmmoPolicy.  Nothing ammo-like is shown to a player who has
+                // not physically checked their kit.
+                bool showPouch = HudAmmoPolicy.ShowPouch(snapshot);
+                SetRowVisible(_strip, showPouch);
+                SetRowVisible(_sidearmStrip, showPouch);
+                _primaryCaption.gameObject.SetActive(showPouch);
+                _sidearmCaption.gameObject.SetActive(showPouch);
                 RefreshMagazines(snapshot, _strip, _slotIcons,
                     HudLayout.MagazineIconWidth, HudLayout.MagazineIconHeight);
-                RefreshSidearm(now);
+                if (showPouch)
+                {
+                    RefreshSidearm(now);
+                }
+
                 RefreshLoadoutCard(snapshot);
                 RefreshInspect(snapshot);
             }
@@ -466,8 +489,13 @@ namespace Kordon.Game.Ui
                 : "GRENADE";
 
             string grenadeState = GrenadeReadout(loadout, snapshot, out Color grenadeColour);
+            // The snapshot always describes the weapon in hand, so a pouch summary is
+            // only printed for the active row - and only while that magazine is out.
+            string pouch = HudAmmoPolicy.PouchSummary(snapshot);
+            string primaryState = (int)loadout.Active == 0 ? pouch : string.Empty;
+            string secondaryState = (int)loadout.Active == 1 ? pouch : string.Empty;
             string[] names = { primary, secondary, grenade };
-            string[] states = { MagazineCount(snapshot), MagazineCount(_secondarySnapshot), grenadeState };
+            string[] states = { primaryState, secondaryState, grenadeState };
 
             for (int i = 0; i < 3; i++)
             {
@@ -513,13 +541,6 @@ namespace Kordon.Game.Ui
             colour = count > 0 ? UiBuilder.Paper : UiBuilder.Danger;
             return count > 0 ? "x" + count : "NONE";
         }
-
-        /// <summary>"4 MAG" style pouch summary.  Never a round count: the pouch holds
-        /// magazines, and their contents stay unknown until the magazine is checked.</summary>
-        private static string MagazineCount(AmmoHudSnapshot snapshot) =>
-            snapshot == null || snapshot.Slots == null
-                ? string.Empty
-                : snapshot.Slots.Count + " MAG";
 
         private void RefreshSidearm(float now)
         {
@@ -579,9 +600,10 @@ namespace Kordon.Game.Ui
 
         private void RefreshInspect(AmmoHudSnapshot snapshot)
         {
-            if (snapshot.MayShowExactCount)
+            if (HudAmmoPolicy.ShowExactCount(snapshot))
             {
-                _inspect.text = snapshot.InspectedRounds + " / " + snapshot.InspectedCapacity;
+                _inspect.text = snapshot.InspectedMagazineName.ToUpperInvariant() + "   " +
+                                snapshot.InspectedRounds + " / " + snapshot.InspectedCapacity;
                 _hint.gameObject.SetActive(false);
             }
             else
