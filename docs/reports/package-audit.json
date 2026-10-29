@@ -108,6 +108,36 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       }
     },
+    "com.unity.transport": {
+      "pinned": "2.4.0",
+      "available_tail": [
+        "1.0.0-pre.3",
+        "1.0.0-pre.2",
+        "0.8.0-preview.8",
+        "0.6.0-preview.7",
+        "0.5.0-preview.5",
+        "0.4.1-preview.1",
+        "0.4.0-preview.3",
+        "0.3.1-preview.4",
+        "0.2.4-preview.0",
+        "0.3.0-preview.6",
+        "0.2.3-preview.0",
+        "0.2.2-preview.2",
+        "0.2.1-preview.1",
+        "0.2.0-preview.4"
+      ],
+      "dist_tags": {
+        "latest": "2.7.4"
+      },
+      "status": "OK",
+      "requires_unity": "2022.3",
+      "requires_unity_release": null,
+      "dependencies": {
+        "com.unity.burst": "1.8.12",
+        "com.unity.collections": "2.2.1",
+        "com.unity.mathematics": "1.3.1"
+      }
+    },
     "com.unity.ugui": {
       "pinned": "2.0.0",
       "status": "built-in (shipped with the editor, not on the public registry)"
