@@ -135,9 +135,71 @@ def magazine(top_y: float, top_z: float, length: float, width: float = 0.030,
         parts.append(seg)
         z -= seg_h * 0.96
         y -= math.sin(math.radians(angle)) * seg_h * 0.4
+    # Ribs down the narrow faces and a witness-hole strip: the two details that
+    # make a magazine read as a magazine in the hand and mid-reload.
+    rib_z = top_z - length * 0.5
+    for i in range(3):
+        parts.append(part((width * 1.08, 0.004, 0.006),
+                          (0.0, top_y - depth * 0.5 - 0.001, rib_z - (i - 1) * length * 0.22),
+                          surface="hardened_steel", name="mag_rib_front"))
+        parts.append(part((width * 1.08, 0.004, 0.006),
+                          (0.0, top_y + depth * 0.5 + 0.001, rib_z - (i - 1) * length * 0.22),
+                          surface="hardened_steel", name="mag_rib_rear"))
+    for i in range(4):
+        parts.append(part((width * 0.62, 0.004, 0.005),
+                          (0.0, top_y + depth * 0.5 + 0.002, top_z - 0.014 - i * 0.020),
+                          surface="rubber", name="mag_witness"))
     # floor plate
     parts.append(part((width * 1.15, depth * 1.12, 0.012), (0.0, y, z + 0.004),
                       surface="rubber", name="mag_floor"))
+    return parts
+
+
+def receiver_details(rear_y: float, receiver_len: float, receiver_h: float,
+                     top_z: float, spec: dict) -> List[bpy.types.Object]:
+    """Furniture that turns a box receiver into a readable weapon.
+
+    Ejection port cover, charging handle, selector, magazine well flare, rivets
+    and, on the long guns, handguard vent slots. All of it is authored geometry
+    welded into the same joined mesh, so nothing here is a floating sticker.
+    """
+    mid_y = rear_y - receiver_len * 0.5
+    half_w = 0.0215 if spec.get("pistol") else 0.0265
+    parts: List[bpy.types.Object] = [
+        # ejection port: a dark recess panel on the right side
+        part((0.004, 0.062, 0.030), (half_w, mid_y + 0.020, top_z - 0.006),
+             surface="rubber", name="ejection_port"),
+        # charging handle that the bolt animation drives visually
+        part((0.016, 0.026, 0.010), (half_w + 0.008, mid_y - 0.040, top_z - 0.004),
+             surface="hardened_steel", name="charging_handle"),
+        # selector lever on the left side
+        part((0.006, 0.044, 0.010), (-half_w, mid_y + 0.010, top_z - 0.026),
+             surface="hardened_steel", name="selector"),
+        # magazine well flare
+        part((0.050, 0.086, 0.014), (0.0, mid_y + 0.050, -receiver_h * 0.36),
+             surface="steel_dark", name="magwell_flare"),
+    ]
+
+    # rivets along both sides of the receiver
+    for side in (-1.0, 1.0):
+        for i in range(4):
+            parts.append(part((0.003, 0.005, 0.005),
+                              (side * half_w, mid_y - 0.060 + i * 0.040,
+                               top_z - receiver_h * 0.62),
+                              surface="hardened_steel", name="rivet"))
+
+    # handguard vents, only where there is a handguard to vent
+    if not spec.get("pistol") and spec["barrel_len"] > 0.10:
+        # forward of the receiver on both cheeks of the handguard (the barrel
+        # points at -Y, so "forward" is a smaller Y)
+        vent_start = rear_y - receiver_len - 0.045
+        for side in (-1.0, 1.0):
+            for i in range(4):
+                parts.append(part((0.004, 0.022, 0.011),
+                                  (side * (spec["barrel_r"] * 2.0),
+                                   vent_start - i * 0.038, top_z - 0.026),
+                                  surface="rubber", name="handguard_vent"))
+
     return parts
 
 
@@ -211,7 +273,9 @@ def sling_loop(y: float, z: float) -> List[bpy.types.Object]:
 
 def finish(parts: Sequence[bpy.types.Object], name: str) -> bpy.types.Object:
     merged = art.join(list(parts), name)
-    art.bevel(merged, width=0.0022, segments=1)
+    # Two bevel segments instead of one: the silhouette of a stamped receiver
+    # reads as a rounded edge, not as a chamfer, at viewmodel distance.
+    art.bevel(merged, width=0.0026, segments=2)
     art.apply_modifiers(merged)
     return merged
 
@@ -320,6 +384,7 @@ def build_weapon(weapon_id: str) -> Tuple[bpy.types.Object, bpy.types.Object, di
                                         top_z + 0.010, height=0.028 if not spec.get("pistol") else 0.020)
     body.extend(sight_parts)
     body.extend(rail(rear_y - receiver_len * 0.10, front_y + 0.02, top_z + 0.012))
+    body.extend(receiver_details(rear_y, receiver_len, receiver_h, top_z, spec))
 
     # ------------------------------------------------------------------ bolt
     bolt = spec.get("bolt")

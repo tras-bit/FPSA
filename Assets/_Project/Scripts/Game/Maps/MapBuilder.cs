@@ -132,6 +132,9 @@ namespace Kordon.Game.Maps
     /// <summary>Everything MapBuilder produced for one map, for the match to query.</summary>
     public sealed class BuiltMap : MonoBehaviour
     {
+        /// <summary>The map the local player is in, so the fall guard can find it.</summary>
+        public static BuiltMap Active { get; private set; }
+
         public MapLayout Layout;
         public NavGraph Nav;
         public KitManifestData Kit;
@@ -139,6 +142,37 @@ namespace Kordon.Game.Maps
         public readonly List<GameObject> Destructibles = new List<GameObject>();
         public readonly Dictionary<string, List<GameObject>> ByTag =
             new Dictionary<string, List<GameObject>>();
+
+        /// <summary>Y (Unity up) below which a player has left the map and is respawned.</summary>
+        public float KillFloorY = -25f;
+
+        /// <summary>Map extent in Unity space, for the boundary walls and spawn checks.</summary>
+        public Bounds WorldBounds;
+
+        public int ShellsPlaced;
+        public int ShellsMissing;
+        public int ModulesPlaced;
+        public int ModulesMissing;
+        public int CollidersAdded;
+
+        private void OnDestroy()
+        {
+            if (Active == this)
+            {
+                Active = null;
+            }
+        }
+
+        /// <summary>World space point of a spawn index, clamped to the built map.</summary>
+        public Vector3 SpawnPosition(int index)
+        {
+            if (SpawnPoints.Count == 0)
+            {
+                return new Vector3(0f, 2f, 0f);
+            }
+
+            return SpawnPoints[Mathf.Abs(index) % SpawnPoints.Count].position;
+        }
     }
 
     /// <summary>
@@ -167,12 +201,15 @@ namespace Kordon.Game.Maps
                     ShellResourceRoot + layout.Id + "/" + shell.Id);
                 if (prefab == null)
                 {
+                    built.ShellsMissing++;
                     Debug.LogError("[kordon] missing shell " + shell.Id + " for " + layout.Id);
                     continue;
                 }
 
+                bool solid = shell.BlocksMovement || shell.Walkable;
                 Place(prefab, shell.Position, shell.YawDegrees, root.transform, shell.Id,
-                      shell.BlocksMovement, built, "shell");
+                      solid, built, "shell", shell.Walkable);
+                built.ShellsPlaced++;
             }
 
             int index = 0;
@@ -181,6 +218,7 @@ namespace Kordon.Game.Maps
                 GameObject prefab = Resources.Load<GameObject>(KitResourceRoot + placement.Module);
                 if (prefab == null)
                 {
+                    built.ModulesMissing++;
                     Debug.LogError("[kordon] missing kit module " + placement.Module);
                     continue;
                 }
@@ -188,7 +226,8 @@ namespace Kordon.Game.Maps
                 bool blocks = kit.BlocksMovement(placement.Module);
                 GameObject instance = Place(prefab, placement.Position, placement.YawDegrees,
                                             root.transform, placement.Module + "_" + index,
-                                            blocks, built, placement.Tag);
+                                            blocks, built, placement.Tag, false);
+                built.ModulesPlaced++;
                 index++;
 
                 if (kit.IsDestructible(placement.Module))
@@ -217,12 +256,69 @@ namespace Kordon.Game.Maps
             }
 
             built.Nav = nav;
+            AddWorldSafety(layout, built, root.transform);
+            Active = built;
+            Debug.Log(string.Format(
+                "[kordon] map {0} built: {1}/{2} shells, {3}/{4} modules, {5} colliders, " +
+                "{6} spawn points, kill floor y={7:0.0}",
+                layout.Id, built.ShellsPlaced, built.ShellsPlaced + built.ShellsMissing,
+                built.ModulesPlaced, built.ModulesPlaced + built.ModulesMissing,
+                built.CollidersAdded, built.SpawnPoints.Count, built.KillFloorY));
             return built;
+        }
+
+        /// <summary>
+        /// Keeps players inside the map: four invisible walls around the layout bounds
+        /// plus a recorded kill floor.  Before this, a player who walked off the apron
+        /// fell forever, because the terrain is the only floor and the map has open
+        /// edges away from the fences.
+        /// </summary>
+        private static void AddWorldSafety(MapLayout layout, BuiltMap built, Transform parent)
+        {
+            Bounds2D bounds = layout.Bounds;
+            const float wallHeight = 40f;
+            const float thickness = 2f;
+            const float margin = 2f;
+
+            float minX = bounds.MinX - margin;
+            float maxX = bounds.MaxX + margin;
+            float minY = bounds.MinY - margin;
+            float maxY = bounds.MaxY + margin;
+            float middleZ = wallHeight * 0.5f;
+
+            GameObject walls = new GameObject("WorldBoundary");
+            walls.transform.SetParent(parent, false);
+            int index = 0;
+            AddWall(walls.transform, "North", new Vector3((minX + maxX) * 0.5f, middleZ, maxY),
+                    new Vector3(maxX - minX + thickness * 2f, wallHeight, thickness), ref index);
+            AddWall(walls.transform, "South", new Vector3((minX + maxX) * 0.5f, middleZ, minY),
+                    new Vector3(maxX - minX + thickness * 2f, wallHeight, thickness), ref index);
+            AddWall(walls.transform, "East", new Vector3(maxX, middleZ, (minY + maxY) * 0.5f),
+                    new Vector3(thickness, wallHeight, maxY - minY + thickness * 2f), ref index);
+            AddWall(walls.transform, "West", new Vector3(minX, middleZ, (minY + maxY) * 0.5f),
+                    new Vector3(thickness, wallHeight, maxY - minY + thickness * 2f), ref index);
+
+            built.CollidersAdded += index;
+            built.WorldBounds = new Bounds(
+                new Vector3((minX + maxX) * 0.5f, 6f, (minY + maxY) * 0.5f),
+                new Vector3(maxX - minX, wallHeight, maxY - minY));
+            built.KillFloorY = -8f;
+        }
+
+        private static void AddWall(Transform parent, string name, Vector3 center, Vector3 size,
+                                    ref int index)
+        {
+            GameObject wall = new GameObject("Wall_" + name);
+            wall.transform.SetParent(parent, false);
+            wall.transform.position = center;
+            BoxCollider collider = wall.AddComponent<BoxCollider>();
+            collider.size = size;
+            index++;
         }
 
         private static GameObject Place(GameObject prefab, KordonVec3 position, float yaw,
                                         Transform parent, string name, bool blocksMovement,
-                                        BuiltMap built, string tag)
+                                        BuiltMap built, string tag, bool walkable)
         {
             GameObject instance = Object.Instantiate(prefab, parent);
             instance.name = name;
@@ -241,7 +337,16 @@ namespace Kordon.Game.Maps
 
                     MeshCollider collider = filter.gameObject.AddComponent<MeshCollider>();
                     collider.sharedMesh = filter.sharedMesh;
+                    built.CollidersAdded++;
                 }
+            }
+
+            // A walkable shell with no collider is the bug that let players fall out
+            // of the world: say so loudly instead of shipping an invisible hole.
+            if (walkable && instance.GetComponentInChildren<Collider>(true) == null)
+            {
+                Debug.LogError("[kordon] walkable shell '" + name + "' has no collider - " +
+                               "the player would fall through it");
             }
 
             if (!string.IsNullOrEmpty(tag))

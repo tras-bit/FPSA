@@ -62,6 +62,26 @@ namespace Kordon.Game.Weapons
         private float _bobPhase;
         private Vector3 _boltLocal;
         private Vector3 _magLocal;
+
+        /// <summary>
+        /// Magazine handling animation. The magazine is a separate child object, so a
+        /// reload can actually pull it out of the well and push the new one in - the
+        /// previous version only toggled its visibility on the frame of the event,
+        /// which read as the magazine teleporting.
+        /// </summary>
+        private enum MagState
+        {
+            Seated,
+            Dropping,
+            Inserting,
+        }
+
+        private MagState _magState = MagState.Seated;
+        private float _magTime;
+
+        private const float MagDropSeconds = 0.26f;
+        private const float MagInsertSeconds = 0.32f;
+        private static readonly Vector3 MagDropOffset = new Vector3(0.015f, -0.22f, -0.02f);
         private GameObject _modelInstance;
         private string _modelWeaponId;
         private float _sightHeight = 0.06f;
@@ -206,7 +226,12 @@ namespace Kordon.Game.Weapons
                     State = HandlingState.ReloadMagOut;
                     if (MagazineProp != null)
                     {
-                        MagazineProp.gameObject.SetActive(false);
+                        // Drop the old magazine out of the well; it is hidden when it
+                        // has travelled clear, not on this frame.
+                        MagazineProp.gameObject.SetActive(true);
+                        MagazineProp.localPosition = _magLocal;
+                        _magState = MagState.Dropping;
+                        _magTime = 0f;
                     }
 
                     break;
@@ -214,8 +239,11 @@ namespace Kordon.Game.Weapons
                     State = HandlingState.ReloadMagIn;
                     if (MagazineProp != null)
                     {
+                        // The new magazine comes up from below the weapon and seats.
                         MagazineProp.gameObject.SetActive(true);
-                        MagazineProp.localPosition = _magLocal;
+                        MagazineProp.localPosition = _magLocal + MagDropOffset;
+                        _magState = MagState.Inserting;
+                        _magTime = 0f;
                     }
 
                     break;
@@ -227,7 +255,9 @@ namespace Kordon.Game.Weapons
                     State = HandlingState.Inspecting;
                     if (MagazineProp != null)
                     {
-                        MagazineProp.gameObject.SetActive(false);
+                        MagazineProp.gameObject.SetActive(true);
+                        MagazineProp.localPosition = _magLocal;
+                        _magState = MagState.Seated;
                     }
 
                     break;
@@ -372,6 +402,8 @@ namespace Kordon.Game.Weapons
 
         private void UpdateProps()
         {
+            AnimateMagazine(Time.deltaTime);
+
             if (BoltProp == null)
             {
                 return;
@@ -385,6 +417,47 @@ namespace Kordon.Game.Weapons
 
             BoltProp.localPosition = Vector3.Lerp(BoltProp.localPosition, target,
                                                   Mathf.Clamp01(Time.deltaTime * 22f));
+        }
+
+        /// <summary>Eased magazine travel: out of the well, then seat the fresh one.</summary>
+        private void AnimateMagazine(float dt)
+        {
+            if (MagazineProp == null || _magState == MagState.Seated)
+            {
+                return;
+            }
+
+            _magTime += Mathf.Max(0f, dt);
+            if (_magState == MagState.Dropping)
+            {
+                float t = Mathf.Clamp01(_magTime / MagDropSeconds);
+                float eased = t * t;
+                MagazineProp.localPosition = _magLocal + MagDropOffset * eased;
+                MagazineProp.localRotation = Quaternion.Euler(-26f * eased, 0f, 8f * eased);
+                if (t >= 1f)
+                {
+                    MagazineProp.gameObject.SetActive(false);
+                    MagazineProp.localRotation = Quaternion.identity;
+                    _magState = MagState.Seated;
+                }
+
+                return;
+            }
+
+            float insert = Mathf.Clamp01(_magTime / MagInsertSeconds);
+            // Overshoot slightly, then settle: the magazine clicks home.
+            float easedIn = 1f - Mathf.Pow(1f - insert, 3f);
+            float overshoot = Mathf.Sin(insert * Mathf.PI) * 0.012f;
+            MagazineProp.localPosition = _magLocal + MagDropOffset * (1f - easedIn) +
+                                         new Vector3(0f, overshoot, 0f);
+            MagazineProp.localRotation = Quaternion.Euler(-18f * (1f - easedIn), 0f,
+                6f * (1f - easedIn));
+            if (insert >= 1f)
+            {
+                MagazineProp.localPosition = _magLocal;
+                MagazineProp.localRotation = Quaternion.identity;
+                _magState = MagState.Seated;
+            }
         }
     }
 }

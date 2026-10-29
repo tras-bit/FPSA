@@ -2,6 +2,7 @@ using Kordon.Core.Settings;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
 using Kordon.Core.Loadout;
+using Kordon.Core.Ui;
 using Kordon.Game.Input;
 using Kordon.Game.Weapons;
 using UnityEngine;
@@ -50,6 +51,13 @@ namespace Kordon.Game.Ui
         private Image _flashOverlay;
         private Text _voiceLine;
         private Text _grenadeLine;
+        private RectTransform _weaponPanel;
+        private readonly Text[] _weaponNames = new Text[3];
+        private readonly Text[] _weaponCounts = new Text[3];
+        private readonly Image[] _weaponTabs = new Image[3];
+        private RectTransform _secondaryStrip;
+        private readonly List<Image> _secondarySlots = new List<Image>();
+        private AmmoHudSnapshot _secondarySnapshot;
 
         private readonly List<Image> _slotImages = new List<Image>();
         private readonly List<Text> _slotMarks = new List<Text>();
@@ -91,25 +99,18 @@ namespace Kordon.Game.Ui
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
             _flashOverlay.raycastTarget = false;
 
-            _strip = UiBuilder.FullRect(root, "MagazineStrip");
-            HorizontalLayoutGroup line = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            line.spacing = 7f;
-            line.childAlignment = TextAnchor.LowerCenter;
-            line.childControlWidth = false;
-            line.childControlHeight = false;
-            line.childForceExpandWidth = false;
-            line.childForceExpandHeight = false;
-            _strip.offsetMin = new Vector2(0f, 46f);
-            _strip.offsetMax = new Vector2(0f, -920f);
+            BuildMagazineRows(root);
 
-            _inspect = UiBuilder.LabelAt(root, "Inspect", "", 26, UiBuilder.Paper,
-                new Vector2(0.5f, 0f), new Vector2(0f, 104f), new Vector2(1000f, 36f),
-                TextAnchor.MiddleCenter);
+            _inspect = UiBuilder.LabelAt(root, "Inspect", "", 24, UiBuilder.Paper,
+                new Vector2(1f, 0f),
+                new Vector2(-HudLayout.EdgeInset, HudLayout.InspectLine().Bottom),
+                new Vector2(HudLayout.ColumnWidth, HudLayout.InspectLineHeight),
+                TextAnchor.MiddleRight);
 
             _hint = UiBuilder.LabelAt(root, "Hint",
                 "tap R  reload     hold R  inspect magazine", 18,
                 new Color(0.78f, 0.80f, 0.77f, 0.7f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 70f), new Vector2(1000f, 28f), TextAnchor.MiddleCenter);
+                new Vector2(0f, 24f), new Vector2(520f, 28f), TextAnchor.MiddleCenter);
 
             _stateLine = UiBuilder.LabelAt(root, "State", "", 20, UiBuilder.Warning,
                 new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(1200f, 30f),
@@ -125,7 +126,7 @@ namespace Kordon.Game.Ui
 
             _subtitle = UiBuilder.LabelAt(root, "Subtitle", "", 24,
                 new Color(0.96f, 0.96f, 0.93f, 0.96f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 138f), new Vector2(1500f, 34f), TextAnchor.MiddleCenter);
+                new Vector2(0f, 138f), new Vector2(1100f, 34f), TextAnchor.MiddleCenter);
 
             _toast = UiBuilder.LabelAt(root, "Toast", "", 30, UiBuilder.Danger,
                 new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 44f),
@@ -140,12 +141,117 @@ namespace Kordon.Game.Ui
                 new Vector2(420f, 24f), TextAnchor.MiddleCenter);
 
             _grenadeLine = UiBuilder.LabelAt(root, "Grenade", "", 18, UiBuilder.Paper,
-                new Vector2(1f, 0f), new Vector2(-250f, 46f), new Vector2(480f, 26f),
+                new Vector2(1f, 0f),
+                new Vector2(-HudLayout.EdgeInset, HudLayout.GrenadeLine().Bottom),
+                new Vector2(HudLayout.ColumnWidth, HudLayout.GrenadeLineHeight),
                 TextAnchor.MiddleRight);
 
+            BuildWeaponPanel(root);
             BuildScoreboard(root);
         }
 
+        /// <summary>
+        /// Which weapon is in hand, bottom right.  The magazine strip alone never said
+        /// that: with a primary, a sidearm and a grenade slot the player had to
+        /// remember the last key they pressed.  One row per slot, the active one lit in
+        /// the accent colour, the others dimmed, each row carrying how many magazines
+        /// of that weapon are left.
+        /// </summary>
+        private void BuildWeaponPanel(RectTransform root)
+        {
+            _weaponPanel = UiBuilder.Node(root, "WeaponPanel");
+            _weaponPanel.anchorMin = new Vector2(1f, 0f);
+            _weaponPanel.anchorMax = new Vector2(1f, 0f);
+            _weaponPanel.pivot = new Vector2(1f, 0f);
+            _weaponPanel.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.WeaponPanelHeight);
+            _weaponPanel.anchoredPosition =
+                new Vector2(-HudLayout.EdgeInset, HudLayout.WeaponPanel().Bottom);
+            Image background = _weaponPanel.gameObject.AddComponent<Image>();
+            background.color = new Color(0.05f, 0.06f, 0.07f, 0.55f);
+            background.raycastTarget = false;
+
+            string[] keys = { "1", "2", "3" };
+            for (int i = 0; i < 3; i++)
+            {
+                RectTransform tab = UiBuilder.Node(_weaponPanel, "Slot" + i);
+                tab.anchorMin = new Vector2(0f, 1f);
+                tab.anchorMax = new Vector2(1f, 1f);
+                tab.pivot = new Vector2(0.5f, 1f);
+                tab.sizeDelta = new Vector2(-16f, 24f);
+                tab.anchoredPosition = new Vector2(0f, -(14f + i * 28f));
+                _weaponTabs[i] = tab.gameObject.AddComponent<Image>();
+                _weaponTabs[i].color = new Color(1f, 1f, 1f, 0f);
+                _weaponTabs[i].raycastTarget = false;
+
+                Text key = UiBuilder.Label(tab, "Key", keys[i], 15, UiBuilder.Dim,
+                    TextAnchor.MiddleLeft);
+                RectTransform keyRect = key.rectTransform;
+                keyRect.anchorMin = Vector2.zero;
+                keyRect.anchorMax = new Vector2(0f, 1f);
+                keyRect.pivot = new Vector2(0f, 0.5f);
+                keyRect.sizeDelta = new Vector2(22f, 0f);
+                keyRect.anchoredPosition = new Vector2(4f, 0f);
+
+                Text name = UiBuilder.Label(tab, "Name", string.Empty, 16, UiBuilder.Dim,
+                    TextAnchor.MiddleLeft);
+                RectTransform nameRect = name.rectTransform;
+                nameRect.anchorMin = Vector2.zero;
+                nameRect.anchorMax = Vector2.one;
+                nameRect.offsetMin = new Vector2(28f, 0f);
+                nameRect.offsetMax = new Vector2(-84f, 0f);
+                _weaponNames[i] = name;
+
+                Text count = UiBuilder.Label(tab, "Count", string.Empty, 15, UiBuilder.Dim,
+                    TextAnchor.MiddleRight);
+                RectTransform countRect = count.rectTransform;
+                countRect.anchorMin = new Vector2(1f, 0f);
+                countRect.anchorMax = new Vector2(1f, 1f);
+                countRect.pivot = new Vector2(1f, 0.5f);
+                countRect.sizeDelta = new Vector2(80f, 0f);
+                countRect.anchoredPosition = new Vector2(-6f, 0f);
+                _weaponCounts[i] = count;
+            }
+        }
+
+        /// <summary>
+        /// Both magazine rows live in the lower right, above the weapon panel: the
+        /// reference the design follows puts the magazines there, and the strip in the
+        /// bottom centre competed with the subtitle line and the interaction hint.
+        /// The sidearm magazines are their own row because they are a separate pouch -
+        /// stacking them with the rifle magazines made the two look like one pool.
+        /// </summary>
+        private void BuildMagazineRows(RectTransform root)
+        {
+            _strip = UiBuilder.Node(root, "MagazineStrip");
+            _strip.anchorMin = new Vector2(1f, 0f);
+            _strip.anchorMax = new Vector2(1f, 0f);
+            _strip.pivot = new Vector2(1f, 0f);
+            _strip.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.MagazineRowHeight);
+            _strip.anchoredPosition = new Vector2(-HudLayout.EdgeInset, HudLayout.MagazineRow().Bottom);
+            HorizontalLayoutGroup line = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
+            line.spacing = 5f;
+            line.childAlignment = TextAnchor.LowerRight;
+            line.childControlWidth = false;
+            line.childControlHeight = false;
+            line.childForceExpandWidth = false;
+            line.childForceExpandHeight = false;
+
+            _secondaryStrip = UiBuilder.Node(root, "SecondaryStrip");
+            _secondaryStrip.anchorMin = new Vector2(1f, 0f);
+            _secondaryStrip.anchorMax = new Vector2(1f, 0f);
+            _secondaryStrip.pivot = new Vector2(1f, 0f);
+            _secondaryStrip.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.SidearmRowHeight);
+            _secondaryStrip.anchoredPosition =
+                new Vector2(-HudLayout.EdgeInset, HudLayout.SidearmRow().Bottom);
+            HorizontalLayoutGroup sidearm =
+                _secondaryStrip.gameObject.AddComponent<HorizontalLayoutGroup>();
+            sidearm.spacing = 5f;
+            sidearm.childAlignment = TextAnchor.LowerRight;
+            sidearm.childControlWidth = false;
+            sidearm.childControlHeight = false;
+            sidearm.childForceExpandWidth = false;
+            sidearm.childForceExpandHeight = false;
+        }
         private void BuildScoreboard(RectTransform root)
         {
             Image board = UiBuilder.Panel(root, "Scoreboard", UiBuilder.Ink,
@@ -256,6 +362,8 @@ namespace Kordon.Game.Ui
                 RefreshStrip(snapshot);
                 RefreshInspect(snapshot);
                 RefreshGrenade(snapshot);
+                RefreshSecondaryStrip(now);
+                RefreshWeaponPanel(snapshot, _secondarySnapshot);
             }
 
             bool wantScoreboard = KordonInput.Held(InputAction.Scoreboard);
@@ -284,6 +392,96 @@ namespace Kordon.Game.Ui
                         Mathf.Max(0.2f, _blindUntil - _blindStartedAt))
                     : 0f;
                 _flashOverlay.color = new Color(1f, 1f, 1f, blind * blind * 0.92f);
+            }
+        }
+
+        private void RefreshWeaponPanel(AmmoHudSnapshot snapshot, AmmoHudSnapshot sidearm)
+        {
+            if (Weapons == null || Weapons.Loadout == null)
+            {
+                return;
+            }
+
+            LoadoutKit loadout = Weapons.Loadout;
+            string primary = loadout.Primary != null && loadout.Primary.Weapon != null
+                ? loadout.Primary.Weapon.DisplayName
+                : "no primary";
+            string secondary = loadout.Secondary != null && loadout.Secondary.Weapon != null
+                ? loadout.Secondary.Weapon.DisplayName
+                : "no sidearm";
+            string grenade = loadout.Grenade != null && !string.IsNullOrEmpty(loadout.Grenade.DisplayName)
+                ? loadout.Grenade.DisplayName
+                : "grenade";
+
+            string[] labels = { primary, secondary, grenade + "   x" + loadout.GrenadesRemaining };
+            string[] counts =
+            {
+                MagazineCount(snapshot),
+                MagazineCount(sidearm),
+                loadout.GrenadesRemaining > 0 ? "HELD" : "NONE"
+            };
+
+            for (int i = 0; i < _weaponNames.Length; i++)
+            {
+                if (_weaponNames[i] == null)
+                {
+                    continue;
+                }
+
+                bool active = (int)loadout.Active == i;
+                _weaponNames[i].text = labels[i].ToUpperInvariant();
+                _weaponNames[i].color = active ? UiBuilder.Accent : UiBuilder.Dim;
+                if (_weaponCounts[i] != null)
+                {
+                    _weaponCounts[i].text = counts[i];
+                    _weaponCounts[i].color = active ? UiBuilder.Accent : UiBuilder.Dim;
+                }
+
+                if (_weaponTabs[i] != null)
+                {
+                    _weaponTabs[i].color = active
+                        ? new Color(0.88f, 0.46f, 0.13f, 0.16f)
+                        : new Color(1f, 1f, 1f, 0f);
+                }
+            }
+        }
+
+        /// <summary>"4 MAG" style pouch summary. Never a round count: the pouch holds
+        /// magazines, and their contents stay unknown until the magazine is checked, so
+        /// this line deliberately shows only how many are left.</summary>
+        private static string MagazineCount(AmmoHudSnapshot snapshot) =>
+            snapshot == null || snapshot.Slots == null ? string.Empty : snapshot.Slots.Count + " MAG";
+
+        private void RefreshSecondaryStrip(float now)
+        {
+            if (_secondaryStrip == null || Weapons == null || Weapons.Loadout == null ||
+                Weapons.Loadout.Secondary == null)
+            {
+                return;
+            }
+
+            AmmoHudSnapshot snapshot = Weapons.Loadout.Secondary.BuildHudSnapshot(now);
+            _secondarySnapshot = snapshot;
+            while (_secondarySlots.Count < snapshot.Slots.Count)
+            {
+                Image slot = UiBuilder.Panel(_secondaryStrip, "SideMag" + _secondarySlots.Count,
+                    UiBuilder.MagazineColor("empty"), new Vector2(0.5f, 0.5f), Vector2.zero,
+                    new Vector2(30f, 12f));
+                slot.raycastTarget = false;
+                LayoutElement element = slot.gameObject.AddComponent<LayoutElement>();
+                element.preferredWidth = 30f;
+                element.preferredHeight = 12f;
+                _secondarySlots.Add(slot);
+            }
+
+            for (int i = 0; i < _secondarySlots.Count; i++)
+            {
+                bool present = i < snapshot.Slots.Count;
+                _secondarySlots[i].gameObject.SetActive(present);
+                if (present)
+                {
+                    _secondarySlots[i].color = UiBuilder.MagazineColor(snapshot.Slots[i].ColorKey);
+                }
             }
         }
 

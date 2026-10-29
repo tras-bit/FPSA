@@ -21,6 +21,14 @@ namespace Kordon.Game.Maps
         public float YawDegrees;
         public bool BlocksSight;
         public bool BlocksMovement;
+
+        /// <summary>
+        /// The player stands on this shell.  A walkable shell needs a collider even
+        /// when it does not "block movement" in the sense of a wall - the ground is
+        /// exactly that case, and leaving it without a collider let the player fall
+        /// out of the world.
+        /// </summary>
+        public bool Walkable;
     }
 
     public struct MapSpawn
@@ -112,6 +120,7 @@ namespace Kordon.Game.Maps
                     YawDegrees = item["yaw"].AsFloat(0f),
                     BlocksSight = item["blocksSight"].AsBool(true),
                     BlocksMovement = item["blocksMovement"].AsBool(true),
+                    Walkable = item["walkable"].AsBool(false),
                 });
             }
 

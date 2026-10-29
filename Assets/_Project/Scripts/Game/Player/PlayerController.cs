@@ -3,8 +3,8 @@ using System;
 using Kordon.Core.Combat;
 using Kordon.Core.Movement;
 using Kordon.Core.Utility;
-using Kordon.Game.Input;
 using Kordon.Game.Maps;
+using Kordon.Game.Input;
 using UnityEngine;
 
 namespace Kordon.Game.Player
@@ -124,7 +124,65 @@ namespace Kordon.Game.Player
             UpdateGroundContact(dt);
             UpdateFootsteps(dt);
             UpdateAnchor(dt);
+            GuardAgainstFallingOutOfTheWorld();
             Vitals.Tick(dt);
+        }
+
+        /// <summary>
+        /// The terrain is the only floor and the map has open edges, so a player can
+        /// still leave the world through a gap.  Instead of falling forever, the body
+        /// is put back on a spawn point (and the fall is reported) - the same thing a
+        /// dedicated server does for a client that ends up outside the level.
+        /// </summary>
+        private void GuardAgainstFallingOutOfTheWorld()
+        {
+            BuiltMap map = BuiltMap.Active;
+            if (map == null || transform.position.y > map.KillFloorY)
+            {
+                return;
+            }
+
+            // Pick any spawn, not spawn zero: a whole server falling off should not
+            // all reappear stacked on one node.
+            int index = map.SpawnPoints.Count > 0
+                ? Random.Range(0, map.SpawnPoints.Count)
+                : 0;
+            Teleport(map.SpawnPosition(index) + Vector3.up * 0.3f, 0f);
+            Debug.LogWarning("[kordon] player left the map (y=" +
+                             transform.position.y.ToString("0.0") + "), returned to spawn");
+        }
+
+        /// <summary>Puts the body at a position with no inherited velocity.</summary>
+        public void Teleport(Vector3 position, float yawDegrees)
+        {
+            // yawDegrees of 0 is a real heading (north), not "keep whatever was set";
+            // every caller has a heading to pass.
+            bool enabled = _controller != null && _controller.enabled;
+            if (_controller != null)
+            {
+                // A CharacterController ignores transform writes while enabled.
+                _controller.enabled = false;
+            }
+
+            // Snap to whatever is underneath: spawn markers are authored at ground
+            // level, and a body that starts even a few centimetres inside the floor
+            // is pushed sideways by the controller on the first move.
+            Vector3 snapped = position;
+            if (Physics.Raycast(position + Vector3.up * 3f, Vector3.down, out RaycastHit ground,
+                                60f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                snapped = ground.point + Vector3.up * 0.06f;
+            }
+
+            transform.position = snapped;
+            transform.rotation = Quaternion.Euler(0f, yawDegrees, 0f);
+
+            if (_controller != null)
+            {
+                _controller.enabled = enabled;
+            }
+
+            Velocity = new KordonVec3(0f, 0f, 0f);
         }
 
         // ---------------------------------------------------------------- stance
@@ -284,7 +342,7 @@ namespace Kordon.Game.Player
 
         public void Respawn(Vector3 unityPosition, float yawDegrees)
         {
-            transform.position = unityPosition;
+            Teleport(unityPosition, yawDegrees);
             transform.rotation = MapSpace.ToUnityYaw(yawDegrees);
             Velocity = KordonVec3.Zero;
             Vitals.Reset();

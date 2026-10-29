@@ -4,12 +4,12 @@
     {
       "id": "dmr14",
       "model": "Kordon/Weapons/dmr14",
-      "triangles": 3148,
-      "bytes": 58076,
+      "triangles": 10068,
+      "bytes": 140796,
       "lengthM": 0.848,
       "sightHeightM": 0.1064,
       "sizeM": [
-        0.094,
+        0.095,
         0.848,
         0.293
       ],
@@ -18,8 +18,8 @@
     {
       "id": "grenade_flash",
       "model": "Kordon/Weapons/grenade_flash",
-      "triangles": 1120,
-      "bytes": 30092,
+      "triangles": 2248,
+      "bytes": 44236,
       "lengthM": 0.144,
       "sightHeightM": 0.0,
       "sizeM": [
@@ -32,13 +32,13 @@
     {
       "id": "grenade_frag",
       "model": "Kordon/Weapons/grenade_frag",
-      "triangles": 1076,
-      "bytes": 32412,
+      "triangles": 2140,
+      "bytes": 46940,
       "lengthM": 0.134,
       "sightHeightM": 0.0,
       "sizeM": [
         0.066,
-        0.068,
+        0.069,
         0.134
       ],
       "hasMagazine": false
@@ -46,8 +46,8 @@
     {
       "id": "grenade_smoke",
       "model": "Kordon/Weapons/grenade_smoke",
-      "triangles": 988,
-      "bytes": 28732,
+      "triangles": 1924,
+      "bytes": 41036,
       "lengthM": 0.171,
       "sightHeightM": 0.0,
       "sizeM": [
@@ -60,12 +60,12 @@
     {
       "id": "k870",
       "model": "Kordon/Weapons/k870",
-      "triangles": 2628,
-      "bytes": 50140,
+      "triangles": 7828,
+      "bytes": 111436,
       "lengthM": 0.786,
       "sightHeightM": 0.108,
       "sizeM": [
-        0.072,
+        0.078,
         0.786,
         0.249
       ],
@@ -74,12 +74,12 @@
     {
       "id": "p9",
       "model": "Kordon/Weapons/p9",
-      "triangles": 1768,
-      "bytes": 41388,
+      "triangles": 6208,
+      "bytes": 94156,
       "lengthM": 0.239,
       "sightHeightM": 0.0744,
       "sizeM": [
-        0.051,
+        0.063,
         0.239,
         0.204
       ],
@@ -88,8 +88,8 @@
     {
       "id": "sr338",
       "model": "Kordon/Weapons/sr338",
-      "triangles": 3236,
-      "bytes": 57740,
+      "triangles": 10284,
+      "bytes": 141052,
       "lengthM": 0.953,
       "sightHeightM": 0.1096,
       "sizeM": [
@@ -102,12 +102,12 @@
     {
       "id": "tr30",
       "model": "Kordon/Weapons/tr30",
-      "triangles": 2840,
-      "bytes": 53948,
+      "triangles": 9312,
+      "bytes": 130412,
       "lengthM": 0.748,
       "sightHeightM": 0.1048,
       "sizeM": [
-        0.053,
+        0.072,
         0.748,
         0.286
       ],
@@ -116,12 +116,12 @@
     {
       "id": "vk74",
       "model": "Kordon/Weapons/vk74",
-      "triangles": 2972,
-      "bytes": 56300,
+      "triangles": 9636,
+      "bytes": 136380,
       "lengthM": 0.708,
       "sightHeightM": 0.1016,
       "sizeM": [
-        0.054,
+        0.072,
         0.708,
         0.292
       ],
@@ -130,12 +130,12 @@
     {
       "id": "vs9",
       "model": "Kordon/Weapons/vs9",
-      "triangles": 2708,
-      "bytes": 53196,
+      "triangles": 8988,
+      "bytes": 127852,
       "lengthM": 0.481,
       "sightHeightM": 0.0984,
       "sizeM": [
-        0.051,
+        0.072,
         0.481,
         0.273
       ],
