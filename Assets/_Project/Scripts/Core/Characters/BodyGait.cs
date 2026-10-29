@@ -82,6 +82,7 @@ namespace Kordon.Core.Characters
         {
             Phase = 0f;
             SpeedBlend01 = 0f;
+            SmoothedSpeedMps = 0f;
         }
 
         /// <summary>
@@ -93,8 +94,13 @@ namespace Kordon.Core.Characters
         /// </summary>
         public void Advance(float horizontalSpeedMps, float dt)
         {
-            float speed = MathUtil.Clamp(horizontalSpeedMps, 0f, 20f);
+            float raw = MathUtil.Clamp(horizontalSpeedMps, 0f, 20f);
             float dtSeconds = MathUtil.Clamp(dt, 0f, 0.1f);
+            // The pose follows the speed with a little lag: a body that snaps from a
+            // standstill to a full stride in one frame looks like a puppet.
+            float follow = MathUtil.Clamp01(dtSeconds * Math.Max(0.5f, SpeedResponsePerSecond));
+            SmoothedSpeedMps = MathUtil.Lerp(SmoothedSpeedMps, raw, follow);
+            float speed = SmoothedSpeedMps;
             SpeedBlend01 = MathUtil.Clamp01(speed / Math.Max(0.1f, SprintSpeedMps));
             if (speed <= StandSpeedThreshold)
             {
@@ -108,6 +114,32 @@ namespace Kordon.Core.Characters
             float stride = MathUtil.Lerp(WalkStrideMeters, SprintStrideMeters, SpeedBlend01);
             Phase += (speed / Math.Max(0.2f, stride)) * MathUtil.TwoPi * dtSeconds;
             Phase = MathUtil.Repeat(Phase, MathUtil.TwoPi);
+        }
+
+
+        /// <summary>How fast the animation follows a change of speed, per second.</summary>
+        public float SpeedResponsePerSecond = 7f;
+
+        /// <summary>Speed the animation is actually playing at, damped towards the real one.</summary>
+        public float SmoothedSpeedMps { get; private set; }
+
+        /// <summary>
+        /// Lean of the upper body towards the aim point, in degrees of forward pitch.
+        /// A body that walks with its chest dead vertical reads as a mannequin, so the
+        /// torso follows the aim slightly and leans into a sprint.
+        /// </summary>
+        public float UpperBodyPitchDegrees(float aimPitchDegrees, float speed01, float crouch01)
+        {
+            float aim = MathUtil.Clamp(aimPitchDegrees, -45f, 45f) * 0.35f;
+            float sprint = MathUtil.Clamp01(speed01) * 8f;
+            float crouch = MathUtil.Clamp01(crouch01) * 18f;
+            return MathUtil.Clamp(aim + sprint + crouch, -20f, 34f);
+        }
+
+        /// <summary>Lean into a turn: turning hard leans the body into the corner.</summary>
+        public float TurnLeanDegrees(float yawRateDegreesPerSecond)
+        {
+            return MathUtil.Clamp(yawRateDegreesPerSecond * 0.12f, -7f, 7f);
         }
 
         /// <summary>The pose for the current phase at the given speed.</summary>

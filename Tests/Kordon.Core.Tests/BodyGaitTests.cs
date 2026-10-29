@@ -96,6 +96,50 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
+        public void SpeedIsFollowedWithALittleLag()
+        {
+            BodyGait gait = new BodyGait();
+            gait.Advance(5f, 1f / 60f);
+            // One frame at a full sprint must not jump the pose to a full stride...
+            Assert.True(gait.SmoothedSpeedMps > 0f);
+            Assert.True(gait.SmoothedSpeedMps < 5f);
+
+            // ...but half a second of sprinting gets there.
+            for (int frame = 0; frame < 30; frame++)
+            {
+                gait.Advance(5f, 1f / 60f);
+            }
+
+            Assert.InRange(gait.SmoothedSpeedMps, 4.5f, 5.0f);
+
+            // Stopping is damped the same way, and settles.
+            for (int frame = 0; frame < 120; frame++)
+            {
+                gait.Advance(0f, 1f / 60f);
+            }
+
+            Assert.True(gait.SmoothedSpeedMps < 0.1f);
+        }
+
+        [Fact]
+        public void TorsoFollowsTheAimAndTheSprint()
+        {
+            BodyGait gait = new BodyGait();
+            float standing = gait.UpperBodyPitchDegrees(0f, 0f, 0f);
+            Assert.Equal(0f, standing, 3);
+            Assert.True(gait.UpperBodyPitchDegrees(30f, 0f, 0f) > standing);
+            Assert.True(gait.UpperBodyPitchDegrees(0f, 1f, 0f) > standing);
+            Assert.True(gait.UpperBodyPitchDegrees(0f, 1f, 1f) > gait.UpperBodyPitchDegrees(0f, 1f, 0f));
+            Assert.InRange(gait.UpperBodyPitchDegrees(-90f, 0f, 0f), -20f, 34f);
+            Assert.InRange(gait.UpperBodyPitchDegrees(90f, 0f, 0f), -20f, 34f);
+
+            // A hard turn leans, a gentle one barely does, and neither tips the body over.
+            Assert.True(gait.TurnLeanDegrees(90f) > gait.TurnLeanDegrees(20f));
+            Assert.Equal(-gait.TurnLeanDegrees(90f), gait.TurnLeanDegrees(-90f), 3);
+            Assert.InRange(gait.TurnLeanDegrees(1000f), -7f, 7f);
+        }
+
+        [Fact]
         public void KilledBodyFallsOverAndStaysDown()
         {
             BodyGait gait = new BodyGait();

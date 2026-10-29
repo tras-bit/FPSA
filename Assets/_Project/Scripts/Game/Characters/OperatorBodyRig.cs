@@ -43,6 +43,15 @@ namespace Kordon.Game.Characters
         private Transform _elbowLeft;
         private Transform _elbowRight;
 
+        private Transform _body;
+        private Quaternion _restBodyRotation = Quaternion.identity;
+        private float _aimPitchDegrees;
+        private float _yawRateDegreesPerSecond;
+        private float _lastYaw;
+        private bool _hasLastYaw;
+
+        public void SetAim(float pitchDegrees) => _aimPitchDegrees = pitchDegrees;
+
         private Quaternion _hipLeftRest = Quaternion.identity;
         private Quaternion _hipRightRest = Quaternion.identity;
         private Quaternion _kneeLeftRest = Quaternion.identity;
@@ -108,6 +117,8 @@ namespace Kordon.Game.Characters
             // The rest rotations are kept, never assumed: if a future export bakes the
             // Z-up to Y-up conversion into each node, the rig still turns the joint
             // instead of tearing the limb off its own orientation.
+            _body = FindNode(root, BodyNode);
+            _restBodyRotation = RestOf(_body);
             _hipLeftRest = RestOf(_hipLeft);
             _hipRightRest = RestOf(_hipRight);
             _kneeLeftRest = RestOf(_kneeLeft);
@@ -183,6 +194,11 @@ namespace Kordon.Game.Characters
             _hasLastPosition = false;
             transform.localPosition = _restLocalPosition;
             transform.localRotation = _restLocalRotation;
+            if (_body != null)
+            {
+                _body.localRotation = _restBodyRotation;
+            }
+
             ApplyPose(default(GaitPose));
         }
 
@@ -207,6 +223,16 @@ namespace Kordon.Game.Characters
             {
                 return;
             }
+
+            float yaw = transform.eulerAngles.y;
+            if (_hasLastYaw && dt > 0f)
+            {
+                float deltaYaw = Mathf.DeltaAngle(_lastYaw, yaw);
+                _yawRateDegreesPerSecond = deltaYaw / dt;
+            }
+
+            _lastYaw = yaw;
+            _hasLastYaw = true;
 
             Vector3 delta = position - _lastPosition;
             _lastPosition = position;
@@ -244,11 +270,19 @@ namespace Kordon.Game.Characters
             float crouch = 0f;
 
             _gait.Advance(_speed, dt);
-            GaitPose pose = _gait.Sample(_speed, crouch, breath);
+            GaitPose pose = _gait.Sample(_gait.SmoothedSpeedMps, crouch, breath);
             ApplyPose(pose);
 
+            // The body leans: into a turn, into a sprint, and slightly towards where it
+            // is aiming.  A torso that never leaves vertical is what makes a walking
+            // body read as a model being slid across the floor.
+            float lean = pose.RollDegrees +
+                         _gait.TurnLeanDegrees(_yawRateDegreesPerSecond);
             transform.localRotation = _restLocalRotation *
-                Quaternion.AngleAxis(pose.RollDegrees, Vector3.forward);
+                Quaternion.AngleAxis(lean, Vector3.forward);
+            _body.localRotation = _restBodyRotation * Quaternion.AngleAxis(
+                -_gait.UpperBodyPitchDegrees(_aimPitchDegrees, _speed / _gait.SprintSpeedMps,
+                    crouch), Vector3.right);
         }
 
         /// <summary>
