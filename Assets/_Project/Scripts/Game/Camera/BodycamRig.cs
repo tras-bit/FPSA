@@ -1,6 +1,7 @@
 using Kordon.Core.Movement;
 using Kordon.Game.Maps;
 using Kordon.Game.Player;
+using Kordon.Game.Rendering;
 using UnityEngine;
 
 namespace Kordon.Game.Camera
@@ -54,7 +55,7 @@ namespace Kordon.Game.Camera
             }
 
             _fovCurrent = HipFov;
-            Shader shader = Shader.Find("Hidden/Kordon/Bodycam");
+            Shader shader = ShaderLibrary.Bodycam();
             if (shader != null)
             {
                 _postMaterial = new Material(shader);

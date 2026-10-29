@@ -199,7 +199,8 @@ Everything network related lives in
 
 ```
 Assets/_Project/
-  Art/            models (FBX), textures, materials, shaders, generated audio
+  Art/            models (FBX), textures, materials, shaders, generated audio;
+                  Resources/ holds everything loaded by path (build safe)
   Scenes/         boot scene (created by the build script)
   Scripts/Core/   engine free deterministic rules: match, ammo, damage, movement,
                   nav, co-op mission, anti-cheat, content loading  (Kordon.Core)

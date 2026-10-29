@@ -83,6 +83,23 @@ boxes, tubes, ribs, vents, rails and sling loops - no unmodified primitives:
 * A missing model warns and falls back to the procedural pose / a placeholder
   sphere, so art can never break the game logic.
 
+## Shaders
+
+Two shaders ship with the game, both written here:
+
+| Shader | File | Used by |
+|---|---|---|
+| `Hidden/Kordon/Bodycam` | `Art/Resources/Kordon/Shaders/KordonBodycam.shader` | the always-on bodycam post pass (barrel warp, chroma split, vignette, sensor grain) |
+| `Kordon/GrenadeFx` | `Art/Resources/Kordon/Shaders/KordonGrenadeFx.shader` | blast flash, smoke and spark billboards |
+
+They live under a `Resources` folder on purpose. `Shader.Find` only sees shaders
+that made it into the build, and a shader referenced by no material asset is
+stripped - which in a player would have silently removed the bodycam pass and the
+grenade effects. `Kordon.Game.Rendering.ShaderLibrary` loads them by resource path
+first and only falls back to `Shader.Find` in the editor, and
+`Tools/verify/policy_check.py` fails the build if a shader leaves `Resources` or if
+a resource path stops resolving.
+
 ## Materials and textures
 
 `Tools/textures/generate_textures.py` synthesises every texture: 17 surface sets

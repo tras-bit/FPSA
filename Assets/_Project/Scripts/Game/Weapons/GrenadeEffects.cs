@@ -1,5 +1,6 @@
 using Kordon.Core.Loadout;
 using Kordon.Game.Audio;
+using Kordon.Game.Rendering;
 using UnityEngine;
 
 namespace Kordon.Game.Weapons
@@ -148,7 +149,6 @@ namespace Kordon.Game.Weapons
     /// </summary>
     public static class GrenadeEffects
     {
-        private const string ShaderName = "Kordon/GrenadeFx";
         private static Shader _shader;
         private static bool _shaderProbed;
 
@@ -159,11 +159,9 @@ namespace Kordon.Game.Weapons
                 if (!_shaderProbed)
                 {
                     _shaderProbed = true;
-                    _shader = Shader.Find(ShaderName);
-                    if (_shader == null)
-                    {
-                        Debug.LogWarning("[kordon] grenade fx shader missing: " + ShaderName);
-                    }
+                    // Resources first: a material-less shader would be stripped from
+                    // the player build and the effects would silently disappear.
+                    _shader = ShaderLibrary.GrenadeFx();
                 }
 
                 return _shader;

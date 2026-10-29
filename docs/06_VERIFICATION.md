@@ -51,6 +51,12 @@ folder compiled by the type check, every content id referenced by code present i
   unit tests, and the server build target is part of the editor build script. The
   server itself was never executed here (no Unity).
 
+* Shaders: both shaders sit under `Resources` and are loaded through
+  `ShaderLibrary`; a policy check (run in CI) fails if a shader moves out of
+  `Resources`, if a `Shader.Find` literal names a missing shader, or if a
+  `ShaderLibrary` resource path stops resolving. Without this, `Shader.Find` would
+  return null in a player build and the bodycam pass would vanish silently.
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no

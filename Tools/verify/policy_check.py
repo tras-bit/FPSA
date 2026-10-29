@@ -164,6 +164,72 @@ def check_content_ids():
         notes.append(f"{len(referenced)} content ids referenced by code all exist in Definitions")
 
 
+def check_shaders_ship_in_build():
+    """A shader that is not under a Resources folder is stripped from the player.
+
+    Shader.Find only sees the shaders baked into a build, and a shader that no
+    material asset references is not baked in.  Losing them silently would remove
+    the bodycam pass and the grenade effects, so every shader must live under
+    Resources, every Shader.Find literal must name a shader that exists, and every
+    resource path in ShaderLibrary must resolve to a real shader file.
+    """
+    assets = os.path.join(ROOT, "Assets")
+    declared = {}
+    by_resource = {}
+    misplaced = []
+    marker = f"{os.sep}Resources{os.sep}"
+    for base, _, files in os.walk(assets):
+        for name in files:
+            if not name.endswith(".shader"):
+                continue
+            path = os.path.join(base, name)
+            match = re.search(r'^\s*Shader\s+"([^"]+)"', read(path), re.MULTILINE)
+            if not match:
+                failures.append(f"shader without a declared name: {os.path.relpath(path, ROOT)}")
+                continue
+            declared[match.group(1)] = path
+            if marker not in path:
+                misplaced.append(os.path.relpath(path, ROOT))
+            else:
+                tail = path.split(marker, 1)[1].replace(os.sep, "/")
+                by_resource[tail[: -len(".shader")]] = match.group(1)
+
+    if misplaced:
+        failures.append("shader outside a Resources folder (stripped from the player build): " +
+                        ", ".join(misplaced))
+
+    for path in walk():
+        for match in re.finditer(r'Shader\.Find\("([^"]+)"\)', read(path)):
+            if match.group(1) not in declared:
+                failures.append(f"{os.path.relpath(path, ROOT)}: Shader.Find(\"{match.group(1)}\") "
+                                "names a shader that does not exist")
+
+    library = os.path.join(SCRIPTS, "Game", "Rendering", "ShaderLibrary.cs")
+    if not os.path.exists(library):
+        failures.append("ShaderLibrary.cs missing: shader loading is not build safe")
+        return
+
+    text = read(library)
+    resources = dict(re.findall(r'const string (\w+Resource)\s*=\s*"([^"]+)"', text))
+    names = dict(re.findall(r'const string (\w+Name)\s*=\s*"([^"]+)"', text))
+    for key, resource in resources.items():
+        if resource not in by_resource:
+            failures.append(f"ShaderLibrary.{key} = \"{resource}\" does not resolve to a shader "
+                            "file under Resources")
+            continue
+        expected = names.get(key[: -len("Resource")] + "Name")
+        if expected is not None and by_resource[resource] != expected:
+            failures.append(f"ShaderLibrary.{key} points at {by_resource[resource]} but the "
+                            f"shader is declared as {expected}")
+    for key, name in names.items():
+        if name not in declared:
+            failures.append(f"ShaderLibrary.{key} = \"{name}\" names a shader that does not exist")
+
+    if not misplaced and resources and len(by_resource) >= len(resources):
+        notes.append(f"{len(declared)} shaders live under Resources and every ShaderLibrary "
+                     "path resolves (build safe, never stripped)")
+
+
 def check_build_scene():
     scenes = os.path.join(ROOT, "Assets", "_Project", "Scenes")
     script = os.path.join(SCRIPTS, "Editor", "BuildScript.cs")
@@ -182,6 +248,7 @@ def main() -> int:
     check_compile_coverage()
     check_content_ids()
     check_build_scene()
+    check_shaders_ship_in_build()
 
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
     with open(REPORT, "w", encoding="utf-8") as handle:
