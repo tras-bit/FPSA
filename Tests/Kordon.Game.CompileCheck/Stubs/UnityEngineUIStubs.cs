@@ -102,6 +102,12 @@ namespace UnityEngine
     public class Font : Object
     {
         public int fontSize { get; set; } = 14;
+
+        // Real UnityEngine.Font API (Unity 6000.0): a font from an installed family,
+        // used as the fallback when a builtin font name is not available.
+        public static Font CreateDynamicFontFromOSFont(string fontname, int size) => new Font();
+
+        public static Font CreateDynamicFontFromOSFont(string[] fontnames, int size) => new Font();
     }
 
     public class Canvas : Behaviour
