@@ -3,6 +3,7 @@ using Kordon.Core.Combat;
 using Kordon.Core.Movement;
 using Kordon.Core.Nav;
 using Kordon.Core.Utility;
+using Kordon.Game.Weapons;
 using Kordon.Game.Maps;
 using Kordon.Game.Player;
 using UnityEngine;
@@ -300,6 +301,12 @@ namespace Kordon.Game.Ai
         {
             Vector3 origin = EyePosition();
             Vector3 destination = target.position + Vector3.up * 1.25f;
+            if (SmokeScreen.Blocks(origin, destination))
+            {
+                // Smoke is a real occlusion volume: militia do not see through it.
+                return false;
+            }
+
             Vector3 direction = destination - origin;
             float distance = direction.magnitude;
             RaycastHit hit;

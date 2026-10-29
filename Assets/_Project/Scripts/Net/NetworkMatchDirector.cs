@@ -493,6 +493,12 @@ namespace Kordon.Net
 
             GrenadeDefinition grenade = projectile.Definition;
             ResolveBlast(grenade, position, throwerId);
+            if (grenade != null && grenade.Kind == GrenadeKind.Smoke)
+            {
+                // The server keeps the cloud in the same field the militia AI reads.
+                SmokeScreen.Add(position + Vector3.up * 0.4f, grenade.EffectRadiusM * 0.85f,
+                    grenade.EffectDurationSeconds);
+            }
             GrenadeExplodedClientRpc(projectile.Id, position, grenade != null ? grenade.Id : string.Empty);
         }
 

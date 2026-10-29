@@ -187,7 +187,8 @@ Assets/StreamingAssets/Data/
   Definitions/    weapons, magazines, bullets, armour, grenades, missions, subtitles
   Maps/           authored layout for both maps (Blender written, single source of truth)
   Nav/            nav graph per map
-ArtSource/Blender/  Blender sources for the kit and both maps (kit + map builders)
+  Art/            generated kit, weapon and grenade manifests
+ArtSource/Blender/  Blender sources: modular kit, both maps, the weapon set
 Tools/            Blender and texture/audio generators, verification scripts
 Tests/            Core unit tests, syntax check, Unity side compile check
 docs/             design and network documents, verification reports, art previews

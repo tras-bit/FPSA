@@ -251,6 +251,9 @@ namespace Kordon.Game.Weapons
                     new Color(0.66f, 0.67f, 0.66f, 0.16f), lifetime, 0.22f, 0.1f, FxShader);
             }
 
+            // The cloud is a real occlusion volume, not a picture: it is registered in
+            // the shared smoke field so the AI and the server cannot see through it.
+            SmokeScreen.Add(position + Vector3.up * 0.4f, radius * 0.85f, lifetime);
             audio?.PlayExplosion(position, GrenadeKind.Smoke);
         }
 

@@ -47,6 +47,7 @@ namespace Kordon.Game.Ui
         private Image _hitMarker;
         private Image _damageFlash;
         private Image _lowHealthEdge;
+        private Image _flashOverlay;
         private Text _voiceLine;
         private Text _grenadeLine;
 
@@ -55,6 +56,8 @@ namespace Kordon.Game.Ui
         private float _hitMarkerAt = -10f;
         private float _toastAt = -10f;
         private float _damageFlashAt = -10f;
+        private float _blindUntil = -10f;
+        private float _blindStartedAt = -10f;
         private int _scoreRowCount = -1;
         private string _lastCount = "";
         private int _lastScoreVersion = -1;
@@ -84,6 +87,10 @@ namespace Kordon.Game.Ui
             _lowHealthEdge = UiBuilder.Panel(root, "LowHealth", new Color(0.35f, 0f, 0f, 0f),
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
             _lowHealthEdge.raycastTarget = false;
+
+            _flashOverlay = UiBuilder.Panel(root, "FlashBang", new Color(1f, 1f, 1f, 0f),
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
+            _flashOverlay.raycastTarget = false;
 
             _strip = UiBuilder.FullRect(root, "MagazineStrip");
             HorizontalLayoutGroup line = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -190,6 +197,18 @@ namespace Kordon.Game.Ui
 
         public void DamageFlash() => _damageFlashAt = Time.time;
 
+        /// <summary>
+        /// Flashbang effect: a hard white bloom that fades out over the blind time the
+        /// blast rules produced.  It never removes control - you can still move, shoot
+        /// and reload - it just takes your eyes for a moment.
+        /// </summary>
+        public void Blind(float seconds)
+        {
+            float duration = Mathf.Clamp(seconds, 0.2f, 6f);
+            _blindStartedAt = Time.time;
+            _blindUntil = Time.time + duration;
+        }
+
         public void SetScoreboard(List<ScoreRow> rows)
         {
             _rows = rows;
@@ -258,6 +277,15 @@ namespace Kordon.Game.Ui
 
             float flash = Mathf.Clamp01(1f - (now - _damageFlashAt) / 0.45f);
             _damageFlash.color = new Color(0.45f, 0.02f, 0.02f, flash * 0.32f);
+
+            if (_flashOverlay != null)
+            {
+                float blind = now < _blindUntil
+                    ? Mathf.Clamp01(1f - (now - _blindStartedAt) /
+                        Mathf.Max(0.2f, _blindUntil - _blindStartedAt))
+                    : 0f;
+                _flashOverlay.color = new Color(1f, 1f, 1f, blind * blind * 0.92f);
+            }
         }
 
         private void RefreshStrip(AmmoHudSnapshot snapshot)

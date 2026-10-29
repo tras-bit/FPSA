@@ -125,9 +125,16 @@ namespace Kordon.Net
                 }
 
                 if (definition.Kind == GrenadeKind.Flashbang &&
-                    distance < definition.EffectRadiusM)
+                    distance < definition.EffectRadiusM &&
+                    GrenadeBlast.HasLineOfSight(position,
+                        Local.Body.transform.position + Vector3.up * 1.4f,
+                        Local.Body.transform))
                 {
-                    Local.Hud.Toast("blinded by a flashbang");
+                    float closeness = 1f - Mathf.Clamp01(
+                        distance / Mathf.Max(0.5f, definition.EffectRadiusM));
+                    Local.Hud.Blind(definition.EffectDurationSeconds *
+                                    Mathf.Lerp(0.25f, 1f, closeness));
+                    Local.Body.Vitals.Suppression.Add(0.7f);
                 }
             }
         }

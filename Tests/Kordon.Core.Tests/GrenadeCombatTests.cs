@@ -412,5 +412,71 @@ namespace Kordon.Core.Tests
             Assert.False(match.IsRespawnReady(4242UL, deathAt + 0.1f));
             Assert.True(match.IsRespawnReady(4242UL, deathAt + config.RespawnDelaySeconds + 0.1f));
         }
+        [Fact]
+        public void SmokeClouds_BlockSight_OnlyInsideTheirVolume()
+        {
+            SmokeField field = new SmokeField();
+            KordonVec3 center = new KordonVec3(0f, 1.2f, 5f);
+            field.Add(center, 4f, expiresAt: 30f);
+
+            // Straight through the cloud.
+            Assert.True(field.BlocksSegment(new KordonVec3(0f, 1.5f, 0f),
+                new KordonVec3(0f, 1.5f, 10f), 1f));
+
+            // Well to the side of it.
+            Assert.False(field.BlocksSegment(new KordonVec3(20f, 1.5f, 0f),
+                new KordonVec3(20f, 1.5f, 10f), 1f));
+
+            // An eye that is already inside the cloud sees nothing either.
+            Assert.True(field.BlocksSegment(center, new KordonVec3(0f, 1.5f, 20f), 1f));
+        }
+
+        [Fact]
+        public void SmokeClouds_Expire_AndStopBlocking()
+        {
+            SmokeField field = new SmokeField();
+            field.Add(KordonVec3.Zero, 6f, expiresAt: 10f);
+            KordonVec3 from = new KordonVec3(-30f, 1.5f, 0f);
+            KordonVec3 to = new KordonVec3(30f, 1.5f, 0f);
+
+            Assert.True(field.BlocksSegment(from, to, 9.9f));
+            Assert.False(field.BlocksSegment(from, to, 10.1f));
+            Assert.Equal(1, field.Count);
+
+            field.Prune(11f);
+            Assert.Equal(0, field.Count);
+        }
+
+        [Fact]
+        public void SmokeClouds_RejectNonsenseAndCanBeCleared()
+        {
+            SmokeField field = new SmokeField();
+            field.Add(KordonVec3.Zero, 0f, 5f);
+            field.Add(KordonVec3.Zero, -3f, 5f);
+            Assert.Equal(0, field.Count);
+
+            field.Add(KordonVec3.Zero, 5f, 40f);
+            field.Add(new KordonVec3(30f, 0f, 0f), 5f, 40f);
+            Assert.Equal(2, field.Count);
+
+            field.Clear();
+            Assert.Equal(0, field.Count);
+            Assert.False(field.BlocksSegment(new KordonVec3(-40f, 1f, 0f),
+                new KordonVec3(40f, 1f, 0f), 1f));
+        }
+
+        [Fact]
+        public void DistanceToSegment_IsClampedToTheEnds()
+        {
+            KordonVec3 a = KordonVec3.Zero;
+            KordonVec3 b = new KordonVec3(0f, 0f, 10f);
+            KordonVec3 point = new KordonVec3(3f, 0f, 5f);
+
+            Assert.Equal(3f, SmokeField.DistanceToSegment(point, a, b), 3);
+
+            // Beyond the end of the segment the distance is to the end point itself.
+            KordonVec3 behind = new KordonVec3(3f, 0f, -4f);
+            Assert.Equal(5f, SmokeField.DistanceToSegment(behind, a, b), 3);
+        }
     }
 }

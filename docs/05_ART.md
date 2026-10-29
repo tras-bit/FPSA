@@ -6,9 +6,10 @@ source under `ArtSource/Blender/`, and the FBX export under
 
 ```
 ArtSource/Blender/
-  kit/kordon_kit.blend         60 modular pieces (walls, doors, cover, crates, props)
-  maps/ffa_zavod7.blend        the FFA map, assembled from the kit
-  maps/coop_silent_kiln.blend  the co-op site
+  kordon_modular_kit.blend     60 modular pieces (walls, doors, cover, crates, props)
+  ffa_zavod7.blend             the FFA map, assembled from the kit
+  coop_silent_kiln.blend       the co-op site
+  kordon_weapons.blend         7 first person weapons + 3 grenades
 Tools/blender.sh               headless Blender runner (bpy wheel)
 Tools/blender/                 kit.py, kordon_layout.py, build_kit.py, build_maps.py
 ```
@@ -47,6 +48,41 @@ spawns, audio zones, landmarks, nav graph.
   yard, control block, kiln hall with a hold objective, extraction pad. 188 nav
   nodes with 1270 links, 6 spawn points.
 
+## Weapons and thrown equipment
+
+`Tools/blender/build_weapons.py` builds the first person models from authored
+boxes, tubes, ribs, vents, rails and sling loops - no unmodified primitives:
+
+| Model | Triangles | Size (W x L x H, m) | Notes |
+|---|---|---|---|
+| `vk74` | 2 972 | 0.05 x 0.71 x 0.29 | wooden furniture, brake, curved magazine |
+| `tr30` | 2 840 | 0.05 x 0.75 x 0.29 | polymer furniture, flash hider, straight magazine |
+| `vs9` | 2 708 | 0.05 x 0.48 x 0.27 | folding wire stock, stubby handguard |
+| `dmr14` | 3 148 | 0.09 x 0.85 x 0.29 | side bolt handle, long rail |
+| `sr338` | 3 236 | 0.07 x 0.95 x 0.27 | straight bolt handle, heavy profile barrel |
+| `k870` | 2 628 | 0.07 x 0.79 x 0.25 | pump, bead sight, no magazine |
+| `p9` | 1 768 | 0.05 x 0.24 x 0.20 | pistol, short slide and grip |
+| `grenade_frag` | 1 076 | 0.07 x 0.07 x 0.13 | ribbed body, lever, pin ring |
+| `grenade_smoke` | 988 | 0.07 x 0.07 x 0.17 | vented canister |
+| `grenade_flash` | 1 120 | 0.06 x 0.06 x 0.14 | drilled canister |
+
+* The origin of every weapon is the top of the pistol grip - the shooting hand -
+  so the viewmodel poses a hand position instead of a bounding box centre.
+* The barrel points along Blender -Y, which is Unity +Z after the FBX axis
+  conversion used by the whole project.
+* Each magazine is a **separate object named `Magazine`** in the same FBX, so the
+  reload beats take the real magazine out of the weapon instead of hiding a
+  generic prop.
+* `StreamingAssets/Data/Art/weapon_manifest.json` records triangles, size and the
+  measured sight height of every model; the manifest is generated, never edited.
+* Every exported FBX is re-imported and its bounding box compared with the
+  authored one, so a broken axis conversion fails the build script.
+* The viewmodel measures the loaded mesh at runtime (sight height, length) and
+  derives the aim and hip poses from it: aiming puts the top of the iron sights on
+  the camera axis, and a pistol is held closer than a sniper rifle.
+* A missing model warns and falls back to the procedural pose / a placeholder
+  sphere, so art can never break the game logic.
+
 ## Materials and textures
 
 `Tools/textures/generate_textures.py` synthesises every texture: 17 surface sets
@@ -80,5 +116,6 @@ a runtime map cannot disagree.
 The sound bank is synthesised too (`Tools/audio/generate_audio.py`): 73 clips,
 ~4.8 MB of 44.1 kHz mono WAV in `Art/Resources/Kordon/Audio/` — eight gunshot
 voices × three variants plus a distance-filtered variant each, six surface
-footstep banks, the magazine handling beats, impacts, hits, grenade, bodycam,
+footstep banks, the magazine handling beats, impacts, hits, grenades
+(pin, bounce, fuze, fragmentation blast, distant blast, smoke hiss, flashbang), bodycam,
 breathing, heartbeat, ambience beds, radio static and cues.

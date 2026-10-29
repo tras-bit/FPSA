@@ -69,6 +69,7 @@ namespace Kordon.Game.Player
             op.Hud = host.gameObject.AddComponent<HudScreen>();
             op.Hud.Weapons = op.Weapons;
             op.Hud.Grenades = op.Grenades;
+            op.Grenades.Hud = op.Hud;
 
             // Audio: the director hears the same noise events the AI and the server do.
             GameObject audioObject = new GameObject("Audio");

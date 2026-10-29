@@ -29,6 +29,7 @@ namespace Kordon.Game.Weapons
         public PlayerController Body;
         public BodycamRig Rig;
         public AudioDirector Audio;
+        public Kordon.Game.Ui.HudScreen Hud;
 
         /// <summary>Minimum time between two throws, mirroring the server rule.</summary>
         public const float ThrowCooldownSeconds = GrenadeTrajectory.MinThrowIntervalSeconds;
@@ -264,6 +265,16 @@ namespace Kordon.Game.Weapons
             GrenadeEffects.Detonate(ProjectileRoot(), grenade, position, Audio);
             int affected = GrenadeBlast.ApplyLocal(grenade, position, Body,
                 (target, blast) => BlastResolved?.Invoke(target, blast));
+
+            if (Hud != null && Body != null)
+            {
+                BlastResult own = GrenadeBlast.Evaluate(grenade, position, Body.transform.position,
+                    Body.EyeHeight(), Body.Armor, true, Body.transform);
+                if (own.Blinded)
+                {
+                    Hud.Blind(own.BlindSeconds);
+                }
+            }
 
             if (Rig != null)
             {
