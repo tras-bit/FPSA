@@ -75,6 +75,16 @@ folder compiled by the type check, every content id referenced by code present i
   from `KRD_steel_rust (Instance)` to `steel_rust` is the part that fails silently,
   so it is the part with tests.
 
+* Assembly boundaries (1.0.3): the editor reported
+  `CS0012 NetworkEndpoint ... Unity.Networking.Transport` for `KordonNetwork.cs`.
+  The static checks compile every script into one assembly, so a missing asmdef
+  reference is invisible to them. A policy rule now maps package namespaces (by
+  `using` or fully qualified use) to the reference the owning asmdef must carry;
+  verified by removing the reference and watching the check fail.
+* Editor warnings are now part of the target: the Unity-side type check reports
+  **0 errors, 0 warnings** (CS0618 obsolete API, CS0067 unused event, CS0414/CS0169
+  dead fields all cleared).
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no

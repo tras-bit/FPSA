@@ -3,6 +3,43 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.3 - 2026-10-29
+
+The build now compiles in Unity with **zero errors and zero warnings**. Every fix
+here came from the editor output, which is the one thing the static checks cannot
+reproduce.
+
+### Fixed
+
+* **`CS0012: The type 'NetworkEndpoint' is defined in an assembly that is not
+  referenced`** in `KordonNetwork.cs`. `UnityTransport` is a thin wrapper over
+  Unity Transport, so using it forces `Unity.Networking.Transport` to be
+  resolvable. `Kordon.Net.asmdef` referenced only `Unity.Netcode.Runtime`, and
+  `Packages/manifest.json` did not declare `com.unity.transport` (it only arrived
+  transitively). Both are now explicit, pinned to the 2.4.0 that Netcode 2.2.0
+  requires.
+* **The kit screen's grenade button never changed its caption.** It read
+  `GRENADE: FRAG x2` no matter what was selected, because the label was created and
+  then thrown away. Cycling now updates it (`FRAG x2` / `SMOKE x2` / `FLASH x2`),
+  so the screen cannot show one grenade while issuing another.
+* Obsolete Unity 6 API: `FindObjectOfType` (6 call sites) replaced by
+  `FindFirstObjectByType`, and `PlayerSettings.SetApplicationIdentifier(BuildTargetGroup, ...)`
+  by the `NamedBuildTarget` overload. No CS0618 warnings left.
+* A never-raised `PracticeMatch.ScoreboardChanged` event, an assigned-but-unread
+  `HudScreen._scoreRowCount`, three unused kit-screen fields and a dead
+  `CoopMissionDirector` flag are gone (CS0067 / CS0414 / CS0169).
+* AI path searches are throttled to 0.9 s per hostile (and forced when a path runs
+  out) instead of twice a second per hostile. The timer that was meant to do this
+  was declared and never used.
+
+### Added
+
+* `Tools/verify/policy_check.py` checks assembly boundaries: a script that uses
+  `Unity.Netcode` or `Unity.Networking.Transport` (by `using` **or** fully
+  qualified) must have the owning asmdef reference that assembly. The static checks
+  flatten every script into one assembly, which is exactly why the CS0012 error was
+  invisible to them; verified by removing the reference and watching the check fail.
+
 ## 1.0.2 - 2026-10-29
 
 Two defects that only a real editor and a real look at the art would show. Both

@@ -10,7 +10,7 @@ audio (synthesised from noise in `Tools/audio`), the UI (built in code) and the
 networking layer glue. No asset, map, sound or piece of code was copied from any
 existing game.
 
-**Release 1.0.2.** This repository is the release: open it in Unity 6 and press
+**Release 1.0.3.** This repository is the release: open it in Unity 6 and press
 Play (three steps, below), or build the player from the `Kordon` menu. The release
 does **not** contain a prebuilt `.exe` - no Windows machine and no Unity licence
 were available in the build environment, so the binary could not be produced here.
@@ -49,6 +49,7 @@ Two things can go wrong on a fresh clone, both recoverable in a minute:
 
 | What you see | Why | Fix |
 |---|---|---|
+| `CS0012: The type 'NetworkEndpoint' is defined in an assembly that is not referenced ... 'Unity.Networking.Transport'` | `UnityTransport` needs the transport assembly; fixed in 1.0.3 (asmdef reference + `com.unity.transport` in the manifest). Your clone predates it | update to 1.0.3 or newer |
 | `CS1069: The type name 'Rigidbody2D' could not be found ... forwarded to assembly 'UnityEngine.Physics2DModule'` (inside `com.unity.netcode.gameobjects`) | the built-in **Physics 2D** package was not enabled, and Netcode for GameObjects needs it for its 2D rigidbody components | already fixed in `Packages/manifest.json` since 1.0.1 (`com.unity.modules.physics2d`). If you edit the manifest, keep it - `Tools/verify/policy_check.py` fails without it |
 | `Assembly 'Library/ScriptAssemblies/Unity.Collections.CodeGen.dll' will not be loaded ... Unable to resolve reference 'Unity.Collections'` | a half-written `Library/` left behind by the failed package resolve | quit Unity, delete `Library/ScriptAssemblies` (or the whole `Library` folder), reopen - packages resolve again and it compiles |
 
