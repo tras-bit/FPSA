@@ -743,6 +743,7 @@ namespace UnityEngine
     public class Renderer : Component
     {
         public Material sharedMaterial { get; set; }
+        public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode { get; set; }
         public Material[] sharedMaterials { get; set; } = new Material[0];
         public Material material => sharedMaterial;
         public bool enabled { get; set; } = true;
@@ -1194,6 +1195,18 @@ namespace UnityEngine
     [AttributeUsage(AttributeTargets.Class)]
     public class DisallowMultipleComponent : Attribute
     {
+    }
+}
+
+namespace UnityEngine.Rendering
+{
+    /// <summary>Real UnityEngine.Rendering.ShadowCastingMode values (Unity 6000.0).</summary>
+    public enum ShadowCastingMode
+    {
+        Off = 0,
+        On = 1,
+        TwoSided = 2,
+        ShadowsOnly = 3,
     }
 }
 

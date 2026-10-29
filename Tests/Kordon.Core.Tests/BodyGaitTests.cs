@@ -35,7 +35,7 @@ namespace Kordon.Core.Tests
             // A full cycle covers WalkStrideMeters.  At that stride and a speed of
             // one stride per second the phase must have advanced exactly one turn.
             BodyGait gait = new BodyGait();
-            gait.Phase = 0f;
+            gait.Reset();
             float speed = 1.4f; // speed below SprintSpeed, so blend = speed / sprint
 
             float blend = MathUtil.Clamp01(speed / gait.SprintSpeedMps);
