@@ -140,8 +140,8 @@ namespace Kordon.Core.Combat
         /// false when it came to rest on that surface (then <see cref="GrenadeFlightState.Resting"/> is set).
         /// </summary>
         public static bool ResolveImpact(ref GrenadeFlightState state, KordonVec3 surfaceNormal,
-            float restitution = DefaultRestitution, float friction = DefaultFriction,
-            out float impactSpeed)
+            out float impactSpeed, float restitution = DefaultRestitution,
+            float friction = DefaultFriction)
         {
             impactSpeed = 0f;
             KordonVec3 normal = surfaceNormal.Magnitude > 0.0001f
