@@ -3,6 +3,35 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.2 - 2026-10-29
+
+Two defects that only a real editor and a real look at the art would show. Both
+are fixed, and both now have a CI check so they cannot come back silently.
+
+### Fixed
+
+* **Every model rendered with its imported, untextured material.** The Blender kit
+  exports materials as `KRD_steel_rust`; the game looked up `M_KRD_steel_rust`,
+  found nothing, and quietly kept the untagged import - a flat grey map and grey
+  weapons, with no error in the console. The prefix is now normalised in one
+  tested place (`Kordon.Core.Utility.SurfaceNaming`, 6 unit tests) and the lookup
+  is `M_steel_rust`.
+* **All 17 normal maps were imported as plain colour textures.** The `.meta` files
+  had no `textureType`, so Unity treated them as Default instead of NormalMap and
+  surface lighting was wrong. They are typed as normal maps now, with albedo sRGB
+  and mask maps linear.
+* A stale comment in the test project claimed the suite also ran inside Unity via
+  a folder that does not exist. Corrected to what actually happens.
+
+### Added
+
+* `Tools/verify/policy_check.py` gained two content checks, each verified by
+  breaking the thing on purpose: every `KRD_*` material inside an FBX must resolve
+  to an authored material, and every texture `.meta` must carry the import
+  settings the art depends on.
+* Mesh-only warning per surface instead of per renderer, so a missing material is
+  reported once instead of hundreds of times.
+
 ## 1.0.1 - 2026-10-29
 
 Fixes found by opening the project in a real Unity 6000.0.32f1 editor - the first
@@ -31,7 +60,7 @@ checks.
 ## 1.0.0 - 2026-10-29
 
 First release. Everything below is in this repository and is verified by the
-automated checks described in `docs/06_VERIFICATION.md` (219 unit tests, 100
+automated checks described in `docs/06_VERIFICATION.md` (225 unit tests, 102
 scripts parsed, every Unity-side script type checked, policy check PASS).
 
 ### PvP - Free-for-All, the release mode
@@ -113,7 +142,7 @@ scripts parsed, every Unity-side script type checked, policy check PASS).
   inspection, ammo hiding, server-side scoring, respawn, match end, damage and
   penetration, anti-cheat, co-op chain, navigation, net configuration, launch
   parsing.
-* 101 scripts parsed, Unity-side scripts type checked against API stubs, structure
+* 102 scripts parsed, Unity-side scripts type checked against API stubs, structure
   and policy checks (`Tools/verify/policy_check.py`, `Tools/unity/audit_packages.py`).
 
 ### Known limitation of this release

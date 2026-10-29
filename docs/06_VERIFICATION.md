@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (219 tests) | **219 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **101 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (225 tests) | **225 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **102 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -66,6 +66,15 @@ folder compiled by the type check, every content id referenced by code present i
   This is the honest cost of building without an editor: package-level errors only
   appear when the project is actually opened.
 
+* Art contracts (1.0.2): a `KRD_`-prefixed FBX material resolves to an authored
+  `M_*.mat`, and every texture `.meta` carries the import settings the art needs.
+  Both were real defects found while preparing the release - the whole map would
+  have rendered with untextured imported materials, and all 17 normal maps were
+  imported as plain colour. Both rules were verified by breaking them on purpose.
+* Material naming is unit tested (`SurfaceNamingTests`, 6 tests): the normalisation
+  from `KRD_steel_rust (Instance)` to `steel_rust` is the part that fails silently,
+  so it is the part with tests.
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no
@@ -97,7 +106,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 219 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 225 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity
