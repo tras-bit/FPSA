@@ -121,6 +121,16 @@ reaches the magazine during one, and returns when it ends; a standing body does 
 march, cadence follows speed over stride, the legs alternate and stay inside their
 joints, a crouch folds the knees, and a killed body falls and stays down.
 
+### Verification
+
+`core-tests` run 40959332273 and the `v1.0.11` tag build are green: 296 core tests
+passed, 111 scripts parsed with 0 syntax errors, the Unity side type checked against
+the API stubs with 0 errors, and the design rule policy passed. `docs/art/operators.png`
+and `docs/art/weapons-lineup.png` are rendered from the exported geometry with the
+generated textures, and `docs/reports/` carries the reports of that run. A red run now
+commits its own reports (`diagnose` job), because the Actions log download host is not
+reachable from the machine this project is authored on.
+
 ## 1.0.10 - 2026-10-29
 
 The weapon set was modelled a fourth time. The complaints on 1.0.9 were specific -
