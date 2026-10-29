@@ -3,6 +3,69 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.6 - 2026-10-29
+
+The map is playable again, the weapons have real detail, the magazine reload is
+animated, and the magazines and the equipped weapon are on screen in the lower
+right. This round starts from the screenshot of 1.0.5: a player standing on a
+sliver of ground with nothing else in the world, then flying off the map.
+
+### Fixed
+
+* **Falling out of the world (root cause).** The map's ground shell was authored
+  with `blocksMovement: false`, and `MapBuilder` only created colliders for shells
+  that blocked movement, so the terrain had no collider at all and every body fell
+  through it. A shell is now solid when it is walkable *or* when it blocks movement,
+  and a walkable shell without a collider is reported as an error instead of
+  shipping an invisible hole. `MapShell.Walkable` is parsed from the map data, so
+  the layout itself states which shell the player stands on.
+* **Falling out of the world (second cause).** Nothing kept a player inside the
+  map: the terrain is the only floor and the yard has open edges away from the
+  fences, so a body that walked off an apron fell forever. `MapBuilder` now builds
+  four invisible boundary walls around the layout bounds, records a kill floor at
+  y = -8, and the controller returns a body that reaches it to a spawn point
+  (logging the fall) instead of letting it fall into the void.
+* **Spawning inside the floor.** `Teleport` and `Respawn` now ray cast down and put
+  the body on the surface beneath the spawn marker instead of trusting the authored
+  height, and a fall reset picks a random spawn rather than always the first one.
+* **Magazines jumped instead of reloading.** The magazine prop was hidden on the
+  frame the reload event fired and shown again on the insert event, which reads as
+  the magazine teleporting. The magazine is now a real animated part: it drops out
+  of the well on a curve with a slight tilt, disappears when it is clear, and the
+  fresh magazine rises from below, overshoots and seats with a click.
+
+### Changed
+
+* **Weapon models rebuilt with detail.** The weapon meshes were box assemblies;
+  each now carries an ejection port, charging handle, selector, magazine well
+  flare, receiver rivets, handguard vent slots, magazine ribs and witness holes,
+  and a two-segment bevel on the silhouette. Triangle count per weapon set went
+  from 22,484 to 68,636 with the sight height and overall length unchanged, so the
+  aim pose and the ballistics metadata are untouched.
+* **Magazines moved to the lower right.** The magazine strip used to be anchored in
+  the bottom centre, where it collided with the interaction hint and the subtitle
+  line and shifted whenever the row count changed. Primary magazines, sidearm
+  magazines, the grenade line and the inspect readout are now one column in the
+  lower right, above a weapon panel. The pocket rule is unchanged: white full,
+  yellow partial, red empty, and never a round count until the magazine is checked.
+
+### Added
+
+* **Weapon panel.** The HUD now states which weapon is in hand: one row per slot
+  with its key, the weapon name and the number of magazines left in that pouch, the
+  active row lit in the accent colour. Before this the HUD only showed magazines,
+  so the player had to remember which key they pressed last.
+* **Map audit in Blender** (`Tools/blender/audit_map.py`). It opens the authored
+  `.blend`, ray casts a 2 m grid downward over the playable bounds (1496 samples on
+  Zavod-7, 1050 on Silent Kiln: 0 holes on both), checks every spawn has floor
+  below it and headroom above it, checks the walkable-shell contract, and writes
+  `docs/reports/map-audit-<map>.md` plus three-quarter and plan renders in
+  `docs/art/`. A hole in the floor now fails the build instead of reaching a player.
+* **12 new automated tests** (253 -> 265): the HUD column geometry is unit tested
+  against six real screen sizes, and the shipped map data is tested for the
+  walkable ground shell, spawns inside the bounds at floor height, and every kit
+  placement resolving to a module the kit manifest exports.
+
 ## 1.0.5 - 2026-10-29
 
 The screens are laid out properly. This round is a UI pass: the settings screen on

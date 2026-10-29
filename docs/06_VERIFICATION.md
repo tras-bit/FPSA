@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (243 tests) | **243 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **105 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (265 tests) | **265 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **106 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -34,6 +34,51 @@ literal outside the Core address policy, networked FFA explicitly sets
 folder compiled by the type check, every content id referenced by code present in
 `StreamingAssets/Data/Definitions`, and a real editor build script.
 
+## 1.0.6 map and weapon verification (executed here)
+
+The screenshot that opened this round showed a player on a sliver of ground with
+the rest of the world missing, then flying off the map. Two independent defects
+were found and both are fixed; this is what was executed to prove it.
+
+* **Authored scene audit.** `Tools/blender/audit_map.py` opens the real
+  `ArtSource/Blender/<map>.blend` used for the FBX export and ray casts a 2 m grid
+  downward over the playable bounds: **1496 samples on Zavod-7, 1050 on Silent
+  Kiln, 0 holes** on both. Every spawn has the ground shell within 0.6 m below it
+  and 1.85 m of clear headroom above it. Reports:
+  `docs/reports/map-audit-ffa_zavod7.md`, `docs/reports/map-audit-coop_silent_kiln.md`.
+* **Review renders.** The same run renders `docs/art/ffa_zavod7-iso.png`,
+  `-top.png` and `docs/art/coop_silent_kiln-iso.png`, `-top.png` from the authored
+  scene (CPU Cycles, in this environment). These are images of the map geometry,
+  not drawings of a plan.
+* **Why the player fell.** The ground shell was authored `blocksMovement: false`
+  and `MapBuilder` only added colliders for shells that blocked movement, so the
+  terrain had no collider in Unity. The audit proves the geometry was there; the
+  missing collider was purely the assembly code. `MapBuilder` now treats a shell as
+  solid when it is walkable or blocks movement, logs an error for a walkable shell
+  without a collider, builds boundary walls from the layout bounds and records a
+  kill floor, and the controller returns a body that reaches the kill floor to a
+  spawn (with a warning) instead of letting it fall forever.
+* **Weapon detail.** All seven weapons and three grenades were rebuilt and exported
+  from Blender: 22 484 -> **68 636 triangles**, with `sightHeightM` and length
+  unchanged (verified by diffing `weapon_manifest.json`), so the aim pose and the
+  ballistics metadata are not disturbed. FBX files are re-imported and their
+  bounding boxes compared with the authored ones by the build script.
+* **HUD geometry.** The bottom-right column (weapon panel, primary magazines,
+  sidearm magazines, grenade line, magazine inspection) is computed by
+  `Kordon.Core.Ui.HudLayout` and unit tested against six screen sizes from
+  1280x720 to 3440x1440: no row overlaps, the column stays out of the centred
+  interaction hint, and the whole column fits in the bottom 235 px.
+* **Map data contract.** `Tests/Kordon.Core.Tests/MapContentTests.cs` (14 tests)
+  asserts exactly one walkable ground shell per map, that it is `ground`, that every
+  spawn is inside the bounds at floor height with a zone, that every kit placement
+  resolves to a module the kit manifest exports and carries a tag, and the 20-slot
+  four-zone / fifty-elimination free-for-all layout.
+
+What this does **not** prove: that the collider fix feels right in a live game.
+That needs the Unity editor and a Windows build, neither of which exists here. The
+geometry audit and the compile check cover the failure that was actually observed,
+but a first person play test remains the missing verification.
+
 ## What was verified by generation (executed here)
 
 * Kit: 60 modules, 203k triangles, FBX exported, both `.blend` files saved.
@@ -42,7 +87,8 @@ folder compiled by the type check, every content id referenced by code present i
   for connectivity by the nav generator.
 * Textures: 17 surface sets + hazard + 2 emissives = 51 PNGs, 19 materials.
 * Weapons and thrown equipment: 7 first person weapon models + 3 grenades,
-  22 484 triangles, FBX re-imported and bounding boxes verified; 79 synthesised
+  68 636 triangles (1.0.6 detail pass, was 22 484), FBX re-imported and bounding
+  boxes verified; 79 synthesised
   WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
   smoke hiss, flashbang).
 
@@ -130,7 +176,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 243 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 265 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity

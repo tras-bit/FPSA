@@ -10,7 +10,7 @@ audio (synthesised from noise in `Tools/audio`), the UI (built in code) and the
 networking layer glue. No asset, map, sound or piece of code was copied from any
 existing game.
 
-**Release 1.0.5.** This repository is the release: open it in Unity 6 and press
+**Release 1.0.6.** This repository is the release: open it in Unity 6 and press
 Play (three steps, below), or build the player from the `Kordon` menu. The release
 does **not** contain a prebuilt `.exe` - no Windows machine and no Unity licence
 were available in the build environment, so the binary could not be produced here.
