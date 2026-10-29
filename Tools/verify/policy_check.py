@@ -79,16 +79,33 @@ def check_no_crosshair():
 
 
 def check_ammo_privacy():
+    """No ammunition is on screen until a magazine is out of the weapon.
+
+    The rule used to be checked by looking for MayShowExactCount in HudScreen.  The
+    HUD now asks Kordon.Core.Ui.HudAmmoPolicy instead, which is unit tested, so the
+    check follows the rule to where it lives and additionally requires that the HUD
+    routes both the exact count *and* the pouch through the policy - a pocket of
+    magazine icons drawn outside the inspect state would be just as revealing.
+    """
     hud = os.path.join(SCRIPTS, "Game", "Ui", "HudScreen.cs")
-    if not os.path.exists(hud):
-        failures.append("HUD screen missing")
-        return
-    text = read(hud)
-    if "MayShowExactCount" not in text:
-        failures.append("HUD does not gate exact ammunition on the inspect state")
+    policy = os.path.join(SCRIPTS, "Core", "Ui", "HudAmmoPolicy.cs")
+    for path in (hud, policy):
+        if not os.path.exists(path):
+            failures.append("ammunition privacy file missing: " + os.path.relpath(path, ROOT))
+            return
+
+    hud_text = read(hud)
+    policy_text = read(policy)
+    if "MayShowExactCount" not in policy_text:
+        failures.append("HudAmmoPolicy does not gate the exact count on MayShowExactCount")
+    elif "HudAmmoPolicy.ShowExactCount" not in hud_text:
+        failures.append("HUD does not gate exact ammunition on HudAmmoPolicy.ShowExactCount")
+    elif "HudAmmoPolicy.ShowPouch" not in hud_text:
+        failures.append("HUD does not hide the magazine pouch outside an inspection")
     else:
-        notes.append("exact round counts are gated on MayShowExactCount (inspect only)")
-    if re.search(r"RoundsLeftInMagazine|ExactRounds\.ToString", text):
+        notes.append("no ammunition on screen until a magazine is out "
+                     "(HudAmmoPolicy.ShowPouch / ShowExactCount)")
+    if re.search(r"RoundsLeftInMagazine|ExactRounds\.ToString", hud_text):
         failures.append("HUD appears to render live rounds outside the inspect readout")
 
 
