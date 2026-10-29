@@ -146,7 +146,7 @@ namespace Kordon.Game.Ui
         private void BuildControls(Transform panel)
         {
             UiStack stack = new UiStack(panel, "Stack", RightWidth - 56f, PanelHeight,
-                paddingTop: 24f, paddingBottom: 24f, spacing: 6f);
+                paddingTop: 24f, paddingBottom: 24f, spacing: 5f);
 
             Text title = stack.Text("CONTROLS", 34, UiBuilder.Paper, 44f, TextAnchor.MiddleCenter);
             if (title != null)
@@ -160,7 +160,7 @@ namespace Kordon.Game.Ui
             for (int i = 0; i < Rebindable.Length; i++)
             {
                 int index = i;
-                Button row = stack.RowButton(() => BeginCapture(index), 34f,
+                Button row = stack.RowButton(() => BeginCapture(index), 33f,
                     out Text action, out Text key);
                 if (row != null)
                 {
@@ -173,7 +173,7 @@ namespace Kordon.Game.Ui
             _captureHint = stack.Text(string.Empty, 16, UiBuilder.Accent, 24f,
                 TextAnchor.MiddleCenter);
             stack.Pair("RESET TO DEFAULTS", () => ResetBindings(), "BACK", () => Back(), 46f,
-                12f, 16f);
+                12f, 16);
         }
 
         public override void OnShow()

@@ -18,7 +18,7 @@ namespace Kordon.Core.Tests
             Assert.Equal(20f + 25f, layout.Allocate(50f));
             Assert.Equal(20f + 50f + 10f + 25f, layout.Allocate(50f));
             Assert.Equal(80f + 50f + 10f + 25f, layout.Allocate(50f));
-            Assert.Equal(250f, layout.Cursor);
+            Assert.Equal(190f, layout.Cursor);
         }
 
         [Fact]
@@ -66,7 +66,8 @@ namespace Kordon.Core.Tests
 
             Assert.True(layout.TryAllocate(80f, out _));
             Assert.False(layout.TryAllocate(1f, out _));
-            Assert.Equal(20f, layout.Remaining);
+            // Remaining is measured above the bottom padding, so it is 0, not 20.
+            Assert.Equal(0f, layout.Remaining);
         }
 
         [Fact]
@@ -75,7 +76,7 @@ namespace Kordon.Core.Tests
             VerticalLayout layout = new VerticalLayout(100f, 0f, 0f, 30f);
 
             Assert.Equal(10f, layout.Allocate(20f));
-            Assert.Equal(45f, layout.Allocate(20f));
+            Assert.Equal(60f, layout.Allocate(20f));
         }
 
         [Fact]
@@ -87,48 +88,49 @@ namespace Kordon.Core.Tests
         }
 
         /// <summary>
-        /// The settings screen's real budget: two 860 px panels, a 16 row controls
-        /// list with its header and footer, and the audio/video column.  If a future
-        /// edit grows a row, this test fails instead of the screen overlapping.
+        /// The settings screen's real budget, mirroring the constants in
+        /// SettingsScreen: two 940 px panels, the audio/video column and the 16 row
+        /// controls list with its header, capture hint and footer.  If a future edit
+        /// grows a row this fails instead of the screen overlapping.
         /// </summary>
         [Fact]
         public void SettingsScreenBudgetsFitTheirPanels()
         {
-            const float panelHeight = 860f;
+            const float panelHeight = 940f;
 
-            // Audio and video column.
-            VerticalLayout left = new VerticalLayout(panelHeight, paddingTop: 96f,
-                paddingBottom: 28f, spacing: 14f);
-            left.Allocate(40f);    // title
-            left.Allocate(18f);    // section: input
-            left.Allocate(24f);    // look sensitivity label + value
-            left.Allocate(16f);    // slider
-            left.Allocate(18f);    // section: audio
-            left.Allocate(24f);    // master volume label + value
-            left.Allocate(16f);    // slider
-            left.Allocate(24f);    // effects label + value
-            left.Allocate(16f);    // slider
-            left.Allocate(48f);    // subtitles
-            left.Allocate(18f);    // section: video
-            left.Allocate(46f);    // quality / fullscreen pair
-            left.Allocate(46f);    // resolution
-            left.Allocate(56f);    // apply and save
-            left.Allocate(52f);    // note
+            // Left column: padding 24, spacing 8.
+            VerticalLayout left = new VerticalLayout(panelHeight, 24f, 24f, 8f);
+            left.Allocate(44f);   // title
+            left.Allocate(20f);   // section
+            left.Allocate(1f);    // rule
+            left.Allocate(22f);   // slider caption + value
+            left.Allocate(18f);   // track
+            left.Allocate(20f);
+            left.Allocate(1f);
+            left.Allocate(22f);
+            left.Allocate(18f);
+            left.Allocate(22f);
+            left.Allocate(18f);
+            left.Allocate(44f);   // subtitles
+            left.Allocate(20f);
+            left.Allocate(1f);
+            left.Allocate(44f);   // quality / fullscreen
+            left.Allocate(44f);   // resolution
+            left.Allocate(52f);   // apply
+            left.Allocate(62f);   // note
             Assert.True(left.Spare >= 0f, "left column overflows by " + -left.Spare + " px");
 
-            // Controls column: header, hint, 16 rebindable rows, capture hint, footer.
-            VerticalLayout right = new VerticalLayout(panelHeight, paddingTop: 96f,
-                paddingBottom: 28f, spacing: 6f);
-            right.Allocate(40f);   // title
-            right.Allocate(24f);   // hint
-            right.Allocate(16f);   // rule
+            // Right column: padding 24, spacing 5, 16 bindable rows of 33.
+            VerticalLayout right = new VerticalLayout(panelHeight, 24f, 24f, 5f);
+            right.Allocate(44f);  // title
+            right.Allocate(22f);  // hint
             for (int i = 0; i < 16; i++)
             {
-                right.Allocate(34f);
+                right.Allocate(33f);
             }
 
-            right.Allocate(24f);   // capture hint
-            right.Allocate(48f);   // reset / back
+            right.Allocate(24f);  // capture hint
+            right.Allocate(46f);  // reset / back
             Assert.True(right.Spare >= 0f, "controls column overflows by " + -right.Spare + " px");
         }
 

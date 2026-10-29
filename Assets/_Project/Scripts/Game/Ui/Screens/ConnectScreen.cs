@@ -205,13 +205,13 @@ namespace Kordon.Game.Ui
             }
         }
 
-        private static string DefaultAddress()
+        private string DefaultAddress()
         {
             ServerRegion region = Flow.Database.Net.DefaultRegion;
             return region != null ? region.Address : string.Empty;
         }
 
-        private static int DefaultPort() => Flow.Database.Net.ServerPort;
+        private int DefaultPort() => Flow.Database.Net.ServerPort;
 
         private void CycleRegion(int direction)
         {

@@ -228,12 +228,28 @@ namespace UnityEngine.UI
         public VerticalWrapMode verticalOverflow { get; set; }
         public float lineSpacing { get; set; } = 1f;
         public bool supportRichText { get; set; } = true;
+        public bool alignByGeometry { get; set; }
+        public bool resizeTextForBestFit { get; set; }
+    }
+
+    /// <summary>UnityEngine.UI.ColorBlock: the tint palette a Selectable uses.</summary>
+    public struct ColorBlock
+    {
+        public Color normalColor;
+        public Color highlightedColor;
+        public Color pressedColor;
+        public Color selectedColor;
+        public Color disabledColor;
+        public float colorMultiplier;
+        public float fadeDuration;
     }
 
     public class Button : Behaviour
     {
         public UnityEvent onClick { get; } = new UnityEvent();
         public bool interactable { get; set; } = true;
+        public Graphic targetGraphic { get; set; }
+        public ColorBlock colors { get; set; }
     }
 
     public class Toggle : Behaviour
@@ -244,14 +260,42 @@ namespace UnityEngine.UI
 
     public class Slider : Behaviour
     {
+        public enum Direction
+        {
+            LeftToRight = 0,
+            RightToLeft = 1,
+            BottomToTop = 2,
+            TopToBottom = 3,
+        }
+
         public float value { get; set; }
         public float minValue { get; set; }
         public float maxValue { get; set; } = 1f;
+        public bool wholeNumbers { get; set; }
+        public Direction direction { get; set; }
+        public RectTransform fillRect { get; set; }
+        public RectTransform handleRect { get; set; }
+        public Graphic targetGraphic { get; set; }
         public UnityEvent<float> onValueChanged { get; } = new UnityEvent<float>();
     }
 
     public class InputField : Behaviour
     {
+        public enum ContentType
+        {
+            Standard = 0,
+            Autocorrected = 1,
+            IntegerNumber = 2,
+            DecimalNumber = 3,
+            Alphanumeric = 4,
+            Name = 5,
+            EmailAddress = 6,
+            Password = 7,
+            Pin = 8,
+            Custom = 9,
+        }
+
+        public ContentType contentType { get; set; }
         public string text { get; set; } = "";
         public Text placeholder { get; set; }
         public Text textComponent { get; set; }
