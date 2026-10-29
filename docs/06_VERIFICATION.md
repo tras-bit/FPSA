@@ -8,7 +8,7 @@ not be executed in this environment, without softening either.
 | Gate | Tool | Last result |
 |---|---|---|
 | Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (289 tests) | **289 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **109 scripts, 0 errors** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **111 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |

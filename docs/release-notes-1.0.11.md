@@ -97,10 +97,11 @@ renders of the exported FBX with the generated textures; they are not a play tes
 
 | Check | Result |
 |---|---|
-| Code | 109 scripts, engine free rules core, game layer, netcode layer |
+| Code | 111 scripts, engine free rules core, game layer, netcode layer |
 | Rules tested | 296 unit tests (2 new: the support hand follows the magazine; 5 new: the body gait and the death fall) |
 | Art | 60 kit modules, 7 weapons + 3 grenades + hands, 2 bodies, 81 texture sets, 29 materials |
 | Export re-import + bounding box check | 10 weapon files, 2 body files; the body also checks its own proportions |
+| Body hierarchy re-import check | `HipL` rotated -28 degrees moves the shin 0.39 m forward; proportions guarded in the build |
 | Design rule checks | PASS |
 | Windows binary | Not built here - see *Honest limits* in `docs/06_VERIFICATION.md` |
 
