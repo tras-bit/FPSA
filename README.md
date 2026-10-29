@@ -10,6 +10,12 @@ audio (synthesised from noise in `Tools/audio`), the UI (built in code) and the
 networking layer glue. No asset, map, sound or piece of code was copied from any
 existing game.
 
+**Release 1.0.0.** This repository is the release: open it in Unity 6 and press
+Play (three steps, below), or build the player from the `Kordon` menu. The release
+does **not** contain a prebuilt `.exe` - no Windows machine and no Unity licence
+were available in the build environment, so the binary could not be produced here.
+See [Known limitations](#known-limitations) and `docs/06_VERIFICATION.md`.
+
 ---
 
 ## Requirements
@@ -35,7 +41,7 @@ or play the game.
    (`GameBootstrap`), so there is nothing to wire in the scene view.
 
 Optional, to bake a map into a scene asset instead of building it at runtime:
-**Kordon → Bake map → ffa_zavod7**.
+**Kordon → Bake map → ffa_zavod7 (Zavod-7)**.
 
 ## Build a player
 
