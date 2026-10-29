@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (189 tests) | **189 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **88 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (213 tests) | **213 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **98 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -20,6 +20,12 @@ protection, kill rate limiting, disconnect grace and reconnect, rematch reset,
 magazine reload/inspect/tap-vs-hold, HUD snapshots never exposing a total round
 count, damage and penetration, recoil and spread responses, movement and stamina,
 the anti-cheat validators, the co-op mission chain and the net config policy.
+Thrown equipment is covered by its own suite: deterministic flight integration and
+bounce energy loss, cooked-fuze clamping, quadratic fragmentation falloff, cover
+blocking fragments but not suppression, armour mitigation, flash cone and duration,
+smoke occlusion geometry (segment vs sphere, expiry), the kit reissuing exactly the
+grenades it was built with, and a self-inflicted grenade death being uncredited but
+still starting the normal respawn timer.
 
 The design rule checks are structural, not aspirational: no crosshair anywhere in
 the game code, exact ammunition only through `MayShowExactCount`, no loopback
@@ -35,7 +41,10 @@ folder compiled by the type check, every content id referenced by code present i
   Silent Kiln (480 instances, 188 nodes / 1270 links, 6 spawns), both validated
   for connectivity by the nav generator.
 * Textures: 17 surface sets + hazard + 2 emissives = 51 PNGs, 19 materials.
-* Audio: 73 synthesised WAV clips.
+* Weapons and thrown equipment: 7 first person weapon models + 3 grenades,
+  22 484 triangles, FBX re-imported and bounding boxes verified; 79 synthesised
+  WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
+  smoke hiss, flashbang).
 
 ## What could NOT be executed here, and why
 
@@ -68,7 +77,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 189 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 213 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity

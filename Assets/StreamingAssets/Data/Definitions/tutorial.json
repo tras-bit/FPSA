@@ -1,5 +1,5 @@
 {
-  "comment": "Basic training. Teaches the rules that differ from a normal arcade shooter: no crosshair, tap R to reload, hold R to inspect a magazine, magazine colours, sprint cost, leaning, spawn protection and the 50 elimination objective.",
+  "comment": "Basic training. Teaches the rules that differ from a normal arcade shooter: no crosshair, tap R to reload, hold R to inspect a magazine, magazine colours, sprint cost, leaning, grenade cooking and smoke, spawn protection and the 50 elimination objective.",
   "id": "kordon_basics",
   "name": "Basic Training",
   "steps": [
@@ -32,6 +32,8 @@
       "body": "Along the bottom of the screen you always see your magazines: white is full, yellow is partly spent, red is empty. There is no round counter anywhere else. Continue when you have read the strip." },
     { "id": "noise", "kind": "Info", "title": "You are never silent",
       "body": "Footsteps carry further on metal grating and gravel, when you sprint, and when you are wearing heavy plates. Reloads and handling are audible too. Plan your route around it." },
+    { "id": "grenades", "kind": "Info", "title": "Grenades: cook, throw, respect the fuze",
+      "body": "Press 3 to take a grenade. Hold the fire button to cook a frag - the fuze burns down and stops at the grenade's own safe minimum - then release to throw. Smoke is a real occlusion volume: militia cannot see through it either. A flashbang blinds only what it can see, and the effect shrinks with distance. You carry two grenades and respawning reissues exactly those two." },
     { "id": "objective", "kind": "Info", "title": "The objective",
       "body": "Free-for-all: 20 operators, no teams, no allies. The first one to personally reach 50 eliminations wins the match. You respawn five seconds after you are eliminated, briefly protected until you fire." },
     { "id": "done", "kind": "Complete", "title": "Training complete",

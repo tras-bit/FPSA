@@ -1,3 +1,4 @@
+using System;
 using Kordon.Game.Match;
 using UnityEngine;
 
@@ -13,6 +14,13 @@ namespace Kordon.Game.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Boot()
         {
+            if (IsDedicatedServer())
+            {
+                // The server has its own bootstrap (Kordon.Net.DedicatedServerBootstrap):
+                // no menu, no UI, no local operator in this process.
+                return;
+            }
+
             if (Object.FindObjectOfType<GameFlow>() != null)
             {
                 return;
@@ -21,6 +29,21 @@ namespace Kordon.Game.Runtime
             GameObject go = new GameObject("GameFlow");
             Object.DontDestroyOnLoad(go);
             go.AddComponent<GameFlow>();
+        }
+
+        /// <summary>Mirror of the Net launch flag, so the menu never comes up on a server.</summary>
+        private static bool IsDedicatedServer()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                if (string.Equals(arguments[i], "-kordon-server", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

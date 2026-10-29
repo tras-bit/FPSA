@@ -86,13 +86,19 @@ namespace Kordon.EditorTools
                 target, summary.result, summary.totalErrors, summary.totalSize);
         }
 
-        /// <summary>Dedicated server entry: run with -kordon-server to skip the menu.</summary>
-        [MenuItem("Kordon/Run dedicated server here")]
+        /// <summary>
+        /// Dedicated server entry: launch the built player with -kordon-server and it
+        /// skips the menu entirely (Kordon.Net.DedicatedServerBootstrap).  This menu
+        /// prints the exact command and the process arguments it can see.
+        /// </summary>
+        [MenuItem("Kordon/Dedicated server/Print launch command")]
         public static void StartDedicatedServer()
         {
-            string[] args = Environment.GetCommandLineArgs();
-            Debug.Log("[kordon] start with: Kordon.exe -kordon-server -serverAddress <bind> -serverPort 27015");
-            args.ToList().ForEach(argument => Debug.Log("  arg: " + argument));
+            Debug.Log("[kordon] dedicated server: " +
+                      "Builds/Windows/Kordon.exe -kordon-server -serverAddress 0.0.0.0 " +
+                      "-serverPort 27015 -map ffa_zavod7");
+            Debug.Log("[kordon] editor process arguments:");
+            Environment.GetCommandLineArgs().ToList().ForEach(argument => Debug.Log("  arg: " + argument));
         }
     }
 }

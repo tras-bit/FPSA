@@ -58,8 +58,26 @@ binary.
 4. First operator to 50 personal kills wins. The results screen shows the
    authoritative standings, then offers a rematch.
 
-A dedicated server is the same binary started with `-kordon-server` (see
-`docs/04_NETWORKING.md`); it runs headless and has no local player.
+### Dedicated server
+
+The same binary can run as a server with no local player and no menu:
+
+```
+Kordon.exe -kordon-server -serverAddress 0.0.0.0 -serverPort 27015 -map ffa_zavod7
+```
+
+* `Kordon.Net.DedicatedServerBootstrap` sees `-kordon-server` before anything else
+  and starts `DedicatedServerHost`; `GameBootstrap` deliberately skips the menu
+  flow in that process, so a server never builds UI or a local operator.
+* The server builds the map itself (colliders included, which is what hitscan and
+  grenade bounces are resolved against), starts the transport on the given
+  interface and port, spawns the authoritative `NetworkMatchDirector` and logs a
+  heartbeat every 15 seconds (phase, operators, target, uptime).
+* Flags: `-serverAddress` (default `0.0.0.0`), `-serverPort` (default from
+  `net_config.json`, 27015), `-map` (default `ffa_zavod7`), `-maxplayers`.
+  Anything it does not recognise is printed, never silently ignored.
+* Clients join it exactly like a player host: **JOIN** with the server's address
+  and port.
 
 ### Co-op: Operation Silent Kiln
 
@@ -200,10 +218,10 @@ path as the editor bake tool - a baked scene and a runtime map cannot drift.
 
 ## Tests and verification
 
-* `Tests/Kordon.Core.Tests` - 189 tests over the rules that matter: the 50 kill
+* `Tests/Kordon.Core.Tests` - 213 tests over the rules that matter: the 50 kill
   match end, magazine handling (tap vs hold, colour states, no exact ammo in
-  snapshots), damage and penetration, movement/stamina, anti-cheat validators,
-  mission chain, net config and content integrity.
+  snapshots), damage and penetration, grenade flight/blast/smoke, movement and
+  stamina, anti-cheat validators, mission chain, net config and content integrity.
 * `Tests/Kordon.SyntaxCheck` - forbidden construct check for the Core assembly.
 * `Tests/Kordon.Game.CompileCheck` - compiles every Unity side script against
   hand written UnityEngine/UnityEditor/NGO stubs with real Unity 6000.0

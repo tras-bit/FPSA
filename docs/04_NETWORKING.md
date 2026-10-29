@@ -92,3 +92,46 @@ at full gain) and `Game.Audio.VoiceRuntime` driving the keys and the HUD. The
 shipped transport is `UnconfiguredVoiceTransport`, which says so in the HUD
 ("VOICE not configured"). Connecting a real provider is one `Install(...)` call
 and requires no change to the game; KORDON never asks for an account or a key.
+
+## Thrown equipment on the wire
+
+Grenades are the only physical projectiles, so they get their own small protocol:
+
+* `GrenadeThrowServerRpc(origin, direction, fuseSeconds)` — the client only says
+  what it did. The server checks the origin against its own copy of the operator
+  (2.5 m), the direction, the 0.45 s throw interval, that the kit still holds a
+  grenade and that the match is live; then it clamps the fuze to
+  `[CookableMinFuse, FuseSeconds]`, decrements the sealed kit itself and owns the
+  flight from that moment.
+* The server steps the same Core `GrenadeTrajectory` in fixed 60 Hz steps, sweeps
+  the map for collisions and resolves the blast with `BlastModel` against its own
+  bodies. Clients never apply grenade damage.
+* `GrenadeSpawnedClientRpc(id, position, velocity, fuse, grenadeId)` lets every
+  client run a visual copy of the flight; the copy never decides anything.
+* `GrenadeExplodedClientRpc(id, position, grenadeId)` retires that copy and plays
+  the blast, the smoke cloud and the flash at the position the server decided.
+  Because both messages carry the same id, the visual grenade and the authoritative
+  explosion can never disagree about which throw they belong to.
+* Kills go through the match controller exactly like gunfire
+  (`RegisterKill`); your own grenade is an uncredited death, so it kills you,
+  counts as a death and never scores a kill.
+* Smoke adds a cloud to the shared `SmokeField` on the server, which is what the
+  militia AI uses to decide whether it can see an operator.
+
+## Dedicated server
+
+`Kordon.Net.DedicatedServerBootstrap` (`[RuntimeInitializeOnLoadMethod]`) parses the
+command line with `Kordon.Core.Config.ServerLaunchOptions` before anything else.
+`-kordon-server` starts `DedicatedServerHost`, which:
+
+1. loads `StreamingAssets/Data`, builds the map from the authored layout JSON - so
+   the server has real colliders for hitscan, grenade bounces and nav,
+2. starts the UTP transport on `-serverAddress` / `-serverPort`,
+3. spawns the `NetworkMatchDirector` and configures it with the database and map,
+4. logs a heartbeat and the match result, and never creates UI or a local operator
+   (`GameBootstrap` returns early when the flag is present).
+
+The flag parser is engine free and unit tested (`ServerLaunchTests`): unknown flags
+are reported, an invalid port is refused instead of silently replaced, and the
+default bind address is `0.0.0.0`, never loopback.
+
