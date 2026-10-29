@@ -388,12 +388,15 @@ namespace Kordon.Core.Tests
         public void OwnGrenadeDeath_IsUncreditedButStartsTheRespawnTimer()
         {
             MatchRulesConfig config = MatchRulesConfig.DefaultFreeForAll();
+
+            // One operator is enough for this rule check (practice uses the same switch).
+            config.MinPlayersToStartLive = 1;
             FfaMatchController match = new FfaMatchController(config, new DeterministicRandom(77));
             Assert.True(match.TryJoin(4242UL, "OP-SELF", false, 0f).IsAccepted);
             match.BeginLoadoutPhase(0f);
             match.SubmitLoadout(4242UL, TestLoadouts.ValidRifleLoadout(), Library, 0f);
-            match.BeginCountdown(0f);
-            match.BeginLive(0f);
+            Assert.True(match.BeginCountdown(0f));
+            Assert.True(match.BeginLive(0f));
             match.InitialSpawn(_ => 0, config.SpawnProtectionSeconds + 1f);
             match.Tick(config.SpawnProtectionSeconds + 1f);
 
