@@ -202,6 +202,16 @@ namespace Kordon.Core.Ammo
             changed |= Primary != null && Primary.ReissueFullMagazines();
             changed |= Secondary != null && Secondary.ReissueFullMagazines();
             Armor?.Reset();
+
+            // Thrown equipment is part of the sealed kit too: respawning reissues the
+            // grenades the operator picked, never more than that.
+            int issued = Grenade != null ? Math.Max(0, Selection?.GrenadeCount ?? 0) : 0;
+            if (GrenadesRemaining != issued)
+            {
+                GrenadesRemaining = issued;
+                changed = true;
+            }
+
             return changed;
         }
 

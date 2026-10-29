@@ -93,6 +93,7 @@ namespace Kordon.Game.Match
             Hud = op.Hud;
             Player.NoiseEmitted += noise => WorldNoise?.Invoke(noise);
             Weapons.PlayerHit += OnLocalHit;
+            op.Grenades.BlastResolved += OnBlastResolved;
             Hud.SetObjective("PRACTICE - no server, no bots. Learn the kit, the map and the magazine rules.");
         }
 
@@ -107,6 +108,29 @@ namespace Kordon.Game.Match
             {
                 Hud?.HitMarker();
             }
+        }
+
+        /// <summary>
+        /// Offline blast feedback and bookkeeping.  A grenade that kills you must put
+        /// you on the normal respawn timer - an uncredited death, because nobody else
+        /// scored it.
+        /// </summary>
+        private void OnBlastResolved(PlayerController target, BlastResult blast)
+        {
+            if (target == Player)
+            {
+                Hud?.DamageFlash();
+                Hud?.SetHealth(Player.Vitals.Health / PlayerVitals.MaxHealth);
+                if (Player.IsDead &&
+                    Match.RegisterUncreditedDeath(LocalClientId, DeathCause.Explosion, Now))
+                {
+                    Hud?.Toast("caught in your own blast");
+                }
+
+                return;
+            }
+
+            Hud?.HitMarker();
         }
 
         private void PlaceAtSpawn(bool initial)

@@ -17,6 +17,7 @@ namespace Kordon.Game.Player
         public BodycamRig Rig;
         public WeaponController Weapons;
         public WeaponViewmodel Viewmodel;
+        public GrenadeThrower Grenades;
         public HudScreen Hud;
         public AudioDirector Audio;
         public VoiceRuntime Voice;
@@ -57,8 +58,17 @@ namespace Kordon.Game.Player
             op.Weapons.Equip(loadout, library, seed);
             op.Body.Weapons = op.Weapons;
 
+            // Grenades: slot 3, hold to cook, release to throw.  Offline this
+            // resolves the blast itself; online the session swaps in a server intent.
+            op.Grenades = go.AddComponent<GrenadeThrower>();
+            op.Grenades.Weapons = op.Weapons;
+            op.Grenades.Body = op.Body;
+            op.Grenades.Rig = op.Rig;
+            op.Viewmodel.Grenades = op.Grenades;
+
             op.Hud = host.gameObject.AddComponent<HudScreen>();
             op.Hud.Weapons = op.Weapons;
+            op.Hud.Grenades = op.Grenades;
 
             // Audio: the director hears the same noise events the AI and the server do.
             GameObject audioObject = new GameObject("Audio");
@@ -66,6 +76,7 @@ namespace Kordon.Game.Player
             op.Audio = audioObject.AddComponent<AudioDirector>();
             op.Audio.Listener = op.Body;
             op.Audio.Layout = layout;
+            op.Grenades.Audio = op.Audio;
             op.Body.NoiseEmitted += noise => OnNoise(op, noise);
             op.Weapons.ShotFired += shot => op.Audio.PlayShot(shot.Origin, shot.WeaponId, false);
             op.Weapons.AmmoEventRaised += ammoEvent =>

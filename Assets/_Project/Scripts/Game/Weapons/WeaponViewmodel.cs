@@ -44,6 +44,9 @@ namespace Kordon.Game.Weapons
         /// <summary>Bolt/charging handle prop, cycled on BoltRelease.</summary>
         public Transform BoltProp;
 
+        /// <summary>Grenade handling: while the grenade slot is out the weapon is lowered out of frame.</summary>
+        public GrenadeThrower Grenades;
+
         public HandlingState State { get; private set; } = HandlingState.Ready;
 
         private Vector3 _position;
@@ -151,6 +154,20 @@ namespace Kordon.Game.Weapons
 
             float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.1f);
             _stateTime += dt;
+
+            // Slot 3 puts the weapon away and the hand comes up; it comes back the
+            // moment the grenade leaves the hand or the slot changes.
+            bool grenadeOut = Body.Weapons != null && Body.Weapons.Loadout != null &&
+                              Body.Weapons.Loadout.Active == ActiveSlot.Grenade;
+            if (WeaponRoot != null && WeaponRoot.gameObject.activeSelf == grenadeOut)
+            {
+                WeaponRoot.gameObject.SetActive(!grenadeOut);
+            }
+
+            if (grenadeOut)
+            {
+                return;
+            }
 
             UpdatePose(dt);
             UpdateProps();

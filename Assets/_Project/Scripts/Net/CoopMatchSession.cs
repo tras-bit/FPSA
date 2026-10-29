@@ -49,6 +49,7 @@ namespace Kordon.Net
         private float _holdSeconds;
         private Transform _hostileRoot;
         private Transform _remoteRoot;
+        private ClientGrenadeView _grenadeView;
         private readonly Dictionary<int, RemoteOperatorView> _hostileViews =
             new Dictionary<int, RemoteOperatorView>();
         private readonly Dictionary<ulong, RemoteOperatorView> _remote =
@@ -113,8 +114,24 @@ namespace Kordon.Net
             _local = LocalOperatorFactory.Build(root.transform, this, _database.Definitions,
                 _loadout, 0xC00B5EEDUL, true, _map != null ? _map.Layout : null, true);
             _local.Weapons.ShotFired += shot => _director?.ShotServerRpc(shot.Origin, shot.Direction);
+
+            // Grenades are server owned: the operation resolves them against operators
+            // and militia alike, so the client only sends the intent.
+            _local.Grenades.NetworkThrow = OnLocalGrenadeThrow;
+            GameObject grenadeView = new GameObject("GrenadeView");
+            grenadeView.transform.SetParent(transform, false);
+            _grenadeView = grenadeView.AddComponent<ClientGrenadeView>();
+            _grenadeView.Configure(_database.Definitions, _local);
+
             _local.Hud.SetObjective("awaiting briefing");
             _local.Body.Respawn(InsertionPoint(), 0f);
+        }
+
+        private bool OnLocalGrenadeThrow(GrenadeDefinition grenade, Vector3 origin, Vector3 direction,
+            float fuseSeconds)
+        {
+            _director?.GrenadeThrowServerRpc(origin, direction, fuseSeconds);
+            return true;
         }
 
         private Vector3 InsertionPoint() =>
@@ -335,6 +352,7 @@ namespace Kordon.Net
 
         public void Shutdown()
         {
+            _grenadeView?.Clear();
             NetworkSessionEvents.Clear();
             _network?.Shutdown();
             Destroy(gameObject);

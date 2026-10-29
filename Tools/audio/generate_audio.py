@@ -35,7 +35,11 @@ RATE = 44100
 rng = np.random.default_rng(0x4B4F52444F4E)
 
 
+WRITTEN = 0
+
+
 def write_wav(name: str, samples: np.ndarray, gain: float = 0.9) -> None:
+    global WRITTEN
     os.makedirs(OUT, exist_ok=True)
     data = np.clip(samples * gain, -1.0, 1.0)
     pcm = (data * 32767.0).astype("<i2")
@@ -44,6 +48,7 @@ def write_wav(name: str, samples: np.ndarray, gain: float = 0.9) -> None:
         handle.setsampwidth(2)
         handle.setframerate(RATE)
         handle.writeframes(pcm.tobytes())
+    WRITTEN += 1
 
 
 def t(seconds: float) -> np.ndarray:
@@ -220,6 +225,37 @@ def siren() -> np.ndarray:
     return 0.4 * np.sin(2 * math.pi * sweep * time) * env(n, 0.05, 3.0, 1.2)
 
 
+def explosion(seconds: float, near: bool = True) -> np.ndarray:
+    """Fragmentation blast: sub sweep, crack, debris grains and a long rumble."""
+    n = int(RATE * seconds)
+    time = np.arange(n) / RATE
+    sub = np.sin(2 * math.pi * np.linspace(78.0, 31.0, n) * time) * env(n, 0.002, 5.0, 1.8)
+    crack = highpass(noise(seconds), 1700.0) * env(n, 0.0005, 24.0, 3.0)
+    debris = lowpass(noise(seconds), 3600.0) * env(n, 0.012, 3.4, 1.2)
+    rumble = lowpass(noise(seconds), 420.0) * env(n, 0.05, 2.1, 1.0)
+    mix = 0.85 * sub + 0.55 * crack + 0.42 * debris + 0.5 * rumble
+    return mix if near else distant(mix, 420.0)
+
+
+def smoke_hiss(seconds: float = 3.2) -> np.ndarray:
+    """Smoke discharge: pressurised hiss settling into a low, even cloud."""
+    n = int(RATE * seconds)
+    hiss = highpass(noise(seconds), 2400.0) * env(n, 0.02, 2.4, 1.0)
+    body = lowpass(noise(seconds), 1300.0) * env(n, 0.05, 2.0, 1.1)
+    return 0.55 * hiss + 0.65 * body
+
+
+def flash_bang(seconds: float = 0.9) -> np.ndarray:
+    """Flashbang: a very short, painful crack with a ringing tail."""
+    n = int(RATE * seconds)
+    time = np.arange(n) / RATE
+    crack = highpass(noise(seconds), 3000.0) * env(n, 0.0004, 40.0, 3.0)
+    ring = (np.sin(2 * math.pi * 3150.0 * time) * 0.5 +
+            np.sin(2 * math.pi * 4720.0 * time) * 0.3) * env(n, 0.002, 7.0, 1.6)
+    thump = np.sin(2 * math.pi * 92.0 * time) * env(n, 0.001, 14.0, 2.0)
+    return 0.7 * crack + 0.35 * ring + 0.4 * thump
+
+
 WEAPONS = {
     # name: (crack, body, tail, bright, seconds)
     "rifle_545": (2400, 118, 5.2, 1.0, 0.85),
@@ -235,28 +271,23 @@ SURFACES = ("concrete", "metal", "gravel", "wood", "sand", "water")
 
 
 def main() -> None:
-    count = 0
     for name, (crack, body, tail, bright, seconds) in WEAPONS.items():
         for variant in range(3):
             shot = gunshot(seconds, crack * (1 + 0.02 * variant), body * (1 - 0.01 * variant),
                            tail, bright)
             write_wav(f"fire_{name}_{variant + 1}.wav", shot, 0.82)
-            count += 1
         far = distant(gunshot(seconds, crack, body, tail + 1.2, bright), 780.0)
         write_wav(f"fire_{name}_far.wav", far, 0.7)
-        count += 1
 
     for surface in SURFACES:
         for variant in range(3):
             write_wav(f"step_{surface}_{variant + 1}.wav",
                       footstep(surface, 0.22 if surface != "metal" else 0.3), 0.7)
-            count += 1
 
     for variant in range(2):
         landing = footstep("concrete", 0.34) * 1.1 + lowpass(noise(0.34), 300.0) * env(
             int(RATE * 0.34), 0.002, 12.0, 1.8)
         write_wav(f"land_{variant + 1}.wav", landing, 0.75)
-        count += 1
 
     write_wav("mag_out.wav", metallic(0.34, 780.0), 0.7)
     write_wav("mag_in.wav", metallic(0.30, 620.0), 0.75)
@@ -274,6 +305,10 @@ def main() -> None:
     write_wav("impact_metal.wav", metallic(0.26, 1300.0), 0.6)
     write_wav("whizz_1.wav", whizz(), 0.7)
     write_wav("whizz_2.wav", whizz()[::-1], 0.65)
+    write_wav("explosion_frag.wav", explosion(1.6, True), 0.95)
+    write_wav("explosion_far.wav", explosion(1.9, False), 0.8)
+    write_wav("smoke_hiss.wav", smoke_hiss(), 0.6)
+    write_wav("flash_bang.wav", flash_bang(), 0.92)
     write_wav("grenade_pin.wav", click(0.2, 900.0, 26.0), 0.7)
     write_wav("grenade_bounce.wav", metallic(0.3, 520.0), 0.65)
     write_wav("grenade_fuse.wav", click(0.25, 700.0, 18.0), 0.6)
@@ -292,9 +327,8 @@ def main() -> None:
     write_wav("radio_static.wav", radio(), 0.4)
     write_wav("objective_chime.wav", chime(), 0.5)
     write_wav("extraction_siren.wav", siren(), 0.5)
-    count += 25
 
-    print(f"wrote {count} clips to {OUT}")
+    print(f"wrote {WRITTEN} clips to {OUT}")
     total = sum(os.path.getsize(os.path.join(OUT, f)) for f in os.listdir(OUT))
     print(f"bank size: {total / 1024:.0f} KB")
 

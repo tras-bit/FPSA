@@ -37,6 +37,7 @@ namespace Kordon.Game.Input
 
         public static bool FireHeld => UnityInput.GetMouseButton(0);
         public static bool FirePressed => UnityInput.GetMouseButtonDown(0);
+        public static bool FireReleased => UnityInput.GetMouseButtonUp(0);
         public static bool AimHeld => UnityInput.GetMouseButton(1);
 
         /// <summary>Signed move axes from the bound keys, length clamped to 1.</summary>

@@ -48,6 +48,25 @@ is offline, is labelled "PRACTICE" in the HUD, and bots are named as bots in the
 scoreboard. Networked FFA sets `AllowBots = false` and the controller refuses a
 bot join with `JoinOutcome.BotsNotAllowed`.
 
+## Thrown equipment
+
+* Three types: `frag_f1` (fragmentation), `smoke_rdg` (smoke), `flash_zarya`
+  (flashbang). Every operator can carry up to two, chosen before the match and
+  locked with the rest of the kit.
+* Flight: fixed-step deterministic integration of gravity, drag, bounce and fuze
+  (`Kordon.Core.Combat.GrenadeTrajectory`). The server runs the same code, clamps
+  the fuze to `[CookableMinFuse, FuseSeconds]` and rejects an origin further than
+  2.5 m from where it believes the operator is, or two throws inside 0.45 s.
+* Blast: `Kordon.Core.Combat.BlastModel`. Damage saturates inside the lethal
+  radius, falls off quadratically to the damage radius, is blocked entirely by
+  cover when the grenade requires line of sight, is scaled by partial cover and
+  reduced by at most 35 % by plates. Suppression survives cover at half strength.
+* A frag never leaves the operator's name off the kill feed: the server credits
+  the thrower through `RegisterKill`; your own grenade is an uncredited death
+  (`RegisterUncreditedDeath`) that still starts the normal respawn timer.
+* Smoke creates a vision volume for its full duration; flash blinds only inside
+  its effect radius with line of sight, for a duration that shrinks with distance.
+
 ## Fairness rules (enforced structurally, see `docs/06_VERIFICATION.md`)
 
 * No crosshair, ever: aim through iron sights or an optic.

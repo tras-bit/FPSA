@@ -443,6 +443,8 @@ namespace UnityEngine
 
         public Transform GetChild(int index) => _children[index];
 
+        public bool IsChildOf(Transform parent) => this == parent || parent != null && this.parent == parent;
+
         public Transform Find(string path) => null;
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {

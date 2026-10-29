@@ -12,6 +12,7 @@ using Kordon.Core.Utility;
 using Kordon.Game.Maps;
 using Kordon.Game.Match;
 using Kordon.Game.Player;
+using Kordon.Game.Weapons;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -44,6 +45,7 @@ namespace Kordon.Net
             public float Yaw;
             public float LastFrameAt;
             public float LastShotAt = float.NegativeInfinity;
+            public float LastGrenadeAt = float.NegativeInfinity;
             public bool LoadoutAccepted;
         }
 
@@ -54,6 +56,13 @@ namespace Kordon.Net
             new Dictionary<ulong, ServerPlayer>();
         private readonly ViolationLog _violations = new ViolationLog();
         private readonly Dictionary<ulong, float> _joinedAt = new Dictionary<ulong, float>();
+
+        // Thrown equipment in flight. The server owns every one of them: it steps the
+        // Core flight model, sweeps for collisions itself and resolves the blast.
+        private readonly Dictionary<int, GrenadeProjectile> _grenades =
+            new Dictionary<int, GrenadeProjectile>();
+        private readonly Dictionary<int, ulong> _grenadeOwners = new Dictionary<int, ulong>();
+        private int _grenadeCounter;
 
         private GameDatabase _database;
         private BuiltMap _map;
@@ -396,6 +405,184 @@ namespace Kordon.Net
             return height >= 0.85f ? HitZone.Thorax : HitZone.Abdomen;
         }
 
+        /// <summary>
+        /// The throw claim.  The client says where it threw from, in which direction and
+        /// with how much fuze left; the server checks all three against its own copy of
+        /// the operator and then owns the flight and the blast.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void GrenadeThrowServerRpc(Vector3 origin, Vector3 direction, float fuseSeconds,
+            ServerRpcParams parameters = default)
+        {
+            ulong clientId = parameters.Receive.SenderClientId;
+            if (!_players.TryGetValue(clientId, out ServerPlayer thrower) || thrower.Vitals.IsDead)
+            {
+                return;
+            }
+
+            if (Match.Phase != MatchPhase.Live || thrower.Kit.Grenade == null)
+            {
+                return;
+            }
+
+            GrenadeDefinition grenade = thrower.Kit.Grenade;
+            Vector3 hand = thrower.Position + Vector3.up * 1.2f;
+            float now = Now;
+            if (Vector3.Distance(origin, hand) > 2.5f)
+            {
+                RecordViolation(clientId, ValidationVerdict.Reject(ViolationKind.InvalidState,
+                    "grenade-origin", 1.5f));
+                return;
+            }
+
+            if (float.IsNaN(direction.x) || float.IsNaN(direction.y) || float.IsNaN(direction.z) ||
+                direction.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            if (now - thrower.LastGrenadeAt < GrenadeTrajectory.MinThrowIntervalSeconds)
+            {
+                return;
+            }
+
+            float minFuse = Mathf.Max(0.05f, grenade.CookableMinFuse);
+            float maxFuse = Mathf.Max(minFuse, grenade.FuseSeconds);
+            float fuse = Mathf.Clamp(fuseSeconds, minFuse, maxFuse);
+
+            if (!thrower.Kit.TryThrowGrenade(now))
+            {
+                return;
+            }
+
+            thrower.LastGrenadeAt = now;
+
+            GrenadeFlightState state = new GrenadeFlightState
+            {
+                Position = MapSpace.ToCore(origin),
+                Velocity = GrenadeTrajectory.LaunchVelocity(grenade.ThrowSpeed,
+                    MapSpace.ToCore(direction.normalized)),
+                FuseRemaining = fuse,
+            };
+
+            int id = ++_grenadeCounter;
+            GrenadeProjectile projectile = GrenadeProjectile.SpawnWithState(transform, grenade, state,
+                false, null, id);
+            if (projectile == null)
+            {
+                return;
+            }
+
+            _grenades[id] = projectile;
+            _grenadeOwners[id] = clientId;
+            projectile.Detonated += OnGrenadeDetonated;
+            GrenadeSpawnedClientRpc(id, origin, MapSpace.ToUnity(state.Velocity), fuse, grenade.Id);
+        }
+
+        private void OnGrenadeDetonated(GrenadeProjectile projectile, Vector3 position)
+        {
+            if (projectile == null)
+            {
+                return;
+            }
+
+            projectile.Detonated -= OnGrenadeDetonated;
+            _grenades.Remove(projectile.Id);
+            _grenadeOwners.TryGetValue(projectile.Id, out ulong throwerId);
+            _grenadeOwners.Remove(projectile.Id);
+
+            GrenadeDefinition grenade = projectile.Definition;
+            ResolveBlast(grenade, position, throwerId);
+            GrenadeExplodedClientRpc(projectile.Id, position, grenade != null ? grenade.Id : string.Empty);
+        }
+
+        /// <summary>
+        /// Server blast: the same Core model the offline game uses, applied to the
+        /// server's bodies.  Kills are registered through the match controller, so a
+        /// grenade can only ever score what the server itself observed.
+        /// </summary>
+        private void ResolveBlast(GrenadeDefinition grenade, Vector3 position, ulong throwerId)
+        {
+            if (grenade == null)
+            {
+                return;
+            }
+
+            float radius = Mathf.Max(grenade.DamageRadiusM,
+                Mathf.Max(grenade.SuppressionRadiusM, grenade.EffectRadiusM));
+            BlastModel model = new BlastModel();
+            List<ServerPlayer> victims = new List<ServerPlayer>(_players.Values);
+
+            for (int i = 0; i < victims.Count; i++)
+            {
+                ServerPlayer victim = victims[i];
+                Vector3 chest = victim.Position + Vector3.up * 1.3f;
+                float distance = Vector3.Distance(position, chest);
+                if (distance > radius)
+                {
+                    continue;
+                }
+
+                bool lineOfSight = GrenadeBlast.HasLineOfSight(position, chest,
+                    _bodies.TryGetValue(victim.ClientId, out RemoteOperatorView body)
+                        ? body.transform
+                        : null);
+
+                BlastResult blast = model.Resolve(new BlastRequest
+                {
+                    Grenade = grenade,
+                    DistanceM = distance,
+                    HasLineOfSight = lineOfSight,
+                    CoverFactor = lineOfSight ? 0f : 1f,
+                    ArmorClass = BlastModel.AverageArmorClass(victim.Armor),
+                    SelfInflicted = victim.ClientId == throwerId,
+                });
+
+                if (!blast.HasEffect)
+                {
+                    continue;
+                }
+
+                DamageResult damage = blast.ToDamageResult();
+                if (!damage.Accepted)
+                {
+                    victim.Vitals.Suppression.Add(blast.Suppression);
+                    continue;
+                }
+
+                bool died = victim.Vitals.ApplyDamage(damage, DeathCause.Explosion);
+                if (!died)
+                {
+                    continue;
+                }
+
+                if (_bodies.TryGetValue(victim.ClientId, out RemoteOperatorView deadBody))
+                {
+                    deadBody.Apply(victim.Position, victim.Yaw, true, true);
+                }
+
+                if (victim.ClientId == throwerId)
+                {
+                    // Your own grenade never scores, but it does kill you.
+                    Match.RegisterUncreditedDeath(victim.ClientId, DeathCause.Explosion, Now);
+                    continue;
+                }
+
+                KillRegistrationResult kill = Match.RegisterKill(throwerId, victim.ClientId,
+                    grenade.Id, HitZone.Thorax, distance, Now);
+                if (!kill.IsAccepted)
+                {
+                    continue;
+                }
+
+                Match.NotifyHitLanded(throwerId);
+                string throwerName = _players.TryGetValue(throwerId, out ServerPlayer killer)
+                    ? killer.Name
+                    : "operator";
+                KillFeedClientRpc(throwerName, grenade.DisplayName, victim.Name, false);
+            }
+        }
+
         [ServerRpc(RequireOwnership = false)]
         public void RespawnRequestServerRpc(ServerRpcParams parameters = default)
         {
@@ -539,6 +726,20 @@ namespace Kordon.Net
         {
             NetworkSessionEvents.RaiseMatchEnded(reason, winnerId, winnerName, winnerKills,
                 durationSeconds);
+        }
+
+        [ClientRpc]
+        private void GrenadeSpawnedClientRpc(int id, Vector3 position, Vector3 velocity,
+            float fuseSeconds, string grenadeId, ClientRpcParams parameters = default)
+        {
+            NetworkSessionEvents.RaiseGrenadeSpawned(id, position, velocity, fuseSeconds, grenadeId);
+        }
+
+        [ClientRpc]
+        private void GrenadeExplodedClientRpc(int id, Vector3 position, string grenadeId,
+            ClientRpcParams parameters = default)
+        {
+            NetworkSessionEvents.RaiseGrenadeExploded(id, position, grenadeId);
         }
 
         private void PushScoreSnapshot()

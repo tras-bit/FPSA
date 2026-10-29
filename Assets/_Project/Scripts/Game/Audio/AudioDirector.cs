@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
+using Kordon.Core.Loadout;
 using Kordon.Core.Movement;
 using Kordon.Game.Maps;
 using Kordon.Game.Player;
@@ -146,6 +147,41 @@ namespace Kordon.Game.Audio
             string kind = SurfaceBank(surface) == "metal" ? "impact_metal" : "impact_concrete";
             PlayAt(Load(kind), position, 0.6f * EffectsVolume, 1f, 20000f);
         }
+
+        /// <summary>
+        /// Grenade report.  Fragmentation changes voice with distance like gunfire
+        /// does, smoke is a pressurised hiss, and the flashbang is a short hard crack.
+        /// </summary>
+        public void PlayExplosion(Vector3 position, GrenadeKind kind)
+        {
+            float distance = ListenerDistance(position);
+            switch (kind)
+            {
+                case GrenadeKind.Smoke:
+                    PlayAt(Load("smoke_hiss"), position, 0.75f * EffectsVolume, 1f,
+                        IsIndoor(position) ? 5000f : 9000f);
+                    break;
+                case GrenadeKind.Flashbang:
+                    PlayAt(Load("flash_bang"), position, 0.85f * EffectsVolume, 1f,
+                        14000f);
+                    break;
+                default:
+                    bool far = distance > 40f;
+                    PlayAt(Load(far ? "explosion_far" : "explosion_frag"), position,
+                        (far ? 1f : 0.95f) * EffectsVolume, 1f,
+                        far ? 2200f : (IsIndoor(position) ? 9000f : 18000f));
+                    break;
+            }
+        }
+
+        /// <summary>Metal-on-concrete bounce, louder the harder the grenade lands.</summary>
+        public void PlayGrenadeBounce(Vector3 position, float impactSpeed) =>
+            PlayAt(Load("grenade_bounce"), position,
+                Mathf.Clamp(0.22f + impactSpeed * 0.05f, 0.22f, 0.72f) * EffectsVolume, 1f, 4200f);
+
+        /// <summary>Spoon and pin leaving the grenade.</summary>
+        public void PlayGrenadePin(Vector3 position) =>
+            PlayAt(Load("grenade_pin"), position, 0.55f * EffectsVolume, 1f, 9000f);
 
         public void PlaySuppressionWhizz(Vector3 position) =>
             PlayAt(Load("whizz_" + Shuffle(1, 2)), position, 0.75f * EffectsVolume, 1f, 20000f);

@@ -97,6 +97,7 @@ play.
 | **Tap R** | reload |
 | **Hold R** | extract and inspect the magazine (exact round count, cannot fire) |
 | Weapon slots | 1 primary, 2 sidearm, 3 grenade |
+| Throw a grenade | left mouse while slot 3 is out — **hold to cook a frag**, release to throw |
 | Use / interact / acknowledge briefing | F |
 | Scoreboard (hold) | Tab |
 | Pause | Esc |
@@ -109,12 +110,38 @@ the new key.
 
 * Bottom centre: the magazine strip. **White = full, yellow = partially used,
   red = empty**, with a tick on the magazine in the weapon.
+* Bottom right: the carried grenade and how many are left. While a frag is cooked
+  the line turns amber and then red and shows the **burning fuze** in seconds.
 * The **only** place an exact round count ever appears is the inspect readout,
   which you get by holding R.
 * There is **no crosshair** and **no permanent ammo counter**. Both exist nowhere
   in the code, and CI checks that they stay that way.
 * The bodycam feed (inertia, sway, grain, chromatic aberration, vignette, exposure
   flutter) is **always on** and has no toggle, by design.
+
+## Thrown equipment
+
+Grenades are the only physical projectiles in the game: an arc, a bounce and a
+timed fuze cannot be a hitscan ray.
+
+* **Select** slot 3. The weapon goes down and your hand comes up.
+* **Hold** the fire button to cook a fragmentation grenade (the fuze burns down
+  to the grenade's own safe minimum and stops there — you cannot hold it until it
+  goes off in your hand), then **release** to throw. Smoke and flashbang leave the
+  hand immediately.
+* The flight is a deterministic arc integrated at a fixed 60 Hz step
+  (`GrenadeTrajectory`), it bounces off the map with real energy loss and it keeps
+  burning on the ground.
+* The blast is resolved by `BlastModel`, the same rules offline and on the server:
+  quadratic fragmentation falloff from the lethal radius to the damage radius,
+  hard cover saves you completely (you still get suppressed), plates soften
+  fragments by up to 35 %, and a flashbang only blinds what it can see.
+* In an online match the client sends only the throw intent (origin, direction,
+  fuze left). The server checks the origin against its own copy of the operator,
+  owns the flight, resolves the blast, and credits kills through the match
+  controller. Your own grenade can kill you and never scores.
+* Respawning reissues exactly the grenades the sealed kit was built with; there is
+  no mid-round resupply and no ground pickup.
 
 ## Network settings
 

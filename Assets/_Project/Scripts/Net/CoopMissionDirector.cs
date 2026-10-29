@@ -14,6 +14,7 @@ using Kordon.Game.Ai;
 using Kordon.Game.Maps;
 using Kordon.Game.Match;
 using Kordon.Game.Player;
+using Kordon.Game.Weapons;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -44,6 +45,7 @@ namespace Kordon.Net
             public float Yaw;
             public float LastFrameAt;
             public float LastShotAt = float.NegativeInfinity;
+            public float LastGrenadeAt = float.NegativeInfinity;
         }
 
         private readonly Dictionary<ulong, ServerOperator> _operators =
@@ -67,6 +69,11 @@ namespace Kordon.Net
         private bool _finished;
         private int _hostilesRemoved;
         private Transform _hostileRoot;
+
+        // Thrown equipment in flight, stepped by the same Core model as the offline game.
+        private readonly Dictionary<int, GrenadeProjectile> _grenades =
+            new Dictionary<int, GrenadeProjectile>();
+        private int _grenadeCounter;
 
         public event Action<MissionOutcome> MissionEnded;
         public event Action<string> Notice;
@@ -353,6 +360,181 @@ namespace Kordon.Net
             {
                 _hostilesRemoved++;
                 KillFeedClientRpc(shooter.Name + "  [" + weapon.DisplayName + "]  " + hostile.DisplayName);
+            }
+        }
+
+        /// <summary>
+        /// Grenade throw in the operation.  Operators and militia stand in the same
+        /// blast: the server resolves both sides with the Core BlastModel.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void GrenadeThrowServerRpc(Vector3 origin, Vector3 direction, float fuseSeconds,
+            ServerRpcParams parameters = default)
+        {
+            ulong clientId = parameters.Receive.SenderClientId;
+            if (!_operators.TryGetValue(clientId, out ServerOperator thrower) || thrower.Vitals.IsDead)
+            {
+                return;
+            }
+
+            if (Mission == null || thrower.Kit.Grenade == null ||
+                Mission.Phase != MissionPhase.ObjectivesActive &&
+                Mission.Phase != MissionPhase.ExtractionCalled)
+            {
+                return;
+            }
+
+            GrenadeDefinition grenade = thrower.Kit.Grenade;
+            Vector3 hand = thrower.Position + Vector3.up * 1.2f;
+            float now = Now;
+            if (Vector3.Distance(origin, hand) > 2.5f ||
+                float.IsNaN(direction.x) || float.IsNaN(direction.y) || float.IsNaN(direction.z) ||
+                direction.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            if (now - thrower.LastGrenadeAt < GrenadeTrajectory.MinThrowIntervalSeconds)
+            {
+                return;
+            }
+
+            float minFuse = Mathf.Max(0.05f, grenade.CookableMinFuse);
+            float maxFuse = Mathf.Max(minFuse, grenade.FuseSeconds);
+            float fuse = Mathf.Clamp(fuseSeconds, minFuse, maxFuse);
+
+            if (!thrower.Kit.TryThrowGrenade(now))
+            {
+                return;
+            }
+
+            thrower.LastGrenadeAt = now;
+
+            GrenadeFlightState state = new GrenadeFlightState
+            {
+                Position = MapSpace.ToCore(origin),
+                Velocity = GrenadeTrajectory.LaunchVelocity(grenade.ThrowSpeed,
+                    MapSpace.ToCore(direction.normalized)),
+                FuseRemaining = fuse,
+            };
+
+            int id = ++_grenadeCounter;
+            GrenadeProjectile projectile = GrenadeProjectile.SpawnWithState(transform, grenade, state,
+                false, null, id);
+            if (projectile == null)
+            {
+                return;
+            }
+
+            _grenades[id] = projectile;
+            projectile.Detonated += OnGrenadeDetonated;
+            GrenadeSpawnedClientRpc(id, origin, MapSpace.ToUnity(state.Velocity), fuse, grenade.Id);
+        }
+
+        private void OnGrenadeDetonated(GrenadeProjectile projectile, Vector3 position)
+        {
+            if (projectile == null)
+            {
+                return;
+            }
+
+            projectile.Detonated -= OnGrenadeDetonated;
+            _grenades.Remove(projectile.Id);
+            GrenadeDefinition grenade = projectile.Definition;
+            ResolveBlast(grenade, position, projectile.Id);
+            GrenadeExplodedClientRpc(projectile.Id, position,
+                grenade != null ? grenade.Id : string.Empty);
+        }
+
+        /// <summary>Fragments, smoke and flash against every operator and every militia body.</summary>
+        private void ResolveBlast(GrenadeDefinition grenade, Vector3 position, int grenadeId)
+        {
+            if (grenade == null)
+            {
+                return;
+            }
+
+            float radius = Mathf.Max(grenade.DamageRadiusM,
+                Mathf.Max(grenade.SuppressionRadiusM, grenade.EffectRadiusM));
+            BlastModel model = new BlastModel();
+
+            List<HostileAgent> hostiles = new List<HostileAgent>(_hostiles);
+            for (int i = 0; i < hostiles.Count; i++)
+            {
+                HostileAgent hostile = hostiles[i];
+                if (hostile == null || hostile.IsDead)
+                {
+                    continue;
+                }
+
+                Vector3 chest = hostile.Position + Vector3.up * 1.1f;
+                float distance = Vector3.Distance(position, chest);
+                if (distance > radius)
+                {
+                    continue;
+                }
+
+                BlastResult blast = model.Resolve(new BlastRequest
+                {
+                    Grenade = grenade,
+                    DistanceM = distance,
+                    HasLineOfSight = GrenadeBlast.HasLineOfSight(position, chest, hostile.transform),
+                    CoverFactor = 0f,
+                    ArmorClass = 0f,
+                });
+
+                DamageResult damage = blast.ToDamageResult();
+                if (damage.Accepted)
+                {
+                    hostile.ApplyDamage(damage);
+                }
+            }
+
+            List<ServerOperator> operators = new List<ServerOperator>(_operators.Values);
+            for (int i = 0; i < operators.Count; i++)
+            {
+                ServerOperator op = operators[i];
+                if (op.Vitals.IsDead)
+                {
+                    continue;
+                }
+
+                Vector3 chest = op.Position + Vector3.up * 1.2f;
+                float distance = Vector3.Distance(position, chest);
+                if (distance > radius)
+                {
+                    continue;
+                }
+
+                BlastResult blast = model.Resolve(new BlastRequest
+                {
+                    Grenade = grenade,
+                    DistanceM = distance,
+                    HasLineOfSight = GrenadeBlast.HasLineOfSight(position, chest,
+                        op.Body != null ? op.Body.transform : null),
+                    CoverFactor = 0f,
+                    ArmorClass = BlastModel.AverageArmorClass(op.Armor),
+                });
+
+                if (!blast.HasEffect)
+                {
+                    continue;
+                }
+
+                DamageResult damage = blast.ToDamageResult();
+                if (!damage.Accepted)
+                {
+                    op.Vitals.Suppression.Add(blast.Suppression);
+                    continue;
+                }
+
+                if (op.Vitals.ApplyDamage(damage, DeathCause.Explosion))
+                {
+                    NoticeClientRpc("an operator was caught in the blast", new ClientRpcParams
+                    {
+                        Send = new ClientRpcSendParams { TargetClientIds = null },
+                    });
+                }
             }
         }
 
@@ -650,6 +832,20 @@ namespace Kordon.Net
         }
 
         // ------------------------------------------------------------- snapshots
+
+        [ClientRpc]
+        private void GrenadeSpawnedClientRpc(int id, Vector3 position, Vector3 velocity,
+            float fuseSeconds, string grenadeId, ClientRpcParams parameters = default)
+        {
+            NetworkSessionEvents.RaiseGrenadeSpawned(id, position, velocity, fuseSeconds, grenadeId);
+        }
+
+        [ClientRpc]
+        private void GrenadeExplodedClientRpc(int id, Vector3 position, string grenadeId,
+            ClientRpcParams parameters = default)
+        {
+            NetworkSessionEvents.RaiseGrenadeExploded(id, position, grenadeId);
+        }
 
         private static ClientRpcParams Target(ulong clientId) => new ClientRpcParams
         {

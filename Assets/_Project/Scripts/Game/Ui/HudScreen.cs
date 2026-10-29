@@ -1,6 +1,7 @@
 using Kordon.Core.Settings;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
+using Kordon.Core.Loadout;
 using Kordon.Game.Input;
 using Kordon.Game.Weapons;
 using UnityEngine;
@@ -29,6 +30,7 @@ namespace Kordon.Game.Ui
     public sealed class HudScreen : MonoBehaviour, IUiScreen
     {
         public WeaponController Weapons;
+        public GrenadeThrower Grenades;
         public bool ShowHints = true;
 
         private Canvas _canvas;
@@ -46,6 +48,7 @@ namespace Kordon.Game.Ui
         private Image _damageFlash;
         private Image _lowHealthEdge;
         private Text _voiceLine;
+        private Text _grenadeLine;
 
         private readonly List<Image> _slotImages = new List<Image>();
         private readonly List<Text> _slotMarks = new List<Text>();
@@ -129,6 +132,10 @@ namespace Kordon.Game.Ui
             _voiceLine = UiBuilder.LabelAt(root, "Voice", "VOICE   not configured", 17,
                 UiBuilder.Dim, new Vector2(0f, 0f), new Vector2(230f, 28f),
                 new Vector2(420f, 24f), TextAnchor.MiddleCenter);
+
+            _grenadeLine = UiBuilder.LabelAt(root, "Grenade", "", 18, UiBuilder.Paper,
+                new Vector2(1f, 0f), new Vector2(-250f, 46f), new Vector2(480f, 26f),
+                TextAnchor.MiddleRight);
 
             BuildScoreboard(root);
         }
@@ -230,6 +237,7 @@ namespace Kordon.Game.Ui
                 AmmoHudSnapshot snapshot = Weapons.Loadout.BuildHudSnapshot(now);
                 RefreshStrip(snapshot);
                 RefreshInspect(snapshot);
+                RefreshGrenade(snapshot);
             }
 
             bool wantScoreboard = KordonInput.Held(InputAction.Scoreboard);
@@ -288,6 +296,45 @@ namespace Kordon.Game.Ui
                     UiBuilder.Ink, new Vector2(0.5f, 0.5f), Vector2.zero,
                     new Vector2(44f, 15f), TextAnchor.MiddleCenter));
             }
+        }
+
+        /// <summary>
+        /// Grenade line: the count of carried grenades is equipment, not magazine
+        /// ammunition, so it is always visible.  While a grenade is cooked the line
+        /// shows the burning fuze instead - a warning you can read without a crosshair.
+        /// </summary>
+        private void RefreshGrenade(AmmoHudSnapshot snapshot)
+        {
+            if (_grenadeLine == null)
+            {
+                return;
+            }
+
+            GrenadeDefinition grenade = Weapons != null && Weapons.Loadout != null
+                ? Weapons.Loadout.Grenade
+                : null;
+            if (grenade == null)
+            {
+                _grenadeLine.text = string.Empty;
+                return;
+            }
+
+            string name = grenade.DisplayName.ToUpperInvariant();
+            if (Grenades != null && Grenades.IsCooking)
+            {
+                float left = Mathf.Max(0f, grenade.FuseSeconds - Grenades.CookSeconds);
+                _grenadeLine.color = left <= grenade.CookableMinFuse + 0.4f
+                    ? UiBuilder.Danger
+                    : UiBuilder.Warning;
+                _grenadeLine.text = name + "   HELD   " + left.ToString("0.0") + " s";
+                return;
+            }
+
+            int count = snapshot.GrenadesRemaining;
+            _grenadeLine.color = count > 0 ? UiBuilder.Paper : UiBuilder.Dim;
+            _grenadeLine.text = count > 0
+                ? name + "   x" + count + "   3 select"
+                : name + "   none left";
         }
 
         private void RefreshInspect(AmmoHudSnapshot snapshot)

@@ -25,6 +25,8 @@ namespace Kordon.Net
         public static event Action<string, string, string> Briefing;
         public static event Action<MissionPhase, string, string, float, float, bool, int, float> Mission;
         public static event Action<bool, string, int, float, string> MissionEnded;
+        public static event Action<int, Vector3, Vector3, float, string> GrenadeSpawned;
+        public static event Action<int, Vector3, string> GrenadeExploded;
 
         public static void RaiseWelcome(int killTarget, float serverTime) =>
             Welcome?.Invoke(killTarget, serverTime);
@@ -66,6 +68,13 @@ namespace Kordon.Net
             float durationSeconds, string debrief) =>
             MissionEnded?.Invoke(success, reason, hostilesRemoved, durationSeconds, debrief);
 
+        public static void RaiseGrenadeSpawned(int id, Vector3 position, Vector3 velocity,
+            float fuseSeconds, string grenadeId) =>
+            GrenadeSpawned?.Invoke(id, position, velocity, fuseSeconds, grenadeId);
+
+        public static void RaiseGrenadeExploded(int id, Vector3 position, string grenadeId) =>
+            GrenadeExploded?.Invoke(id, position, grenadeId);
+
         public static void RaiseState(ulong[] ids, Vector3[] positions, float[] yaws,
             int[] health, bool[] dead) => State?.Invoke(ids, positions, yaws, health, dead);
 
@@ -84,6 +93,8 @@ namespace Kordon.Net
             Briefing = null;
             Mission = null;
             MissionEnded = null;
+            GrenadeSpawned = null;
+            GrenadeExploded = null;
         }
     }
 }

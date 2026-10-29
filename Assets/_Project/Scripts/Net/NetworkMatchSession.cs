@@ -46,6 +46,7 @@ namespace Kordon.Net
         private readonly Dictionary<ulong, RemoteOperatorView> _remote =
             new Dictionary<ulong, RemoteOperatorView>();
         private Transform _remoteRoot;
+        private ClientGrenadeView _grenadeView;
 
         public KordonNetwork Network => _network;
 
@@ -108,6 +109,13 @@ namespace Kordon.Net
                 _loadout, 0xD00D5EEDUL, true, _map != null ? _map.Layout : null, false);
             _local.Weapons.ShotFired += OnLocalShot;
             _local.Weapons.AmmoEventRaised += OnAmmoEvent;
+
+            // Grenades are server owned: ask the director, never resolve a blast here.
+            _local.Grenades.NetworkThrow = OnLocalGrenadeThrow;
+            GameObject grenadeView = new GameObject("GrenadeView");
+            grenadeView.transform.SetParent(transform, false);
+            _grenadeView = grenadeView.AddComponent<ClientGrenadeView>();
+            _grenadeView.Configure(_database.Definitions, _local);
             _local.Hud.SetObjective("FREE-FOR-ALL - first operator to 50 kills wins");
             _local.Body.Respawn(SpawnPoint(), 0f);
         }
@@ -239,6 +247,13 @@ namespace Kordon.Net
         private void OnLocalShot(ShotInfo shot)
         {
             _director?.ShotServerRpc(shot.Origin, shot.Direction);
+        }
+
+        private bool OnLocalGrenadeThrow(GrenadeDefinition grenade, Vector3 origin, Vector3 direction,
+            float fuseSeconds)
+        {
+            _director?.GrenadeThrowServerRpc(origin, direction, fuseSeconds);
+            return true;
         }
 
         private void OnAmmoEvent(AmmoEvent ammoEvent)
@@ -401,6 +416,7 @@ namespace Kordon.Net
 
         public void Shutdown()
         {
+            _grenadeView?.Clear();
             NetworkSessionEvents.Clear();
             _network?.Shutdown();
             Destroy(gameObject);
