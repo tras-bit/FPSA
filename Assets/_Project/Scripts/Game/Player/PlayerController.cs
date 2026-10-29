@@ -145,7 +145,7 @@ namespace Kordon.Game.Player
             // Pick any spawn, not spawn zero: a whole server falling off should not
             // all reappear stacked on one node.
             int index = map.SpawnPoints.Count > 0
-                ? Random.Range(0, map.SpawnPoints.Count)
+                ? UnityEngine.Random.Range(0, map.SpawnPoints.Count)
                 : 0;
             Teleport(map.SpawnPosition(index) + Vector3.up * 0.3f, 0f);
             Debug.LogWarning("[kordon] player left the map (y=" +

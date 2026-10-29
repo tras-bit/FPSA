@@ -908,10 +908,25 @@ namespace UnityEngine
         public Collider collider;
     }
 
+    /// <summary>UnityEngine.QueryTriggerInteraction, as shipped in 6000.0.</summary>
+    public enum QueryTriggerInteraction
+    {
+        UseGlobal = 0,
+        Ignore = 1,
+        Collide = 2,
+    }
+
     public static class Physics
     {
         public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit,
             float maxDistance = Mathf.Infinity, int layerMask = -1)
+        {
+            hit = default;
+            return false;
+        }
+
+        public static bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit,
+            float maxDistance, int layerMask, QueryTriggerInteraction queryTriggerInteraction)
         {
             hit = default;
             return false;

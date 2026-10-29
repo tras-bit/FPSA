@@ -257,7 +257,7 @@ namespace Kordon.Game.Maps
 
             built.Nav = nav;
             AddWorldSafety(layout, built, root.transform);
-            Active = built;
+            BuiltMap.Active = built;
             Debug.Log(string.Format(
                 "[kordon] map {0} built: {1}/{2} shells, {3}/{4} modules, {5} colliders, " +
                 "{6} spawn points, kill floor y={7:0.0}",
