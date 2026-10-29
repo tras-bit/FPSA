@@ -198,7 +198,8 @@ namespace UnityEditor
         public static string companyName { get; set; }
         public static ColorSpace colorSpace { get; set; }
 
-        public static void SetApplicationIdentifier(NamedBuildTarget buildTarget, string identifier)
+        public static void SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget buildTarget,
+            string identifier)
         {
         }
     }
