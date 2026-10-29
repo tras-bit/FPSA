@@ -1,6 +1,7 @@
 using Kordon.Core.Ammo;
 using Kordon.Core.Movement;
 using Kordon.Game.Camera;
+using Kordon.Game.Maps;
 using Kordon.Game.Player;
 using UnityEngine;
 
@@ -47,6 +48,9 @@ namespace Kordon.Game.Weapons
         /// <summary>Grenade handling: while the grenade slot is out the weapon is lowered out of frame.</summary>
         public GrenadeThrower Grenades;
 
+        /// <summary>The authored FBX currently in the hands (null until the art is loaded).</summary>
+        public GameObject ModelInstance => _modelInstance;
+
         public HandlingState State { get; private set; } = HandlingState.Ready;
 
         private Vector3 _position;
@@ -58,9 +62,12 @@ namespace Kordon.Game.Weapons
         private float _bobPhase;
         private Vector3 _boltLocal;
         private Vector3 _magLocal;
+        private GameObject _modelInstance;
+        private string _modelWeaponId;
+        private float _sightHeight = 0.06f;
+        private float _modelLength = 0.6f;
 
         private static readonly Vector3 PoseReady = new Vector3(0.16f, -0.19f, 0.46f);
-        private static readonly Vector3 PoseAim = new Vector3(0f, -0.135f, 0.38f);
         private static readonly Vector3 PoseSprint = new Vector3(0.11f, -0.26f, 0.36f);
         private static readonly Vector3 PoseMagOut = new Vector3(0.13f, -0.24f, 0.40f);
         private static readonly Vector3 PoseInspect = new Vector3(0.10f, -0.22f, 0.42f);
@@ -74,7 +81,7 @@ namespace Kordon.Game.Weapons
                 WeaponRoot = root.transform;
             }
 
-            _position = PoseReady;
+            _position = HipPose;
             WeaponRoot.localPosition = _position;
             if (MagazineProp != null)
             {
@@ -84,6 +91,110 @@ namespace Kordon.Game.Weapons
             if (BoltProp != null)
             {
                 _boltLocal = BoltProp.localPosition;
+            }
+        }
+
+        /// <summary>
+        /// Hip pose, scaled by the actual model length: a pistol is held close to the
+        /// camera, a sniper rifle further out. Falls back to the rifle pose until the
+        /// authored model is in place.
+        /// </summary>
+        private Vector3 HipPose
+        {
+            get
+            {
+                float t = Mathf.Clamp01(_modelLength / 0.9f);
+                return new Vector3(Mathf.Lerp(0.13f, 0.17f, t), Mathf.Lerp(-0.13f, -0.20f, t),
+                                   Mathf.Lerp(0.30f, 0.46f, t));
+            }
+        }
+
+        /// <summary>
+        /// Aim pose: the top of the iron sights is put on the camera axis, measured from
+        /// the model itself, so every weapon aims down its own sights.
+        /// </summary>
+        private Vector3 AimPose
+        {
+            get
+            {
+                float t = Mathf.Clamp01(_modelLength / 0.9f);
+                return new Vector3(0f, -_sightHeight + 0.004f,
+                                   Mathf.Lerp(0.22f, 0.34f, t));
+            }
+        }
+
+        /// <summary>Load the authored model for the active weapon, once per weapon change.</summary>
+        private void EnsureModel()
+        {
+            string id = Body != null && Body.Weapons != null && Body.Weapons.ActiveWeapon != null
+                ? Body.Weapons.ActiveWeapon.Id
+                : null;
+            if (id == _modelWeaponId)
+            {
+                return;
+            }
+
+            _modelWeaponId = id;
+            if (_modelInstance != null)
+            {
+                Destroy(_modelInstance);
+                _modelInstance = null;
+            }
+
+            MagazineProp = null;
+            _sightHeight = 0.06f;
+            _modelLength = 0.6f;
+            if (string.IsNullOrEmpty(id) || WeaponRoot == null)
+            {
+                return;
+            }
+
+            GameObject prefab = Resources.Load<GameObject>("Kordon/Weapons/" + id);
+            if (prefab == null)
+            {
+                Debug.LogWarning("[kordon] no viewmodel art for weapon '" + id + "'");
+                return;
+            }
+
+            _modelInstance = Instantiate(prefab, WeaponRoot, false);
+            _modelInstance.name = "Weapon_" + id;
+            SurfaceMaterialLibrary.Apply(_modelInstance);
+
+            Transform magazine = _modelInstance.transform.Find("Magazine");
+            if (magazine != null)
+            {
+                MagazineProp = magazine;
+                _magLocal = magazine.localPosition;
+            }
+
+            MeasureModel(_modelInstance);
+        }
+
+        /// <summary>Read the sight height and the length straight from the mesh bounds.</summary>
+        private void MeasureModel(GameObject model)
+        {
+            float top = 0f;
+            float forward = 0f;
+            foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter == null || filter.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                Bounds bounds = filter.sharedMesh.bounds;
+                top = Mathf.Max(top, bounds.center.y + bounds.size.y * 0.5f);
+                forward = Mathf.Max(forward, bounds.center.z + bounds.size.z * 0.5f);
+            }
+
+            if (top > 0.01f)
+            {
+                _sightHeight = top;
+            }
+
+            if (forward > 0.05f)
+            {
+                _modelLength = forward;
             }
         }
 
@@ -157,6 +268,8 @@ namespace Kordon.Game.Weapons
 
             // Slot 3 puts the weapon away and the hand comes up; it comes back the
             // moment the grenade leaves the hand or the slot changes.
+            EnsureModel();
+
             bool grenadeOut = Body.Weapons != null && Body.Weapons.Loadout != null &&
                               Body.Weapons.Loadout.Active == ActiveSlot.Grenade;
             if (WeaponRoot != null && WeaponRoot.gameObject.activeSelf == grenadeOut)
@@ -196,7 +309,7 @@ namespace Kordon.Game.Weapons
                 {
                     case HandlingState.Aiming:
                     default:
-                        pose = aiming ? PoseAim : PoseReady;
+                        pose = aiming ? AimPose : HipPose;
                         break;
                     case HandlingState.ReloadMagOut:
                     case HandlingState.ReloadMagIn:
@@ -247,6 +360,14 @@ namespace Kordon.Game.Weapons
 
             WeaponRoot.localPosition = _position;
             WeaponRoot.localRotation = _rotation;
+        }
+
+        private void OnDestroy()
+        {
+            if (_modelInstance != null)
+            {
+                Destroy(_modelInstance);
+            }
         }
 
         private void UpdateProps()

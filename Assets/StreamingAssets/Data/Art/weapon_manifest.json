@@ -1,0 +1,145 @@
+{
+  "comment": "First person weapon models built by Tools/blender/build_weapons.py. Dimensions are metres; sightHeightM is the top of the iron sights above the grip, which is what the viewmodel uses to align the aim pose.",
+  "weapons": [
+    {
+      "id": "dmr14",
+      "model": "Kordon/Weapons/dmr14",
+      "triangles": 3148,
+      "bytes": 58076,
+      "lengthM": 0.848,
+      "sightHeightM": 0.1064,
+      "sizeM": [
+        0.094,
+        0.848,
+        0.293
+      ],
+      "hasMagazine": true
+    },
+    {
+      "id": "grenade_flash",
+      "model": "Kordon/Weapons/grenade_flash",
+      "triangles": 1120,
+      "bytes": 30092,
+      "lengthM": 0.144,
+      "sightHeightM": 0.0,
+      "sizeM": [
+        0.064,
+        0.058,
+        0.144
+      ],
+      "hasMagazine": false
+    },
+    {
+      "id": "grenade_frag",
+      "model": "Kordon/Weapons/grenade_frag",
+      "triangles": 1076,
+      "bytes": 32412,
+      "lengthM": 0.134,
+      "sightHeightM": 0.0,
+      "sizeM": [
+        0.066,
+        0.068,
+        0.134
+      ],
+      "hasMagazine": false
+    },
+    {
+      "id": "grenade_smoke",
+      "model": "Kordon/Weapons/grenade_smoke",
+      "triangles": 988,
+      "bytes": 28732,
+      "lengthM": 0.171,
+      "sightHeightM": 0.0,
+      "sizeM": [
+        0.07,
+        0.068,
+        0.171
+      ],
+      "hasMagazine": false
+    },
+    {
+      "id": "k870",
+      "model": "Kordon/Weapons/k870",
+      "triangles": 2628,
+      "bytes": 50140,
+      "lengthM": 0.786,
+      "sightHeightM": 0.108,
+      "sizeM": [
+        0.072,
+        0.786,
+        0.249
+      ],
+      "hasMagazine": false
+    },
+    {
+      "id": "p9",
+      "model": "Kordon/Weapons/p9",
+      "triangles": 1768,
+      "bytes": 41388,
+      "lengthM": 0.239,
+      "sightHeightM": 0.0744,
+      "sizeM": [
+        0.051,
+        0.239,
+        0.204
+      ],
+      "hasMagazine": true
+    },
+    {
+      "id": "sr338",
+      "model": "Kordon/Weapons/sr338",
+      "triangles": 3236,
+      "bytes": 57740,
+      "lengthM": 0.953,
+      "sightHeightM": 0.1096,
+      "sizeM": [
+        0.074,
+        0.953,
+        0.267
+      ],
+      "hasMagazine": true
+    },
+    {
+      "id": "tr30",
+      "model": "Kordon/Weapons/tr30",
+      "triangles": 2840,
+      "bytes": 53948,
+      "lengthM": 0.748,
+      "sightHeightM": 0.1048,
+      "sizeM": [
+        0.053,
+        0.748,
+        0.286
+      ],
+      "hasMagazine": true
+    },
+    {
+      "id": "vk74",
+      "model": "Kordon/Weapons/vk74",
+      "triangles": 2972,
+      "bytes": 56300,
+      "lengthM": 0.708,
+      "sightHeightM": 0.1016,
+      "sizeM": [
+        0.054,
+        0.708,
+        0.292
+      ],
+      "hasMagazine": true
+    },
+    {
+      "id": "vs9",
+      "model": "Kordon/Weapons/vs9",
+      "triangles": 2708,
+      "bytes": 53196,
+      "lengthM": 0.481,
+      "sightHeightM": 0.0984,
+      "sizeM": [
+        0.051,
+        0.481,
+        0.273
+      ],
+      "hasMagazine": true
+    }
+  ]
+}

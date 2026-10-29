@@ -3,6 +3,7 @@ using Kordon.Core.Ammo;
 using Kordon.Core.Combat;
 using Kordon.Core.Loadout;
 using Kordon.Game.Audio;
+using Kordon.Game.Maps;
 using Kordon.Game.Camera;
 using Kordon.Game.Input;
 using Kordon.Game.Player;
@@ -49,6 +50,9 @@ namespace Kordon.Game.Weapons
 
         private GrenadeProjectile _live;
         private Transform _projectileRoot;
+        private Transform _viewRoot;
+        private GameObject _heldModel;
+        private GrenadeKind _heldKind = GrenadeKind.None;
         private float _cookStartedAt;
 
         public GrenadeDefinition HeldGrenade =>
@@ -64,7 +68,11 @@ namespace Kordon.Game.Weapons
                 return;
             }
 
-            if (Body.IsDead || Weapons.Loadout.Active != ActiveSlot.Grenade || Remaining <= 0)
+            bool slotActive = Weapons.Loadout.Active == ActiveSlot.Grenade &&
+                              Remaining > 0 && !Body.IsDead;
+            UpdateHeldGrenade(HeldGrenade, slotActive);
+
+            if (!slotActive)
             {
                 CancelCook();
                 return;
@@ -93,6 +101,76 @@ namespace Kordon.Game.Weapons
             {
                 Throw(grenade);
             }
+        }
+
+        /// <summary>
+        /// The grenade in the hand: the authored model for the selected type, held in
+        /// the lower right of the frame, pulled back while the fuze is burning.
+        /// </summary>
+        private void UpdateHeldGrenade(GrenadeDefinition grenade, bool slotActive)
+        {
+            if (!slotActive || grenade == null)
+            {
+                HideHeldGrenade();
+                return;
+            }
+
+            if (_heldKind != grenade.Kind && _heldModel != null)
+            {
+                Destroy(_heldModel);
+                _heldModel = null;
+            }
+
+            if (_heldModel == null)
+            {
+                GameObject prefab = Resources.Load<GameObject>(
+                    GrenadeProjectile.ModelPath(grenade.Kind));
+                if (prefab == null)
+                {
+                    return;
+                }
+
+                _heldModel = Instantiate(prefab, ViewRoot(), false);
+                _heldKind = grenade.Kind;
+                SurfaceMaterialLibrary.Apply(_heldModel);
+            }
+
+            _heldModel.SetActive(true);
+
+            Transform model = _heldModel.transform;
+            float cook = Mathf.Clamp01(CookSeconds / Mathf.Max(0.2f, grenade.FuseSeconds));
+            Vector3 pose = new Vector3(0.20f + cook * 0.01f, -0.17f + cook * 0.02f,
+                                       0.34f - cook * 0.05f);
+            float breath = Body != null ? Body.Stamina.BreathIntensity : 0f;
+            pose += new Vector3(Mathf.Sin(Time.time * 2.1f) * 0.0025f * breath,
+                                Mathf.Sin(Time.time * 1.7f) * 0.0035f * breath, 0f);
+            model.localPosition = Vector3.Lerp(model.localPosition, pose,
+                                               Mathf.Clamp01(Time.deltaTime * 14f));
+            model.localRotation = Quaternion.Slerp(model.localRotation,
+                Quaternion.Euler(-12f - cook * 22f, 24f, 8f + cook * 10f),
+                Mathf.Clamp01(Time.deltaTime * 12f));
+        }
+
+        private void HideHeldGrenade()
+        {
+            if (_heldModel != null)
+            {
+                _heldModel.SetActive(false);
+            }
+        }
+
+        private Transform ViewRoot()
+        {
+            if (_viewRoot != null)
+            {
+                return _viewRoot;
+            }
+
+            GameObject root = new GameObject("GrenadeHand");
+            Transform parent = Rig != null ? Rig.transform : (Body != null ? Body.transform : null);
+            root.transform.SetParent(parent, false);
+            _viewRoot = root.transform;
+            return _viewRoot;
         }
 
         private void BeginCook(GrenadeDefinition grenade)
@@ -144,6 +222,7 @@ namespace Kordon.Game.Weapons
             Vector3 direction = Rig != null ? Rig.transform.forward : Body.transform.forward;
             LastThrowTime = now;
             CancelCook();
+            HideHeldGrenade();
 
             Audio?.PlayGrenadePin(origin);
             Thrown?.Invoke(grenade, origin, direction);
@@ -207,6 +286,14 @@ namespace Kordon.Game.Weapons
         {
             Transform source = Rig != null ? Rig.transform : Body.transform;
             return source.position + source.forward * 0.42f + Vector3.up * -0.06f;
+        }
+
+        private void OnDestroy()
+        {
+            if (_heldModel != null)
+            {
+                Destroy(_heldModel);
+            }
         }
 
         private Transform ProjectileRoot()

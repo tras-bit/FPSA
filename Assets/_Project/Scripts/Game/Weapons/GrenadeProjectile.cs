@@ -88,8 +88,30 @@ namespace Kordon.Game.Weapons
             return projectile;
         }
 
+        /// <summary>Authored model for each type of thrown equipment.</summary>
+        public static string ModelPath(GrenadeKind kind)
+        {
+            switch (kind)
+            {
+                case GrenadeKind.Smoke: return "Kordon/Weapons/grenade_smoke";
+                case GrenadeKind.Flashbang: return "Kordon/Weapons/grenade_flash";
+                default: return "Kordon/Weapons/grenade_frag";
+            }
+        }
+
         private void BuildVisual()
         {
+            GrenadeKind kind = Definition != null ? Definition.Kind : GrenadeKind.Fragmentation;
+            GameObject prefab = Resources.Load<GameObject>(ModelPath(kind));
+            if (prefab != null)
+            {
+                GameObject model = Instantiate(prefab, transform, false);
+                model.name = "Body";
+                SurfaceMaterialLibrary.Apply(model);
+                return;
+            }
+
+            // Fallback so a missing model never hides the grenade in flight.
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             body.name = "Body";
             body.transform.SetParent(transform, false);
@@ -102,7 +124,7 @@ namespace Kordon.Game.Weapons
             }
 
             Renderer renderer = body.GetComponent<Renderer>();
-            Material material = Definition != null && Definition.Kind == GrenadeKind.Smoke
+            Material material = kind == GrenadeKind.Smoke
                 ? SurfaceMaterialLibrary.ForSurface("rubber")
                 : SurfaceMaterialLibrary.ForSurface("steel_dark");
             if (renderer != null && material != null)

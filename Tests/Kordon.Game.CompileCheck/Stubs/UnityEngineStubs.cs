@@ -360,6 +360,8 @@ namespace UnityEngine
 
         public static T Instantiate<T>(T original) where T : Object => original;
         public static T Instantiate<T>(T original, Transform parent) where T : Object => original;
+        public static T Instantiate<T>(T original, Transform parent, bool instantiateInWorldSpace)
+            where T : Object => original;
         public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation)
             where T : Object => original;
         public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation,
