@@ -6828,10 +6828,20 @@
       "tag": "signage"
     },
     {
-      "module": "wall_1",
+      "module": "wall_4",
       "position": [
-        -41.47,
-        -24.0,
+        -39.97,
+        -32.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "spawn_A"
+    },
+    {
+      "module": "wall_2",
+      "position": [
+        -36.91,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -6840,18 +6850,8 @@
     {
       "module": "wall_1",
       "position": [
-        -40.58,
-        -24.0,
-        0.0
-      ],
-      "yaw": 0.0,
-      "tag": "spawn_A"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -35.42,
-        -24.0,
+        -35.35,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -6861,57 +6861,17 @@
       "module": "wall_1",
       "position": [
         -34.53,
-        -24.0,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
       "tag": "spawn_A"
     },
     {
-      "module": "wall_4",
-      "position": [
-        -34.0,
-        -29.97,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_A"
-    },
-    {
-      "module": "wall_2",
-      "position": [
-        -34.0,
-        -26.91,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_A"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -34.0,
-        -25.35,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_A"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -34.0,
-        -24.53,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_A"
-    },
-    {
       "module": "floor_slab_4",
       "position": [
         -38.0,
-        -26.0,
+        -30.0,
         3.6
       ],
       "yaw": 0.0,
@@ -6920,7 +6880,7 @@
     {
       "module": "floor_slab_4",
       "position": [
-        -36.0,
+        -40.0,
         -28.0,
         3.6
       ],
@@ -6930,18 +6890,18 @@
     {
       "module": "crate_1",
       "position": [
-        -35.4,
-        -25.4,
+        -40.9,
+        -30.9,
         0.0
       ],
-      "yaw": 45.0,
+      "yaw": 0.0,
       "tag": "spawn_A"
     },
     {
       "module": "barrel_cluster",
       "position": [
-        -40.8,
-        -25.6,
+        -40.6,
+        -24.6,
         0.0
       ],
       "yaw": 0.0,
@@ -6950,8 +6910,8 @@
     {
       "module": "sandbag_wall",
       "position": [
-        -39.0,
-        -31.4,
+        -31.6,
+        -34.4,
         0.0
       ],
       "yaw": 45.0,
@@ -6960,18 +6920,28 @@
     {
       "module": "floodlight_wall",
       "position": [
-        -34.4,
-        -24.4,
+        -41.6,
+        -26.8,
         2.4
       ],
       "yaw": 45.0,
       "tag": "spawn_A"
     },
     {
-      "module": "wall_1",
+      "module": "wall_4",
       "position": [
-        34.53,
-        -24.0,
+        36.03,
+        -32.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "spawn_B"
+    },
+    {
+      "module": "wall_2",
+      "position": [
+        39.09,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -6980,18 +6950,8 @@
     {
       "module": "wall_1",
       "position": [
-        35.42,
-        -24.0,
-        0.0
-      ],
-      "yaw": 0.0,
-      "tag": "spawn_B"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        40.58,
-        -24.0,
+        40.65,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -7001,57 +6961,17 @@
       "module": "wall_1",
       "position": [
         41.47,
-        -24.0,
+        -32.0,
         0.0
       ],
       "yaw": 0.0,
       "tag": "spawn_B"
     },
     {
-      "module": "wall_4",
-      "position": [
-        34.0,
-        -29.97,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_B"
-    },
-    {
-      "module": "wall_2",
-      "position": [
-        34.0,
-        -26.91,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_B"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        34.0,
-        -25.35,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_B"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        34.0,
-        -24.53,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_B"
-    },
-    {
       "module": "floor_slab_4",
       "position": [
         38.0,
-        -26.0,
+        -30.0,
         3.6
       ],
       "yaw": 0.0,
@@ -7060,7 +6980,7 @@
     {
       "module": "floor_slab_4",
       "position": [
-        36.0,
+        40.0,
         -28.0,
         3.6
       ],
@@ -7070,18 +6990,18 @@
     {
       "module": "crate_1",
       "position": [
-        35.4,
-        -25.4,
+        40.9,
+        -30.9,
         0.0
       ],
-      "yaw": 135.0,
+      "yaw": 0.0,
       "tag": "spawn_B"
     },
     {
       "module": "barrel_cluster",
       "position": [
-        40.8,
-        -25.6,
+        40.6,
+        -24.6,
         0.0
       ],
       "yaw": 0.0,
@@ -7090,8 +7010,8 @@
     {
       "module": "sandbag_wall",
       "position": [
-        39.0,
-        -31.4,
+        31.6,
+        -34.4,
         0.0
       ],
       "yaw": 135.0,
@@ -7100,18 +7020,28 @@
     {
       "module": "floodlight_wall",
       "position": [
-        34.4,
-        -24.4,
+        41.6,
+        -26.8,
         2.4
       ],
       "yaw": 135.0,
       "tag": "spawn_B"
     },
     {
-      "module": "wall_1",
+      "module": "wall_4",
       "position": [
-        -41.47,
-        24.0,
+        -39.97,
+        32.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "spawn_C"
+    },
+    {
+      "module": "wall_2",
+      "position": [
+        -36.91,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -7120,18 +7050,8 @@
     {
       "module": "wall_1",
       "position": [
-        -40.58,
-        24.0,
-        0.0
-      ],
-      "yaw": 0.0,
-      "tag": "spawn_C"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -35.42,
-        24.0,
+        -35.35,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -7141,57 +7061,17 @@
       "module": "wall_1",
       "position": [
         -34.53,
-        24.0,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
       "tag": "spawn_C"
     },
     {
-      "module": "wall_4",
-      "position": [
-        -34.0,
-        26.03,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_C"
-    },
-    {
-      "module": "wall_2",
-      "position": [
-        -34.0,
-        29.09,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_C"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -34.0,
-        30.65,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_C"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        -34.0,
-        31.47,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_C"
-    },
-    {
       "module": "floor_slab_4",
       "position": [
         -38.0,
-        26.0,
+        30.0,
         3.6
       ],
       "yaw": 0.0,
@@ -7200,7 +7080,7 @@
     {
       "module": "floor_slab_4",
       "position": [
-        -36.0,
+        -40.0,
         28.0,
         3.6
       ],
@@ -7210,18 +7090,18 @@
     {
       "module": "crate_1",
       "position": [
-        -35.4,
-        25.4,
+        -40.9,
+        30.9,
         0.0
       ],
-      "yaw": 315.0,
+      "yaw": 0.0,
       "tag": "spawn_C"
     },
     {
       "module": "barrel_cluster",
       "position": [
-        -40.8,
-        25.6,
+        -40.6,
+        24.6,
         0.0
       ],
       "yaw": 0.0,
@@ -7230,8 +7110,8 @@
     {
       "module": "sandbag_wall",
       "position": [
-        -39.0,
-        31.4,
+        -31.6,
+        34.4,
         0.0
       ],
       "yaw": 315.0,
@@ -7240,18 +7120,28 @@
     {
       "module": "floodlight_wall",
       "position": [
-        -34.4,
-        24.4,
+        -41.6,
+        26.8,
         2.4
       ],
       "yaw": 315.0,
       "tag": "spawn_C"
     },
     {
-      "module": "wall_1",
+      "module": "wall_4",
       "position": [
-        34.53,
-        24.0,
+        36.03,
+        32.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "spawn_D"
+    },
+    {
+      "module": "wall_2",
+      "position": [
+        39.09,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -7260,18 +7150,8 @@
     {
       "module": "wall_1",
       "position": [
-        35.42,
-        24.0,
-        0.0
-      ],
-      "yaw": 0.0,
-      "tag": "spawn_D"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        40.58,
-        24.0,
+        40.65,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
@@ -7281,57 +7161,17 @@
       "module": "wall_1",
       "position": [
         41.47,
-        24.0,
+        32.0,
         0.0
       ],
       "yaw": 0.0,
       "tag": "spawn_D"
     },
     {
-      "module": "wall_4",
-      "position": [
-        34.0,
-        26.03,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_D"
-    },
-    {
-      "module": "wall_2",
-      "position": [
-        34.0,
-        29.09,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_D"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        34.0,
-        30.65,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_D"
-    },
-    {
-      "module": "wall_1",
-      "position": [
-        34.0,
-        31.47,
-        0.0
-      ],
-      "yaw": 90.0,
-      "tag": "spawn_D"
-    },
-    {
       "module": "floor_slab_4",
       "position": [
         38.0,
-        26.0,
+        30.0,
         3.6
       ],
       "yaw": 0.0,
@@ -7340,7 +7180,7 @@
     {
       "module": "floor_slab_4",
       "position": [
-        36.0,
+        40.0,
         28.0,
         3.6
       ],
@@ -7350,18 +7190,18 @@
     {
       "module": "crate_1",
       "position": [
-        35.4,
-        25.4,
+        40.9,
+        30.9,
         0.0
       ],
-      "yaw": 225.0,
+      "yaw": 0.0,
       "tag": "spawn_D"
     },
     {
       "module": "barrel_cluster",
       "position": [
-        40.8,
-        25.6,
+        40.6,
+        24.6,
         0.0
       ],
       "yaw": 0.0,
@@ -7370,8 +7210,8 @@
     {
       "module": "sandbag_wall",
       "position": [
-        39.0,
-        31.4,
+        31.6,
+        34.4,
         0.0
       ],
       "yaw": 225.0,
@@ -7380,8 +7220,8 @@
     {
       "module": "floodlight_wall",
       "position": [
-        34.4,
-        24.4,
+        41.6,
+        26.8,
         2.4
       ],
       "yaw": 225.0,
@@ -7397,7 +7237,7 @@
         -28.0,
         0.05
       ],
-      "yaw": 36.38,
+      "yaw": 6.38,
       "marker": "spawn_a1"
     },
     {
@@ -7408,7 +7248,7 @@
         -29.3,
         0.05
       ],
-      "yaw": 36.38,
+      "yaw": 66.38,
       "marker": "spawn_a2"
     },
     {
@@ -7419,7 +7259,7 @@
         -29.3,
         0.05
       ],
-      "yaw": 36.38,
+      "yaw": 51.38,
       "marker": "spawn_a3"
     },
     {
@@ -7430,7 +7270,7 @@
         -26.7,
         0.05
       ],
-      "yaw": 36.38,
+      "yaw": 66.38,
       "marker": "spawn_a4"
     },
     {
@@ -7441,7 +7281,7 @@
         -26.7,
         0.05
       ],
-      "yaw": 36.38,
+      "yaw": 51.38,
       "marker": "spawn_a5"
     },
     {
@@ -7452,7 +7292,7 @@
         -28.0,
         0.05
       ],
-      "yaw": 143.62,
+      "yaw": 158.62,
       "marker": "spawn_b1"
     },
     {
@@ -7463,7 +7303,7 @@
         -29.3,
         0.05
       ],
-      "yaw": 143.62,
+      "yaw": 128.62,
       "marker": "spawn_b2"
     },
     {
@@ -7474,7 +7314,7 @@
         -29.3,
         0.05
       ],
-      "yaw": 143.62,
+      "yaw": 113.62,
       "marker": "spawn_b3"
     },
     {
@@ -7485,7 +7325,7 @@
         -26.7,
         0.05
       ],
-      "yaw": 143.62,
+      "yaw": 128.62,
       "marker": "spawn_b4"
     },
     {
@@ -7496,7 +7336,7 @@
         -26.7,
         0.05
       ],
-      "yaw": 143.62,
+      "yaw": 158.62,
       "marker": "spawn_b5"
     },
     {
@@ -7507,7 +7347,7 @@
         28.0,
         0.05
       ],
-      "yaw": -36.38,
+      "yaw": -6.38,
       "marker": "spawn_c1"
     },
     {
@@ -7518,7 +7358,7 @@
         26.7,
         0.05
       ],
-      "yaw": -36.38,
+      "yaw": 8.62,
       "marker": "spawn_c2"
     },
     {
@@ -7529,7 +7369,7 @@
         26.7,
         0.05
       ],
-      "yaw": -36.38,
+      "yaw": 8.62,
       "marker": "spawn_c3"
     },
     {
@@ -7540,7 +7380,7 @@
         29.3,
         0.05
       ],
-      "yaw": -36.38,
+      "yaw": -6.38,
       "marker": "spawn_c4"
     },
     {
@@ -7551,7 +7391,7 @@
         29.3,
         0.05
       ],
-      "yaw": -36.38,
+      "yaw": -6.38,
       "marker": "spawn_c5"
     },
     {
@@ -7562,7 +7402,7 @@
         28.0,
         0.05
       ],
-      "yaw": -143.62,
+      "yaw": -128.62,
       "marker": "spawn_d1"
     },
     {
@@ -7584,7 +7424,7 @@
         26.7,
         0.05
       ],
-      "yaw": -143.62,
+      "yaw": -128.62,
       "marker": "spawn_d3"
     },
     {
@@ -7595,7 +7435,7 @@
         29.3,
         0.05
       ],
-      "yaw": -143.62,
+      "yaw": -128.62,
       "marker": "spawn_d4"
     },
     {
@@ -7606,7 +7446,7 @@
         29.3,
         0.05
       ],
-      "yaw": -143.62,
+      "yaw": -113.62,
       "marker": "spawn_d5"
     }
   ],

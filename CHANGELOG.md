@@ -3,6 +3,26 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.13 - 2026-10-30
+
+The map, finished where it was actually broken: the spawns.
+
+### Fixed
+
+* **Players spawned inside crates and stared at walls.** The corner shelters were built
+  with their walls on the side that faces the map, and their crates, barrels and
+  sandbags stood inside the five spawn slots themselves. Nothing in the pipeline looked
+  at a spawn horizontally - the map audit only asked whether there was floor under it -
+  so the first editor run put the camera into a crate half a metre away.
+  The shelters are open to the yard now, their props stand clear of the slots, and the
+  map build runs `place_spawns_in_the_open`: every spawn is nudged to the nearest point
+  with 1.2 m of elbow room and turned towards the clearest view, then checked - 1.2 m
+  of clearance and 6 m of sight, or the build fails. Both maps pass; the tightest slot
+  now has 1.28 m of room and 15.5 m of view.
+* `check_spawn_clearance` measures that against the real module boxes, in the same pass
+  that writes the layout, so a spawn can no longer be "on the floor" and still be
+  unusable.
+
 ## 1.0.12 - 2026-10-30
 
 The first run in a real Unity editor, and the two things it broke on.

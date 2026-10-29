@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -149,6 +150,111 @@ def check_bounds(data: dict) -> List[str]:
     return problems
 
 
+def solid_boxes(data: dict, manifest: Dict[str, dict]) -> List[tuple]:
+    """World axis aligned boxes of every module that blocks movement."""
+    boxes = []
+    for placement in data["placements"]:
+        module = manifest.get(placement["module"])
+        if module is None or not module.get("blocksMovement"):
+            continue
+        size_x, size_y, size_z = module["size"]
+        x, y, z = placement["position"]
+        angle = math.radians(placement["yaw"])
+        half_x = abs(size_x * math.cos(angle)) * 0.5 + abs(size_y * math.sin(angle)) * 0.5
+        half_y = abs(size_x * math.sin(angle)) * 0.5 + abs(size_y * math.cos(angle)) * 0.5
+        boxes.append((x - half_x, x + half_x, y - half_y, y + half_y, z, z + size_z))
+    return boxes
+
+
+def clearance(boxes: List[tuple], x: float, y: float, z: float,
+              ignore_height: float = 2.0) -> float:
+    worst = 1e9
+    for min_x, max_x, min_y, max_y, min_z, max_z in boxes:
+        if max_z < z + 0.2 or min_z > z + ignore_height:
+            continue
+        dx = max(min_x - x, 0.0, x - max_x)
+        dy = max(min_y - y, 0.0, y - max_y)
+        worst = min(worst, math.hypot(dx, dy))
+    return worst
+
+
+def view_distance(boxes: List[tuple], x: float, y: float, z: float, yaw_degrees: float) -> float:
+    yaw = math.radians(yaw_degrees)
+    distance = 0.0
+    for step in range(1, 49):
+        probe = step * 0.5
+        if clearance(boxes, x + math.cos(yaw) * probe, y + math.sin(yaw) * probe, z) < 0.35:
+            break
+        distance = probe
+    return distance
+
+
+def place_spawns_in_the_open(data: dict, manifest: Dict[str, dict]) -> None:
+    """Move every spawn to a spot it can stand in, and face it where it can see.
+
+    A shelter slot that is inside a crate, or aimed at a wall a metre away, is not a
+    spawn: it is a spawn shaped hole.  The layout places the shelters; this pass makes
+    sure the slots inside them are actually usable, by nudging each one to the nearest
+    point with elbow room and then turning it towards the clearest view that still
+    points roughly the way the shelter was built to face.
+    """
+    boxes = solid_boxes(data, manifest)
+    for spawn in data["spawns"]:
+        x, y, z = spawn["position"]
+        best = (x, y)
+        if clearance(boxes, x, y, z) < 1.2:
+            found = False
+            for ring in range(1, 13):
+                for step in range(12):
+                    angle = step * math.pi / 6.0
+                    nx = x + math.cos(angle) * ring * 0.5
+                    ny = y + math.sin(angle) * ring * 0.5
+                    if clearance(boxes, nx, ny, z) >= 1.2:
+                        best = (nx, ny)
+                        found = True
+                        break
+                if found:
+                    break
+        spawn["position"] = [round(best[0], 2), round(best[1], 2), z]
+
+        original = spawn["yaw"]
+        chosen = original
+        chosen_view = view_distance(boxes, best[0], best[1], z, original)
+        for step in range(1, 13):
+            for offset in (15.0, -15.0):
+                candidate = original + step * offset
+                view = view_distance(boxes, best[0], best[1], z, candidate)
+                if view > chosen_view + 0.5:
+                    chosen = candidate
+                    chosen_view = view
+            if chosen_view >= 20.0:
+                break
+        spawn["yaw"] = round((chosen + 180.0) % 360.0 - 180.0, 2)
+
+
+def check_spawn_clearance(data: dict, manifest: Dict[str, dict]) -> List[str]:
+    """A spawn the player cannot stand up in, or cannot see out of, is a broken spawn.
+
+    The first editor run put the camera into a crate: the corner shelters had their
+    walls on the side that faces the map, and the props were placed in the five slots
+    themselves.  Nothing in the pipeline looked at a spawn horizontally - the map audit
+    only asked whether there was floor underneath - so it shipped.  This measures each
+    slot against the solid modules around it: 1.2 m of elbow room all round and 6 m of
+    clear view along the direction the player faces.
+    """
+    problems = []
+    boxes = solid_boxes(data, manifest)
+    for spawn in data["spawns"]:
+        x, y, z = spawn["position"]
+        room = clearance(boxes, x, y, z)
+        if room < 1.2:
+            problems.append(f"spawn {spawn['id']} has only {room:.2f} m of clearance")
+        view = view_distance(boxes, x, y, z, spawn["yaw"])
+        if view < 6.0:
+            problems.append(f"spawn {spawn['id']} can see only {view:.1f} m ahead")
+    return problems
+
+
 def check_spawns(data: dict, nav_nodes: List[dict]) -> List[str]:
     problems = []
     markers = {node["marker"] for node in nav_nodes if node["marker"]}
@@ -230,7 +336,9 @@ def main() -> int:
         data["nav"] = {"nodeCount": len(nodes), "linkCount": len(links)}
 
         problems = check_bounds(data)
+        place_spawns_in_the_open(data, manifest)
         problems += check_spawns(data, nodes)
+        problems += check_spawn_clearance(data, manifest)
         problems += check_objective_markers(data, nodes)
         errors = lay.validate_nav(map_id, nodes, links)
         problems += errors

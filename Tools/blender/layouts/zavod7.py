@@ -498,26 +498,34 @@ def build_placements() -> Tuple[List[dict], Dict[str, list]]:
     out.append(lay.placement("sign_plate", (-0.4, 33.4, 2.4), 180.0, "signage"))
 
     # ---- spawn shelters: four corners, five slots each -------------------
+    #
+    # The walls belong on the corner side of the shelter, with the opening towards the
+    # yard: built the other way round, a spawn was a box with a wall between the player
+    # and the map, and the props sat in the five slots themselves - which is why the
+    # first editor run spawned the camera inside a crate.
     for zone, (cx, cy) in sorted(SPAWN_ZONES.items()):
-        face_x = 1.0 if cx < 0 else -1.0
+        face_x = 1.0 if cx < 0 else -1.0   # from the corner towards the yard
         face_y = 1.0 if cy < 0 else -1.0
         yaw = math.degrees(math.atan2(face_y, face_x))
-        lay.side_run("wall_4", (cx - 4.0, cy + face_y * 4.0), (cx + 4.0, cy + face_y * 4.0),
-                     out, openings=[(4.0, 4.1)], tag=f"spawn_{zone}")
-        lay.side_run("wall_4", (cx + face_x * 4.0, cy - 4.0), (cx + face_x * 4.0, cy + 4.0),
+        # back wall (against the corner) and the two side walls; open to the yard
+        lay.side_run("wall_4", (cx - 4.0, cy - face_y * 4.0), (cx + 4.0, cy - face_y * 4.0),
                      out, tag=f"spawn_{zone}")
-        out.append(lay.placement("floor_slab_4", (cx, cy + face_y * 2.0, 3.6), 0.0,
+        # One back wall only. Side walls turned the shelter into a pen whose corner
+        # slots stared at 4 m of concrete, so the yard side stays open.
+        # a lean-to roof over the back half of the shelter, not over the firing line
+        out.append(lay.placement("floor_slab_4", (cx, cy - face_y * 2.0, 3.6), 0.0,
                                  f"spawn_{zone}"))
-        out.append(lay.placement("floor_slab_4", (cx + face_x * 2.0, cy, 3.6), 0.0,
+        out.append(lay.placement("floor_slab_4", (cx - face_x * 2.0, cy, 3.6), 0.0,
                                  f"spawn_{zone}"))
-        out.append(lay.placement("crate_1", (cx + face_x * 2.6, cy + face_y * 2.6, 0.0),
-                                 yaw, f"spawn_{zone}"))
-        out.append(lay.placement("barrel_cluster", (cx - face_x * 2.8, cy + face_y * 2.4,
+        # props stand clear of the five slots, which are within 1.7 m of the centre
+        out.append(lay.placement("crate_1", (cx - face_x * 2.9, cy - face_y * 2.9, 0.0),
+                                 0.0, f"spawn_{zone}"))
+        out.append(lay.placement("barrel_cluster", (cx - face_x * 2.6, cy + face_y * 3.4,
                                                     0.0), 0.0, f"spawn_{zone}"))
-        out.append(lay.placement("sandbag_wall", (cx - face_x * 1.0, cy - face_y * 3.4, 0.0),
+        out.append(lay.placement("sandbag_wall", (cx + face_x * 6.4, cy - face_y * 6.4, 0.0),
                                  yaw, f"spawn_{zone}"))
         out.append(lay.placement("floodlight_wall",
-                                 (cx + face_x * 3.6, cy + face_y * 3.6, 2.4), yaw,
+                                 (cx - face_x * 3.6, cy + face_y * 1.2, 2.4), yaw,
                                  f"spawn_{zone}"))
 
     counts["placements"] = out

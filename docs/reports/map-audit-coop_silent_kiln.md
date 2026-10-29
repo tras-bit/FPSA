@@ -21,8 +21,3 @@ All 6 spawns stand on the ground shell with 1.85 m of clear headroom.
 
 One walkable ground shell; every declared shell exists; the ground covers the playable bounds. `MapBuilder` gives it a collider because it is walkable.
 
-## Review images
-
-![coop_silent_kiln](../docs/art/coop_silent_kiln-iso.png)
-![coop_silent_kiln](../docs/art/coop_silent_kiln-top.png)
-
