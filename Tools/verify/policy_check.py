@@ -474,6 +474,106 @@ def check_assembly_references():
                      "reference of the owning asmdef")
 
 
+# Netcode's ILPP code generator validates RPC parameters at build time and fails the
+# whole player build ("Don't know how to serialize System.String[]").  Neither the
+# C# compiler nor the syntax check sees it, because the generated serialiser is not
+# C# we write.  So the rule is checked here, statically, in the same shape the
+# generator uses.
+RPC_SCALAR_TYPES = {
+    "bool", "byte", "sbyte", "char", "short", "ushort", "int", "uint", "long", "ulong",
+    "float", "double", "string",
+    "Vector2", "Vector3", "Vector4", "Quaternion", "Color", "Color32", "Ray",
+    "FixedString32Bytes", "FixedString64Bytes", "FixedString128Bytes",
+    "FixedString512Bytes", "FixedString4096Bytes",
+    "ClientRpcParams", "ServerRpcParams", "RpcParams", "NetworkObjectReference",
+    "NetworkBehaviourReference", "NetworkPrefabRef",
+}
+RPC_UNSUPPORTED_ARRAYS = {"string", "object", "decimal"}
+
+
+def check_rpc_parameter_types():
+    """Every RPC parameter must be a type Netcode can serialise."""
+    serializable = set()
+    for path in walk():
+        for match in re.finditer(r"\b(?:struct|class)\s+(\w+)\s*:\s*([^{]+)", read(path)):
+            if "INetworkSerializable" in match.group(2):
+                serializable.add(match.group(1))
+
+    problems = []
+    checked = 0
+    attribute = re.compile(r"\[(?:Client|Server)?Rpc[^\]]*\]")
+    signature = re.compile(r"\b(?:void|IEnumerator)\s+\w+\s*\(([^)]*)\)", re.S)
+
+    for path in walk():
+        text = read(path)
+        lines = text.splitlines()
+        for number, line in enumerate(lines, 1):
+            if not attribute.search(line):
+                continue
+            # The method follows the attribute, possibly after another attribute or a
+            # doc comment; scan forward for the first signature.
+            tail = "\n".join(lines[number - 1: number + 12])
+            found = signature.search(tail)
+            if not found:
+                problems.append(f"{os.path.relpath(path, ROOT)}:{number}: RPC without a "
+                                "parsable signature")
+                continue
+
+            parameters = [p.strip() for p in found.group(1).split(",") if p.strip()]
+            for parameter in parameters:
+                if "=" in parameter:
+                    parameter = parameter.split("=", 1)[0].strip()
+                parts = parameter.split()
+                if len(parts) < 2:
+                    continue
+                # "Vector3 position" -> type is the token before the name.
+                declared = parts[-2]
+                definition = " ".join(parts[:-2])
+
+                element = None
+                if declared.endswith("[]"):
+                    element = declared[: -2]
+                elif declared.startswith("List<"):
+                    element = "list-outside-whitelist"
+
+                checked += 1
+                location = f"{os.path.relpath(path, ROOT)}:{number}"
+                if element is not None:
+                    if element in RPC_UNSUPPORTED_ARRAYS or element not in RPC_SCALAR_TYPES \
+                            and element not in serializable and element != "list-outside-whitelist":
+                        problems.append(f"{location}: RPC parameter '{declared}' cannot be "
+                                        "serialised by Netcode (use a whitelisted array or "
+                                        "an INetworkSerializable type)")
+                        continue
+                    if element == "list-outside-whitelist":
+                        problems.append(f"{location}: RPC parameter '{declared}' is a List, "
+                                        "which Netcode cannot serialise (use an array or an "
+                                        "INetworkSerializable type)")
+                        continue
+                    if element in RPC_UNSUPPORTED_ARRAYS:
+                        problems.append(f"{location}: RPC parameter '{declared}' cannot be "
+                                        "serialised by Netcode (the ILPP build fails on it)")
+                        continue
+                    continue
+
+                if "INetworkSerializable" in definition:
+                    continue
+                if declared in RPC_SCALAR_TYPES or declared in serializable:
+                    continue
+                if declared in ("bool", "int", "float") and "Params" in definition:
+                    continue
+                problems.append(f"{location}: RPC parameter '{declared}' is not a type "
+                                "Netcode can serialise")
+
+    if problems:
+        failures.append("RPC parameters Netcode cannot serialise (the ILPP code generator "
+                        "rejects these and the player build fails):\n  " +
+                        "\n  ".join(problems))
+    elif checked:
+        notes.append(f"{checked} RPC parameters are all types Netcode can serialise "
+                     "(no string[] and no List in an RPC)")
+
+
 def check_build_scene():
     scenes = os.path.join(ROOT, "Assets", "_Project", "Scenes")
     script = os.path.join(SCRIPTS, "Editor", "BuildScript.cs")
@@ -492,6 +592,7 @@ def main() -> int:
     check_compile_coverage()
     check_content_ids()
     check_assembly_references()
+    check_rpc_parameter_types()
     check_build_scene()
     check_imported_material_contract()
     check_texture_import_settings()

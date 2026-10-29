@@ -8,6 +8,7 @@ using Kordon.Core.Data;
 using Kordon.Core.Loadout;
 using Kordon.Core.Movement;
 using Kordon.Core.Rules;
+using Kordon.Core.Serialization;
 using Kordon.Core.Utility;
 using Kordon.Game.Maps;
 using Kordon.Game.Match;
@@ -770,7 +771,10 @@ namespace Kordon.Net
                 pings[i] = rows[i].PingMs;
             }
 
-            ScoreSnapshotClientRpc(ids, kills, deaths, names, pings, (int)Match.Phase);
+            // Names travel as one length prefixed string: NGO's RPC code generator
+            // cannot serialize a string[] and fails the ILPP build (see NameListWire).
+            ScoreSnapshotClientRpc(ids, kills, deaths, NameListWire.Encode(names), pings,
+                (int)Match.Phase);
             PushStateSnapshot();
         }
 
@@ -809,10 +813,11 @@ namespace Kordon.Net
         }
 
         [ClientRpc]
-        private void ScoreSnapshotClientRpc(ulong[] ids, int[] kills, int[] deaths, string[] names,
+        private void ScoreSnapshotClientRpc(ulong[] ids, int[] kills, int[] deaths, string names,
             int[] pings, int phase)
         {
-            NetworkSessionEvents.RaiseScore(ids, kills, deaths, names, pings,
+            string[] decoded = NameListWire.Decode(names, ids != null ? ids.Length : 0);
+            NetworkSessionEvents.RaiseScore(ids, kills, deaths, decoded, pings,
                 (MatchPhase)phase);
         }
 
