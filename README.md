@@ -218,7 +218,7 @@ path as the editor bake tool - a baked scene and a runtime map cannot drift.
 
 ## Tests and verification
 
-* `Tests/Kordon.Core.Tests` - 213 tests over the rules that matter: the 50 kill
+* `Tests/Kordon.Core.Tests` - 219 tests over the rules that matter: the 50 kill
   match end, magazine handling (tap vs hold, colour states, no exact ammo in
   snapshots), damage and penetration, grenade flight/blast/smoke, movement and
   stamina, anti-cheat validators, mission chain, net config and content integrity.

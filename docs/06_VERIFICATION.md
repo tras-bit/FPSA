@@ -7,8 +7,8 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (213 tests) | **213 passed, 0 failed** |
-| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **98 scripts, 0 errors** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (219 tests) | **219 passed, 0 failed** |
+| Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **100 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
 | Reports | committed by the `publish` job | `docs/reports/*.md` |
@@ -46,6 +46,11 @@ folder compiled by the type check, every content id referenced by code present i
   WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
   smoke hiss, flashbang).
 
+* Dedicated server: the launch path is real code (`DedicatedServerBootstrap` →
+  `DedicatedServerHost`), the command line parser is engine free and covered by six
+  unit tests, and the server build target is part of the editor build script. The
+  server itself was never executed here (no Unity).
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no
@@ -77,7 +82,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 213 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 219 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity
