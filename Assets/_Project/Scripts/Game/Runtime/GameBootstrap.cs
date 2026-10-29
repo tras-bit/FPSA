@@ -21,13 +21,13 @@ namespace Kordon.Game.Runtime
                 return;
             }
 
-            if (Object.FindObjectOfType<GameFlow>() != null)
+            if (UnityEngine.Object.FindObjectOfType<GameFlow>() != null)
             {
                 return;
             }
 
             GameObject go = new GameObject("GameFlow");
-            Object.DontDestroyOnLoad(go);
+            UnityEngine.Object.DontDestroyOnLoad(go);
             go.AddComponent<GameFlow>();
         }
 
