@@ -88,7 +88,7 @@ scripts parsed, every Unity-side script type checked, policy check PASS).
   inspection, ammo hiding, server-side scoring, respawn, match end, damage and
   penetration, anti-cheat, co-op chain, navigation, net configuration, launch
   parsing.
-* 100 scripts parsed, Unity-side scripts type checked against API stubs, structure
+* 101 scripts parsed, Unity-side scripts type checked against API stubs, structure
   and policy checks (`Tools/verify/policy_check.py`, `Tools/unity/audit_packages.py`).
 
 ### Known limitation of this release

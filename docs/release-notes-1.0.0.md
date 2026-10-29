@@ -43,11 +43,12 @@ Controls, HUD rules and the magazine system are in the README.
 
 | | |
 |---|---|
-| Code | 100 scripts, 22 122 lines: engine-free rules core, game layer, netcode layer |
+| Code | 101 scripts, 22 174 lines: engine-free rules core, game layer, netcode layer |
 | Rules tested | 219 unit tests, all passing in CI |
 | Maps | Zavod-7 (88 x 68 m, 3 routes) and Silent Kiln (70 x 60 m co-op) |
 | Art | 60 modular kit models, 10 weapons/grenades (22 484 tris), 51 textures, 19 materials |
 | Audio | 79 synthesised WAV files |
+| Shaders | 2 hand written shaders (bodycam post pass, grenade FX), loaded from `Resources` so they cannot be stripped from a player build |
 | Art sources | `ArtSource/Blender` - `.blend` files, `.fbx` exports in the project |
 | Docs | README, concept, rules, magazine system, networking, art, verification |
 
@@ -56,7 +57,7 @@ Controls, HUD rules and the magazine system are in the README.
 | Check | Result |
 |---|---|
 | Core rule tests (`dotnet test`) | 219 / 219 passed |
-| Syntax + structure (Roslyn, C# 9) | 100 scripts, 0 errors |
+| Syntax + structure (Roslyn, C# 9) | 101 scripts, 0 errors |
 | Unity-side type check against API stubs | 0 errors |
 | Content / policy audit | PASS |
 | Unity Editor build | **not run** - no editor in the build environment |
