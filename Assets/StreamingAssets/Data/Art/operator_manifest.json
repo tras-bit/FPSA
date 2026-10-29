@@ -1,0 +1,65 @@
+{
+  "comment": "Player and militia bodies authored by Tools/blender/build_operators.py. Origin at the footprint centre on the ground, facing Blender +Y (Unity +Z at yaw 0), 1.82 m tall, matching the operator contract.",
+  "operators": [
+    {
+      "id": "operator",
+      "heightM": 1.726,
+      "widthM": 0.544,
+      "depthM": 0.506,
+      "triangles": 28840,
+      "parts": [
+        "Body",
+        "ThighL",
+        "ThighR",
+        "ShinL",
+        "ShinR",
+        "UpperArmL",
+        "UpperArmR",
+        "ForearmL",
+        "ForearmR"
+      ],
+      "joints": [
+        "HipL",
+        "HipR",
+        "KneeL",
+        "KneeR",
+        "ShoulderL",
+        "ShoulderR",
+        "ElbowL",
+        "ElbowR"
+      ],
+      "bytes": 695788,
+      "model": "Kordon/Operators/operator"
+    },
+    {
+      "id": "militia",
+      "heightM": 1.726,
+      "widthM": 0.544,
+      "depthM": 0.506,
+      "triangles": 28840,
+      "parts": [
+        "Body",
+        "ThighL",
+        "ThighR",
+        "ShinL",
+        "ShinR",
+        "UpperArmL",
+        "UpperArmR",
+        "ForearmL",
+        "ForearmR"
+      ],
+      "joints": [
+        "HipL",
+        "HipR",
+        "KneeL",
+        "KneeR",
+        "ShoulderL",
+        "ShoulderR",
+        "ElbowL",
+        "ElbowR"
+      ],
+      "bytes": 696892,
+      "model": "Kordon/Operators/militia"
+    }
+  ]
+}

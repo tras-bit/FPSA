@@ -3,6 +3,7 @@ using Kordon.Core.Combat;
 using Kordon.Core.Movement;
 using Kordon.Core.Nav;
 using Kordon.Core.Utility;
+using Kordon.Game.Characters;
 using Kordon.Game.Weapons;
 using Kordon.Game.Maps;
 using Kordon.Game.Player;
@@ -63,11 +64,15 @@ namespace Kordon.Game.Ai
         private Vector3 _patrolGoal;
         private Renderer[] _renderers;
         private Collider _collider;
+        private OperatorBodyRig _rig;
 
         private void Awake()
         {
             _renderers = GetComponentsInChildren<Renderer>();
             _collider = GetComponentInChildren<Collider>();
+            // The authored militia body carries hip, knee, shoulder and elbow nodes, so a
+            // hostile walks and falls like an operator instead of sliding like a prop.
+            _rig = OperatorBodyRig.Bind(gameObject);
         }
 
         public void Configure(NavGraph graph, Transform[] targets, DeterministicRandom random,
@@ -112,11 +117,19 @@ namespace Kordon.Game.Ai
                 _collider.enabled = false;
             }
 
-            foreach (Renderer renderer in _renderers)
+            if (_rig != null)
             {
-                if (renderer != null)
+                // The body drops where it was shot and stays there for the cleanup delay.
+                _rig.PlayDeath();
+            }
+            else
+            {
+                foreach (Renderer renderer in _renderers)
                 {
-                    renderer.enabled = false;
+                    if (renderer != null)
+                    {
+                        renderer.enabled = false;
+                    }
                 }
             }
 
@@ -142,6 +155,10 @@ namespace Kordon.Game.Ai
 
             Move(dt);
             TryShoot(dt);
+            if (_rig != null)
+            {
+                _rig.Drive(transform.position, dt);
+            }
         }
 
         private void Think()

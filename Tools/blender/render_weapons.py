@@ -63,8 +63,11 @@ def apply_textures(tiling: float = 2.4) -> None:
 
         # per texture density: wood wants a coarse grain, phosphated steel a fine
         # one, otherwise the wear patches read as camouflage blotches
-        density = {"gunwood": 1.6, "gunmetal": 5.0, "gunolive": 4.5,
-                   "gunpolymer": 5.0, "gunbare": 4.0,
+        # Weapon maps repeat five to six times across a viewmodel sized island:
+        # any coarser and the blotches of the metal map read as cast iron rather
+        # than as a machined, phosphated surface.
+        density = {"gunwood": 1.8, "gunmetal": 5.5, "gunolive": 4.5,
+                   "gunpolymer": 6.0, "gunbare": 4.0,
                    "hardened_steel": 9.0, "rubber": 6.0}.get(texture, tiling)
         coordinates = nodes.new("ShaderNodeTexCoord")
         mapping = nodes.new("ShaderNodeMapping")
@@ -100,7 +103,47 @@ def apply_textures(tiling: float = 2.4) -> None:
             invert.operation = "SUBTRACT"
             invert.inputs[0].default_value = 1.0
             links.new(mask.outputs["Alpha"], invert.inputs[1])
-            links.new(invert.outputs["Value"], principled.inputs["Roughness"])
+
+            # Cavity shading from a real ambient occlusion trace. This is what a
+            # game asset gets from a baked AO map; Cycles can trace it directly.
+            # It uses AO rather than Geometry.Pointiness because pointiness on a
+            # low poly beveled mesh saturates near 1 on every smooth shaded face,
+            # which turned the whole weapon into polished white metal.
+            ao = nodes.new("ShaderNodeAmbientOcclusion")
+            ao.inputs["Distance"].default_value = 0.035
+            ao.samples = 6
+            ao.only_local = True
+            cavity = nodes.new("ShaderNodeValToRGB")
+            cavity.color_ramp.elements[0].position = 0.25
+            cavity.color_ramp.elements[0].color = (1.0, 1.0, 1.0, 1.0)
+            cavity.color_ramp.elements[1].position = 0.92
+            cavity.color_ramp.elements[1].color = (0.0, 0.0, 0.0, 1.0)
+            links.new(ao.outputs["Color"], cavity.inputs["Fac"])
+
+            # albedo: dirty in the cavities, scuffed bright on the edges
+            grime = nodes.new("ShaderNodeMixRGB")
+            grime.blend_type = "MULTIPLY"
+            grime.inputs["Fac"].default_value = 0.55
+            grime.inputs["Color2"].default_value = (0.34, 0.34, 0.34, 1.0)
+            links.new(image.outputs["Color"], grime.inputs["Color1"])
+            cavity_strength = nodes.new("ShaderNodeMath")
+            cavity_strength.operation = "MULTIPLY"
+            cavity_strength.inputs[1].default_value = 0.75
+            links.new(cavity.outputs["Color"], cavity_strength.inputs[0])
+            links.new(cavity_strength.outputs["Value"], grime.inputs["Fac"])
+
+            links.new(grime.outputs["Color"], principled.inputs["Base Color"])
+
+            # roughness: polished on the edges, rough in the crud
+            rough_cavity = nodes.new("ShaderNodeMixRGB")
+            rough_cavity.blend_type = "MIX"
+            rough_cavity.inputs["Color2"].default_value = (0.82, 0.82, 0.82, 1.0)
+            links.new(cavity.outputs["Color"], rough_cavity.inputs["Fac"])
+            links.new(invert.outputs["Value"], rough_cavity.inputs["Color1"])
+            links.new(rough_cavity.outputs["Color"], principled.inputs["Roughness"])
+
+            # bare metal appears where the finish has rubbed off
+            links.new(separate.outputs["Red"], principled.inputs["Metallic"])
 
 
 # --------------------------------------------------------------------------
@@ -117,7 +160,7 @@ def setup(resolution, samples=48):
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "AgX"
     scene.view_settings.look = "AgX - Medium High Contrast"
-    scene.view_settings.exposure = 0.25
+    scene.view_settings.exposure = 0.62
     scene.world = scene.world or bpy.data.worlds.new("W")
     build_environment(scene.world)
 
@@ -138,7 +181,7 @@ def build_environment(world):
     nodes.clear()
 
     backdrop = nodes.new("ShaderNodeBackground")
-    backdrop.inputs[0].default_value = (0.007, 0.008, 0.010, 1.0)
+    backdrop.inputs[0].default_value = (0.0025, 0.0028, 0.0034, 1.0)
     backdrop.inputs[1].default_value = 1.0
 
     coordinates = nodes.new("ShaderNodeTexCoord")
@@ -154,7 +197,7 @@ def build_environment(world):
     top.color = (0.95, 0.92, 0.86, 1.0)
 
     dome = nodes.new("ShaderNodeBackground")
-    dome.inputs[1].default_value = 4.2
+    dome.inputs[1].default_value = 1.7
 
     path = nodes.new("ShaderNodeLightPath")
     mix = nodes.new("ShaderNodeMixShader")
@@ -181,43 +224,83 @@ def add_light(name, energy, size, location, rotation_deg, colour):
 
 
 def studio_floor(z: float = -0.14):
-    """Dark workbench surface with a soft pool of light under the weapon.
+    """Dark bench with a soft pool of light directly under the weapon.
 
-    A flat plane held one value and reflected the dome evenly, which turned the
-    whole frame into flat grey.  A radial falloff keeps the eye on the model and
-    reads as a lit table rather than a render plane.
+    A plane with one value and a huge radial ramp reads as a lit wall: the 1.0.9
+    sheet had a 0.07 grey floor filling the frame and the weapon was darker than
+    the background, which is why every model looked washed out.  This ramp is
+    driven by the object coordinates in metres, so it falls to near black within
+    a metre and a half of the model.
     """
-    bpy.ops.mesh.primitive_plane_add(size=16, location=(0.0, 0.0, z))
+    bpy.ops.mesh.primitive_plane_add(size=24, location=(0.0, 0.0, z))
     obj = bpy.context.object
     material = bpy.data.materials.new("floor")
     material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     principled = nodes["Principled BSDF"]
-    principled.inputs["Roughness"].default_value = 0.30
+    principled.inputs["Roughness"].default_value = 0.62
 
     coordinates = nodes.new("ShaderNodeTexCoord")
-    gradient = nodes.new("ShaderNodeTexGradient")
-    gradient.gradient_type = "RADIAL"
+    length = nodes.new("ShaderNodeVectorMath")
+    length.operation = "LENGTH"
+    map_range = nodes.new("ShaderNodeMapRange")
+    map_range.inputs["From Min"].default_value = 0.08
+    map_range.inputs["From Max"].default_value = 1.60
     ramp = nodes.new("ShaderNodeValToRGB")
     ramp.color_ramp.elements[0].position = 0.0
-    ramp.color_ramp.elements[0].color = (0.070, 0.071, 0.076, 1.0)
-    ramp.color_ramp.elements[1].position = 0.62
-    ramp.color_ramp.elements[1].color = (0.009, 0.009, 0.011, 1.0)
-    links.new(coordinates.outputs["Generated"], gradient.inputs["Vector"])
-    links.new(gradient.outputs["Fac"], ramp.inputs["Fac"])
+    ramp.color_ramp.elements[0].color = (0.050, 0.051, 0.055, 1.0)
+    ramp.color_ramp.elements[1].position = 1.0
+    ramp.color_ramp.elements[1].color = (0.0035, 0.0035, 0.0042, 1.0)
+    links.new(coordinates.outputs["Object"], length.inputs[0])
+    links.new(length.outputs["Value"], map_range.inputs["Value"])
+    links.new(map_range.outputs["Result"], ramp.inputs["Fac"])
     links.new(ramp.outputs["Color"], principled.inputs["Base Color"])
     obj.data.materials.append(material)
+
+
+def softbox(name, size, location, rotation_deg, strength, colour=(1.0, 1.0, 1.0)):
+    """An emissive card the camera never sees but the metal does.
+
+    A gun is dark, low albedo metal: almost everything you read of its shape is
+    the environment reflected in it.  Area lights alone leave the flat panels with
+    nothing to reflect - which is why the earlier receivers came out as one flat
+    grey silhouette - so the studio gets a few large, soft, bright cards overhead
+    and to the sides.  They are hidden from camera rays, so the sheet still reads
+    on black.
+    """
+    bpy.ops.mesh.primitive_plane_add(size=size, location=location)
+    obj = bpy.context.object
+    obj.name = name
+    obj.rotation_euler = tuple(math.radians(v) for v in rotation_deg)
+    material = bpy.data.materials.new(name + "_emit")
+    material.use_nodes = True
+    nodes = material.node_tree.nodes
+    nodes.clear()
+    emission = nodes.new("ShaderNodeEmission")
+    emission.inputs[0].default_value = (*colour, 1.0)
+    emission.inputs[1].default_value = strength
+    output = nodes.new("ShaderNodeOutputMaterial")
+    material.node_tree.links.new(emission.outputs[0], output.inputs[0])
+    obj.data.materials.append(material)
+    obj.visible_camera = False
+    obj.visible_diffuse = False
+    return obj
 
 
 def lights():
     # warm key, cool fill, hard rim: the rim is what separates a black receiver from
     # a black background, which is the whole problem with rendering dark metal
-    add_light("key", 34, 2.2, (0.85, -1.05, 1.30), (36, 0, 36), (1.0, 0.95, 0.88))
-    add_light("fill", 6, 3.0, (-1.30, 0.55, 0.85), (62, 0, -54), (0.82, 0.89, 1.0))
-    add_light("rim", 32, 1.2, (-0.25, 1.25, 0.95), (-38, 0, -172), (0.94, 0.97, 1.0))
-    add_light("kicker", 18, 0.9, (0.95, 0.85, 0.60), (-52, 0, 132), (1.0, 0.97, 0.93))
-    add_light("top", 9, 2.4, (0.0, 0.10, 1.45), (0, 0, 0), (1.0, 0.98, 0.95))
+    add_light("key", 70, 1.2, (0.78, -0.95, 1.15), (32, 0, 40), (1.0, 0.95, 0.88))
+    add_light("fill", 16, 2.0, (-1.15, -0.55, 0.62), (55, 0, -62), (0.82, 0.89, 1.0))
+    add_light("rim", 105, 0.9, (-0.45, 1.15, 0.78), (-52, 0, -145), (0.90, 0.94, 1.0))
+    add_light("kicker", 34, 0.7, (1.05, 0.72, 0.48), (-56, 0, 128), (1.0, 0.97, 0.93))
+    add_light("top", 22, 1.6, (0.05, 0.05, 1.45), (0, 0, 0), (1.0, 0.98, 0.95))
+    # reflections: a long overhead strip, two side cards and a dark flag behind
+    softbox("strip_over", 5.0, (0.0, 0.30, 1.05), (0, 0, 0), 2.6, (1.0, 0.97, 0.92))
+    softbox("strip_left", 3.2, (-1.55, -0.35, 0.55), (0, 90, 0), 1.6, (0.86, 0.92, 1.0))
+    softbox("strip_right", 3.0, (1.60, 0.55, 0.50), (0, -90, 0), 2.0, (1.0, 0.96, 0.90))
+    softbox("strip_back", 2.4, (0.35, 1.70, 0.70), (0, 0, 0), 1.4, (1.0, 0.95, 0.90))
 
 
 def camera(location, target, lens=55.0):
@@ -232,7 +315,7 @@ def camera(location, target, lens=55.0):
     return obj
 
 
-def frame_weapon(weapon, lens=62.0, azimuth=132.0, elevation=8.0, margin=1.02):
+def frame_weapon(weapon, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.05):
     """Place the camera so the whole weapon fits, from a three quarter angle.
 
     Framing by the bounding sphere is simple but wasteful: a rifle is long and thin,
@@ -269,10 +352,18 @@ def frame_weapon(weapon, lens=62.0, azimuth=132.0, elevation=8.0, margin=1.02):
                 half_h = max(half_h, abs(offset.dot(up)))
                 depth = max(depth, abs(offset.dot(direction)))
 
+    # Blender's AUTO sensor fit puts the 36 mm sensor on the long side, so the
+    # vertical half angle depends on the tile aspect; assuming 18 mm there left
+    # every weapon floating in a third of its tile.
+    scene = bpy.context.scene
+    aspect = scene.render.resolution_y / max(1, scene.render.resolution_x)
+    vertical_half = 18.0 * min(1.0, aspect)
     horizontal = 2.0 * math.atan(18.0 / lens)
-    vertical = 2.0 * math.atan(9.0 / lens)
+    vertical = 2.0 * math.atan(vertical_half / lens)
+    # distance to the bounding box centre: the near face is `depth` closer than the
+    # centre, so half of it is added back to keep the front of the weapon in frame
     distance = max(half_w / math.tan(horizontal * 0.5),
-                   half_h / math.tan(vertical * 0.5)) * margin + depth
+                   half_h / math.tan(vertical * 0.5)) * margin + depth * 0.6
     distance = max(distance, 0.30)
 
     location = centre + direction * distance
@@ -290,7 +381,8 @@ def render_weapon(weapon_id, path, resolution=(880, 460), closeup=None):
     weapon, _magazine, _meta = bw.build_weapon(weapon_id)
     setup(resolution)
     apply_textures()
-    studio_floor()
+    floor_z = min((weapon.matrix_world @ vertex.co).z for vertex in weapon.data.vertices)
+    studio_floor(floor_z - 0.012)
     lights()
     if closeup is None:
         frame_weapon(weapon)
@@ -318,7 +410,7 @@ def main():
     apply_textures()
     studio_floor()
     lights()
-    camera((0.72, -0.60, 0.30), (0.00, 0.01, -0.01), lens=58)
+    camera((0.52, -0.50, 0.26), (0.00, 0.03, -0.015), lens=85)
     shoot(detail)
 
     from PIL import Image, ImageDraw, ImageFont

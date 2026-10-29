@@ -1,3 +1,4 @@
+using Kordon.Game.Characters;
 using Kordon.Game.Maps;
 using UnityEngine;
 
@@ -24,6 +25,8 @@ namespace Kordon.Net
         private Vector3 _targetPosition;
         private float _targetYaw;
         private bool _hasTarget;
+        private OperatorBodyRig _rig;
+        private bool _dead;
 
         public static RemoteOperatorView Create(Transform parent, ulong clientId, string name,
             bool visuals)
@@ -37,11 +40,55 @@ namespace Kordon.Net
             return view;
         }
 
+        /// <summary>
+        /// Where the authored operator bodies live.  Built by
+        /// Tools/blender/build_operators.py and exported to Resources, exactly like
+        /// the weapons: no hand authored prefabs, and the manifest in
+        /// StreamingAssets/Data/Art/operator_manifest.json carries the dimensions.
+        /// </summary>
+        public const string OperatorResourceRoot = "Kordon/Operators/";
+
         private void Build(bool visuals)
         {
             GameObject root = new GameObject("Visual");
             root.transform.SetParent(transform, false);
             _visualRoot = root.transform;
+
+            // The authored body: 1.82 m operator with a plate carrier, helmet,
+            // pouches and a slung rifle.  Until 1.0.11 this was a capsule and a
+            // sphere, which is a grey block in a finished game whatever the shaders
+            // do - it is the silhouette every other player sees.
+            GameObject authored = null;
+            if (visuals)
+            {
+                authored = BuildAuthoredBody(root.transform);
+            }
+
+            if (authored != null)
+            {
+                _collider = authored.GetComponentInChildren<Collider>();
+                if (_collider == null)
+                {
+                    _collider = AddHitCollider(authored.transform);
+                }
+
+                _torso = authored.GetComponentInChildren<Renderer>();
+                if (_torso != null)
+                {
+                    _torso.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                }
+
+                // The authored body walks, aims its weight and falls over, because the
+                // FBX carries hip, knee, shoulder and elbow nodes.  A body that slides
+                // across the floor is the animated equivalent of a grey block.
+                _rig = OperatorBodyRig.Bind(authored);
+                if (_rig == null)
+                {
+                    Debug.LogWarning("Operator body has no rig nodes; it will not animate.");
+                }
+
+                return;
+            }
 
             GameObject torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             torso.name = "Torso";
@@ -77,6 +124,43 @@ namespace Kordon.Net
                     _head.enabled = false;
                 }
             }
+        }
+
+        /// <summary>Load the authored operator, or null when the art is not in Resources.</summary>
+        private static GameObject BuildAuthoredBody(Transform parent)
+        {
+            GameObject prefab = Resources.Load<GameObject>(OperatorResourceRoot + "operator");
+            if (prefab == null)
+            {
+                return null;
+            }
+
+            GameObject instance = Object.Instantiate(prefab, parent, false);
+            instance.name = "OperatorBody";
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            SurfaceMaterialLibrary.Apply(instance);
+            return instance;
+        }
+
+        /// <summary>
+        /// A capsule over the body for the server's authoritative raycasts.
+        ///
+        /// The hit zones are resolved from the point the ray hit (head above 1.5 m,
+        /// thorax above 0.85 m - see NetworkMatchDirector.ZoneFromHit), so the
+        /// collider has to be a capsule of the operator's own height: a mesh
+        /// collider would make a belt pouch count as a leg.
+        /// </summary>
+        private static Collider AddHitCollider(Transform root)
+        {
+            GameObject proxy = new GameObject("HitProxy");
+            proxy.transform.SetParent(root, false);
+            proxy.transform.localPosition = new Vector3(0f, 0.87f, 0f);
+            CapsuleCollider capsule = proxy.AddComponent<CapsuleCollider>();
+            capsule.height = 1.74f;
+            capsule.radius = 0.30f;
+            capsule.center = Vector3.zero;
+            return capsule;
         }
 
         private void ApplyLook(Renderer renderer, float brightness)
@@ -116,7 +200,25 @@ namespace Kordon.Net
                 _hasTarget = true;
             }
 
-            if (_visualRoot != null)
+            if (dead != _dead)
+            {
+                _dead = dead;
+                if (_rig != null)
+                {
+                    if (dead)
+                    {
+                        _rig.PlayDeath();
+                    }
+                    else
+                    {
+                        _rig.ResetPose();
+                    }
+                }
+            }
+
+            // A dead operator stays on the floor instead of blinking out: the body falls
+            // over where it was shot and only the collider goes away.
+            if (_visualRoot != null && _rig == null)
             {
                 _visualRoot.gameObject.SetActive(!dead);
             }
@@ -140,6 +242,11 @@ namespace Kordon.Net
             Quaternion target = MapSpace.ToUnityYaw(_targetYaw);
             transform.rotation = Quaternion.Slerp(transform.rotation, target,
                 Mathf.Clamp01(dt * 18f));
+
+            if (_rig != null)
+            {
+                _rig.Drive(transform.position, dt);
+            }
         }
     }
 }

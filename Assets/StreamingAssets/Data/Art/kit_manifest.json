@@ -151,12 +151,8 @@
     "glass": {
       "kind": "Glass",
       "texture": "glass",
-      "baseColor": [
-        0.55,
-        0.62,
-        0.62
-      ],
-      "roughness": 0.08,
+      "baseColor": [0.05, 0.058, 0.062],
+      "roughness": 0.1,
       "metallic": 0.0
     },
     "gravel": {
@@ -233,9 +229,9 @@
         0.058,
         0.028
       ],
-      "roughness": 0.45,
+      "roughness": 0.44,
       "metallic": 0.0,
-      "shade": 0.55
+      "shade": 0.58
     },
     "gun_metal": {
       "kind": "Steel",
@@ -245,9 +241,9 @@
         0.16,
         0.17
       ],
-      "roughness": 0.32,
-      "metallic": 0.92,
-      "shade": 0.32
+      "roughness": 0.42,
+      "metallic": 0.62,
+      "shade": 0.55
     },
     "gun_olive": {
       "kind": "Steel",
@@ -257,9 +253,9 @@
         0.15,
         0.085
       ],
-      "roughness": 0.55,
-      "metallic": 0.12,
-      "shade": 0.32
+      "roughness": 0.52,
+      "metallic": 0.1,
+      "shade": 0.45
     },
     "gun_polymer": {
       "kind": "Rubber",
@@ -269,10 +265,70 @@
         0.076,
         0.08
       ],
-      "roughness": 0.62,
+      "roughness": 0.78,
       "metallic": 0.0,
-      "shade": 0.55
+      "shade": 0.30
     },
+      "glove_leather": {
+        "kind": "Rubber",
+        "texture": "gloveleather",
+        "baseColor": [
+          0.12,
+          0.096,
+          0.076
+        ],
+        "roughness": 0.8,
+        "metallic": 0.0,
+        "shade": 0.3
+      },
+      "uniform_canvas": {
+        "kind": "Rubber",
+        "texture": "uniformcanvas",
+        "baseColor": [
+          0.098,
+          0.118,
+          0.072
+        ],
+        "roughness": 0.92,
+        "metallic": 0.0,
+        "shade": 0.3
+      },
+      "armor_plate": {
+        "kind": "Rubber",
+        "texture": "armorplate",
+        "baseColor": [
+          0.08,
+          0.086,
+          0.07
+        ],
+        "roughness": 0.86,
+        "metallic": 0.0,
+        "shade": 0.3
+      },
+      "militia_canvas": {
+        "kind": "Rubber",
+        "texture": "militiacanvas",
+        "baseColor": [
+          0.118,
+          0.096,
+          0.062
+        ],
+        "roughness": 0.94,
+        "metallic": 0.0,
+        "shade": 0.32
+      },
+      "militia_steel": {
+        "kind": "Steel",
+        "texture": "militiasteel",
+        "baseColor": [
+          0.135,
+          0.12,
+          0.1
+        ],
+        "roughness": 0.72,
+        "metallic": 0.35,
+        "shade": 0.3
+      },
     "gun_bare": {
       "kind": "Steel",
       "texture": "gunbare",
@@ -281,9 +337,9 @@
         0.305,
         0.315
       ],
-      "roughness": 0.3,
-      "metallic": 1.0,
-      "shade": 0.3
+      "roughness": 0.26,
+      "metallic": 0.92,
+      "shade": 0.62
     }
   },
   "modules": {

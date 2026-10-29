@@ -769,14 +769,33 @@ namespace Kordon.Net
                 }
             }
 
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            go.name = "Hostile_" + (++_hostilesSpawned);
-            go.transform.SetParent(_hostileRoot, false);
-            go.transform.localScale = new Vector3(0.6f, 0.9f, 0.45f);
-            Material body = SurfaceMaterialLibrary.ForSurface("steel_rust");
-            if (body != null)
+            // The authored militia body: same rig as the operator, different kit.
+            // Before 1.0.11 this hostile was a rust coloured capsule, which is a
+            // placeholder, not art.
+            GameObject go = null;
+            GameObject prefab = Resources.Load<GameObject>(
+                RemoteOperatorView.OperatorResourceRoot + "militia");
+            if (prefab != null)
             {
-                go.GetComponent<Renderer>().sharedMaterial = body;
+                go = Instantiate(prefab, _hostileRoot, false);
+                go.name = "Hostile_" + (++_hostilesSpawned);
+                SurfaceMaterialLibrary.Apply(go);
+                CapsuleCollider hit = go.AddComponent<CapsuleCollider>();
+                hit.height = 1.74f;
+                hit.radius = 0.30f;
+                hit.center = new Vector3(0f, 0.87f, 0f);
+            }
+            else
+            {
+                go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                go.name = "Hostile_" + (++_hostilesSpawned);
+                go.transform.SetParent(_hostileRoot, false);
+                go.transform.localScale = new Vector3(0.6f, 0.9f, 0.45f);
+                Material body = SurfaceMaterialLibrary.ForSurface("steel_rust");
+                if (body != null)
+                {
+                    go.GetComponent<Renderer>().sharedMaterial = body;
+                }
             }
 
             HostileAgent agent = go.AddComponent<HostileAgent>();

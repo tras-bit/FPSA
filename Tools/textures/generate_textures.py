@@ -116,6 +116,28 @@ def tint(rgb: Tuple[float, float, float]) -> np.ndarray:
     return np.array(rgb, dtype=float)[None, None, :]
 
 
+def blur(array: np.ndarray, radius: int) -> np.ndarray:
+    """Separable box blur over a periodic array.
+
+    Weapon surfaces need it. A height field built straight from per pixel noise
+    turns into a normal map with a random normal every two pixels, which is what
+    made the 1.0.9 receivers look like cast gravel: the eye reads it as chipped
+    stone, not as metal. Blurring the height before the finite difference gives
+    the finish a scale.
+    """
+    if radius <= 0:
+        return array
+    out = array.astype(float)
+    for axis in (0, 1):
+        pad = [(0, 0), (0, 0)]
+        pad[axis] = (radius + 1, radius)
+        cumulative = np.cumsum(np.pad(out, pad, mode="wrap"), axis=axis)
+        lead = np.take(cumulative, np.arange(2 * radius + 1, cumulative.shape[axis]), axis=axis)
+        trail = np.take(cumulative, np.arange(0, cumulative.shape[axis] - 2 * radius - 1), axis=axis)
+        out = (lead - trail) / (2 * radius + 1)
+    return out
+
+
 def normal_from_height(height: np.ndarray, strength: float = 2.2) -> np.ndarray:
     dy, dx = np.gradient(height * strength)
     normal = np.stack([-dx, -dy, np.ones_like(dx)], -1)
@@ -286,99 +308,153 @@ def _plain(base, rng, smooth_value, speckle=0.1):
 
 
 def _gun_steel(base, rng):
-    """Parkerised or blued steel, as a real metal rather than grey paint.
+    """Parkerised steel: even, slightly oily, scratched only where things rub.
 
-    The 1.0.8 weapon textures returned a metallic mask of zero and one constant
-    smoothness, which is why the models read as moulded plastic no matter how the
-    studio was lit: nothing was reflecting anything. A receiver is metal - it
-    mirrors the room, it is only slightly rough, and the finish is scuffed where
-    hands, slings and holsters have been over it - so the mask now carries metal,
-    the smoothness follows the oil and wear patches, and a scratch shows bare,
-    brighter steel under the finish.
+    The 1.0.9 recipe summed a per pixel height into a strong normal map, so at
+    viewmodel distance a receiver looked like a slab of asphalt. A real finish is
+    almost flat: a phosphated grain you only see at arm's length, a slow oil film
+    that shifts the value by a few percent, and a few bright scratches.
     """
-    grain = value_noise(rng, 240)                       # bead blast / machining
-    blotch = fbm(rng, 6, 4)                             # oil film and handling
-    scratches = np.clip(ridge(rng, 52, 3) - 0.84, 0.0, 1.0) * 5.0
-    pits = np.clip(value_noise(rng, 300) - 0.86, 0.0, 1.0) * 5.0
-    wear = np.clip(scratches * 0.90 + pits * 0.55, 0.0, 1.0)
+    oil = fbm(rng, 4, 3)                                # long oil film
+    blast = blur(value_noise(rng, 384), 2)              # phosphating grain
+    drift = blur(value_noise(rng, 64), 4)               # machining drift
+    scratches = np.clip(ridge(rng, 96, 3) - 0.935, 0.0, 1.0) * 9.0
+    bare = tint((0.40, 0.405, 0.415))
 
-    colour = tint(base) * (0.80 + 0.44 * blotch[..., None])
-    colour *= (0.93 + 0.14 * grain[..., None])
-    colour = mix(colour, tint((0.36, 0.36, 0.37)) * (0.55 + 0.45 * grain[..., None]), wear * 0.55)
-    metallic = np.clip(0.80 + 0.16 * blotch - 0.30 * wear, 0.0, 1.0)
-    smooth = np.clip(0.44 + 0.18 * (blotch - 0.5) + 0.28 * wear - 0.12 * pits, 0.16, 0.90)
-    height = 0.30 * grain + 0.16 * blotch - 0.34 * wear
-    return colour, height, metallic, smooth
+    colour = tint(base) * (0.975 + 0.075 * oil[..., None])
+    colour *= (0.99 + 0.025 * blast[..., None]) * (0.995 + 0.012 * drift[..., None])
+    colour = mix(colour, bare, np.clip(scratches, 0.0, 1.0) * 0.45)
+    metallic = np.clip(0.94 + 0.03 * oil - 0.20 * scratches, 0.0, 1.0)
+    smooth = np.clip(0.48 + 0.06 * (oil - 0.5) + 0.20 * np.clip(scratches, 0.0, 1.0),
+                     0.34, 0.86)
+    height = 0.05 * blast + 0.07 * drift - 0.22 * scratches
+    return colour, blur(height, 1), metallic, smooth
 
 
 def _gun_bare(base, rng):
-    """Machined steel: bolt carriers, pins, crowns and the exposed barrel.
+    """Machined steel: lathe marks on barrels, milling marks on carriers.
 
-    Weapon parts that are not finished are brighter and much smoother than the
-    receiver around them - that contrast is most of what makes a gun read as a gun
-    rather than as one grey object, and the previous build got it by pointing those
-    parts at a map texture that rendered as a white block.
+    Bright and much smoother than the finished parts around it - that value and
+    roughness contrast is most of what separates a barrel from a receiver.
     """
-    grain = value_noise(rng, 300)                       # turning / milling marks
-    lines = np.clip(ridge(rng, 130, 2) - 0.72, 0.0, 1.0) * 3.2
-    blotch = fbm(rng, 7, 3)
+    yy, _xx = np.mgrid[0:SIZE, 0:SIZE].astype(float) / SIZE
+    polish = fbm(rng, 5, 3)
+    turning = blur(np.sin((yy * 150.0 + polish * 4.0) * np.pi) * 0.5 + 0.5, 1)
+    brush = blur(value_noise(rng, 320), 1)
 
-    colour = tint(base) * (0.90 + 0.22 * blotch[..., None]) * (0.94 + 0.12 * grain[..., None])
-    colour = mix(colour, tint((0.55, 0.55, 0.56)) * (0.7 + 0.3 * grain[..., None]), lines * 0.35)
-    metallic = np.clip(0.96 + 0.04 * blotch, 0.0, 1.0)
-    smooth = np.clip(0.62 + 0.14 * (blotch - 0.5) - 0.16 * lines, 0.34, 0.92)
-    height = 0.22 * grain + 0.10 * blotch - 0.18 * lines
-    return colour, height, metallic, smooth
+    colour = tint(base) * (0.97 + 0.06 * polish[..., None]) * (0.99 + 0.02 * turning[..., None])
+    metallic = np.clip(0.97 + 0.02 * polish, 0.0, 1.0)
+    smooth = np.clip(0.68 + 0.05 * (polish - 0.5) - 0.025 * turning, 0.52, 0.88)
+    height = 0.04 * turning + 0.03 * brush
+    return colour, blur(height, 1), metallic, smooth
 
 
 def _gun_polymer(base, rng):
-    """Glass filled nylon: matte, stippled, never shiny and never metal."""
-    pebble = fbm(rng, 48, 4)
-    blotch = fbm(rng, 8, 4)
-    scuff = np.clip(fbm(rng, 96, 3) - 0.58, 0.0, 1.0) * 4.0
-    colour = tint(base) * (0.88 + 0.30 * blotch[..., None])
-    colour *= (0.95 + 0.12 * pebble[..., None])
-    colour = mix(colour, tint((0.20, 0.20, 0.205)), scuff * 0.40)
-    smooth = np.clip(0.28 + 0.10 * (blotch - 0.5) + 0.08 * scuff, 0.12, 0.58)
-    height = 0.55 * pebble + 0.20 * blotch - 0.22 * scuff
-    return colour, height, np.zeros_like(height), smooth
+    """Glass filled nylon: matte, finely stippled, with worn, polished high spots."""
+    stipple = blur(value_noise(rng, 288), 1)
+    moulding = fbm(rng, 36, 3)
+    scuff = np.clip(fbm(rng, 120, 3) - 0.80, 0.0, 1.0) * 6.0
+
+    colour = tint(base) * (0.98 + 0.045 * moulding[..., None]) * (0.985 + 0.03 * stipple[..., None])
+    colour = mix(colour, tint((0.115, 0.117, 0.122)), np.clip(scuff, 0.0, 1.0) * 0.40)
+    smooth = np.clip(0.30 + 0.05 * (moulding - 0.5) + 0.10 * np.clip(scuff, 0.0, 1.0),
+                     0.20, 0.50)
+    height = 0.14 * stipple + 0.05 * moulding - 0.08 * scuff
+    return colour, blur(height, 1), np.zeros_like(height), smooth
+
+
+def _uniform_canvas(base, rng):
+    """Ripstop canvas: a visible warp and weft, seams faint, no big blotches."""
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE].astype(float)
+    warp = np.sin(xx * (np.pi * 96.0 / SIZE)) * 0.5 + 0.5
+    weft = np.sin(yy * (np.pi * 96.0 / SIZE)) * 0.5 + 0.5
+    weave = blur(0.5 * (warp + weft), 1)
+    slub = blur(value_noise(rng, 64), 2)
+    fold = fbm(rng, 8, 3)
+    dust = np.clip(fbm(rng, 18, 3) - 0.66, 0.0, 1.0) * 2.4
+
+    colour = tint(base) * (0.94 + 0.08 * slub[..., None]) * (0.98 + 0.03 * weave[..., None])
+    colour = colour * (0.96 + 0.07 * fold[..., None])
+    colour = mix(colour, tint((0.22, 0.21, 0.18)), np.clip(dust, 0.0, 1.0) * 0.45)
+    smooth = np.clip(0.14 + 0.05 * slub + 0.10 * np.clip(dust, 0.0, 1.0), 0.06, 0.30)
+    height = 0.22 * weave + 0.10 * slub + 0.06 * fold
+    return colour, blur(height, 1), np.zeros_like(height), smooth
+
+
+def _armor_plate(base, rng):
+    """Ceramic composite plate in a fabric cover: matte, finely pitted, scuffed."""
+    pits = blur(value_noise(rng, 200), 1)
+    cover = blur(value_noise(rng, 90), 1)
+    scuff = np.clip(fbm(rng, 22, 3) - 0.74, 0.0, 1.0) * 3.0
+    edge = np.clip(ridge(rng, 30, 2) - 0.86, 0.0, 1.0) * 6.0
+
+    colour = tint(base) * (0.95 + 0.07 * cover[..., None]) * (0.98 + 0.03 * pits[..., None])
+    colour = mix(colour, tint((0.26, 0.26, 0.25)), np.clip(scuff, 0.0, 1.0) * 0.55)
+    colour = colour * (1.0 - 0.12 * np.clip(edge, 0.0, 1.0)[..., None])
+    smooth = np.clip(0.20 + 0.06 * (cover - 0.5) + 0.20 * np.clip(scuff, 0.0, 1.0), 0.10, 0.48)
+    height = 0.12 * pits + 0.06 * cover - 0.14 * np.clip(edge, 0.0, 1.0)
+    return colour, blur(height, 1), np.zeros_like(height), smooth
+
+
+def _glove_leather(base, rng):
+    """Oiled leather glove: pebble grain, creases, worn pale where it flexes.
+
+    A glove is read from half a metre, so the grain has to be fine - a coarse cell
+    pattern reads as reptile skin - while the creases carry the value.
+    """
+    pebble = blur(value_noise(rng, 190), 1)
+    grain = blur(value_noise(rng, 420), 1)
+    creases = np.clip(ridge(rng, 14, 3) - 0.62, 0.0, 1.0) * 2.2
+    scuff = np.clip(fbm(rng, 26, 3) - 0.72, 0.0, 1.0) * 3.0
+
+    colour = tint(base) * (0.93 + 0.10 * pebble[..., None]) * (0.99 + 0.02 * grain[..., None])
+    colour = colour * (1.0 - 0.18 * np.clip(creases, 0.0, 1.0)[..., None])
+    colour = mix(colour, tint((0.26, 0.225, 0.185)), np.clip(scuff, 0.0, 1.0) * 0.55)
+    smooth = np.clip(0.30 + 0.04 * (pebble - 0.5) + 0.16 * np.clip(scuff, 0.0, 1.0)
+                     - 0.08 * np.clip(creases, 0.0, 1.0), 0.18, 0.52)
+    height = 0.16 * pebble + 0.05 * grain - 0.22 * np.clip(creases, 0.0, 1.0)
+    return colour, blur(height, 1), np.zeros_like(height), smooth
 
 
 def _gun_paint(base, rng):
-    """Olive drab enamel over an alloy chassis, chipped down to bare metal."""
-    blotch = fbm(rng, 5, 4)
-    grain = value_noise(rng, 210)
-    chips = np.clip(fbm(rng, 42, 4) - 0.56, 0.0, 1.0) * 5.0
+    """Olive drab enamel over an alloy chassis, chipped down to bare metal.
 
-    colour = tint(base) * (0.86 + 0.28 * blotch[..., None])
-    colour *= (0.95 + 0.10 * grain[..., None])
-    colour = mix(colour, tint((0.30, 0.30, 0.31)), chips * 0.85)
-    metallic = chips * 0.9
-    smooth = np.clip(0.36 + 0.10 * (blotch - 0.5) + 0.26 * chips, 0.14, 0.84)
-    height = 0.22 * grain + 0.14 * blotch - 0.50 * chips
-    return colour, height, metallic, smooth
+    Chips are thin and rare. Broad chipping low down is what made the 1.0.9
+    enamel read as camouflage paint rather than a coat that has been knocked.
+    """
+    film = fbm(rng, 4, 3)
+    grain = blur(value_noise(rng, 320), 1)
+    chips = np.clip(ridge(rng, 150, 3) - 0.915, 0.0, 1.0) * 12.0
+
+    colour = tint(base) * (0.97 + 0.06 * film[..., None]) * (0.995 + 0.012 * grain[..., None])
+    colour = mix(colour, tint((0.29, 0.295, 0.305)), np.clip(chips, 0.0, 1.0) * 0.85)
+    metallic = np.clip(chips * 0.9, 0.0, 1.0)
+    smooth = np.clip(0.42 + 0.05 * (film - 0.5) + 0.22 * np.clip(chips, 0.0, 1.0),
+                     0.28, 0.80)
+    height = 0.03 * grain + 0.03 * film - 0.26 * chips
+    return colour, blur(height, 1), metallic, smooth
 
 
 def _gun_wood(base, rng):
-    """Oiled walnut with a straight grain.
+    """Oiled walnut: grain that follows the blank, pores across it, no planks.
 
-    The map recipe cuts wood into planks with dark seams, which on a rifle stock
-    reads as a crate bolted to the receiver. A stock is one piece of timber: rings
-    that run the length of it, dark pores across the grain and a thin varnish that
-    lifts the highlights without making the whole part shine.
+    The map wood recipe cuts boards with seams; on a rifle stock that reads as a
+    crate. This is one piece of timber: long dark grain lines, fine pores, and a
+    varnish soft enough to keep the wood matte.
     """
     yy, _xx = np.mgrid[0:SIZE, 0:SIZE].astype(float) / SIZE
-    warp = fbm(rng, 6, 3)
-    rings = np.sin((yy * 34.0 + warp * 7.0) * np.pi) * 0.5 + 0.5
-    figure = fbm(rng, 12, 4)
-    pores = value_noise(rng, 300)
-    colour = tint(base) * (0.76 + 0.30 * rings[..., None])
-    colour *= (0.92 + 0.20 * figure[..., None])
-    colour *= (1.0 - 0.22 * np.clip(pores - 0.52, 0.0, 1.0)[..., None])
-    height = rings * 0.10 + pores * 0.04
-    smooth = np.clip(0.32 + 0.12 * figure - 0.10 * np.clip(pores - 0.5, 0.0, 1.0),
-                     0.10, 0.62)
-    return colour, height, np.zeros_like(height), smooth
+    warp = fbm(rng, 5, 3)
+    rings = np.sin((yy * 44.0 + warp * 6.0) * np.pi) * 0.5 + 0.5
+    fine = np.sin((yy * 190.0 + warp * 3.0) * np.pi) * 0.5 + 0.5
+    figure = fbm(rng, 11, 4)
+    pores = np.clip(value_noise(rng, 300) - 0.66, 0.0, 1.0)
+
+    colour = tint(base) * (0.91 + 0.12 * rings[..., None])
+    colour *= (0.98 + 0.04 * figure[..., None]) * (0.99 + 0.015 * fine[..., None])
+    colour *= (1.0 - 0.14 * pores[..., None])
+    smooth = np.clip(0.42 + 0.05 * figure - 0.07 * pores, 0.26, 0.64)
+    height = 0.05 * rings + 0.02 * fine - 0.08 * pores
+    return colour, blur(height, 1), np.zeros_like(height), smooth
 
 
 RECIPES = {
@@ -406,6 +482,11 @@ RECIPES = {
     "gunolive": _gun_paint,
     "gunpolymer": _gun_polymer,
     "gunbare": _gun_bare,
+    "gloveleather": _glove_leather,
+    "uniformcanvas": _uniform_canvas,
+    "armorplate": _armor_plate,
+    "militiacanvas": _uniform_canvas,
+    "militiasteel": _armor_plate,
 }
 
 TILING = {
@@ -415,7 +496,9 @@ TILING = {
     "glass": 1.0, "gravel": 3.0, "sand": 3.0, "ceramic": 1.0, "hazard": 1.0,
     # Weapon maps repeat several times across a viewmodel sized UV island: at 1.0 the
     # blotches of a wall texture read as hammered cast iron on an anodised receiver.
-    "gunmetal": 5.0, "gunwood": 1.6, "gunolive": 4.5, "gunpolymer": 5.0, "gunbare": 4.0,
+    "gunmetal": 5.5, "gunwood": 1.8, "gunolive": 4.5, "gunpolymer": 6.0, "gunbare": 4.0,
+    "gloveleather": 7.0, "uniformcanvas": 5.0, "armorplate": 6.0,
+    "militiacanvas": 5.0, "militiasteel": 6.0,
 }
 
 
@@ -632,9 +715,13 @@ def main() -> int:
             shade = float(spec.get("shade", 1.0))
             if abs(shade - 1.0) > 1e-6:
                 albedo = np.clip(albedo * shade, 0.0, 1.0)
+            # Weapon surfaces carry their detail in the silhouette and the
+            # roughness, not in a deep bump: a strong normal turns a receiver
+            # into stone at viewmodel distance.
+            strength = 0.6 if texture_name.startswith("gun") else 2.2
             maps = {
                 "albedo": (albedo, True),
-                "normal": (normal_from_height(height), False),
+                "normal": (normal_from_height(height, strength), False),
                 "metsmo": (np.stack([metallic, np.ones_like(height), np.zeros_like(height),
                                      smooth], -1), False),
             }

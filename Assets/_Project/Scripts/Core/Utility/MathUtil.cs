@@ -5,6 +5,9 @@ namespace Kordon.Core.Utility
     /// <summary>Deterministic scalar maths shared by every rule module.</summary>
     public static class MathUtil
     {
+        public const float Pi = (float)Math.PI;
+        public const float TwoPi = (float)(Math.PI * 2.0);
+        public const float HalfPi = (float)(Math.PI * 0.5);
         public const float Deg2Rad = (float)(Math.PI / 180.0);
         public const float Rad2Deg = (float)(180.0 / Math.PI);
         public const float Epsilon = 1e-6f;
@@ -57,6 +60,24 @@ namespace Kordon.Core.Utility
             float t = 1f - (float)Math.Pow(smoothing, deltaTime);
             return Lerp(current, target, t);
         }
+
+        /// <summary>Fractional part folded into [0, length); the loop of a cycle.</summary>
+        public static float Repeat(float value, float length)
+        {
+            if (length <= Epsilon)
+            {
+                return 0f;
+            }
+
+            float wrapped = value - (float)Math.Floor(value / length) * length;
+            return wrapped < 0f ? wrapped + length : wrapped;
+        }
+
+        public static float Round(float value) => (float)Math.Round(value);
+
+        public static float Sin(float radians) => (float)Math.Sin(radians);
+
+        public static float Cos(float radians) => (float)Math.Cos(radians);
 
         public static float WrapAngle(float degrees)
         {

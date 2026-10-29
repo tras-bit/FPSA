@@ -75,6 +75,14 @@ namespace Kordon.Core.Weapons
         public float MagazineRoll;
         public bool MagazineVisible;
 
+        /// <summary>
+        /// 0 with the support hand on the fore-end, 1 with it on the magazine.
+        /// The adapter slides the left hand along this: a reload where the hand
+        /// stays on the handguard while the magazine falls out is the single most
+        /// obvious tell that a game has no first person hands at all.
+        /// </summary>
+        public float SupportHandBlend;
+
         /// <summary>0 seated, 1 fully racked back.</summary>
         public float BoltTravel;
 
@@ -480,7 +488,18 @@ namespace Kordon.Core.Weapons
             _pose.MagazineZ = _magazineZ;
             _pose.MagazinePitch = _magazinePitch;
             _pose.MagazineRoll = _magazineRoll;
+
+            // the support hand leaves the fore-end for the magazine well the moment
+            // the handling state starts and returns when the weapon is ready again
+            float handTarget = _poseState == ViewmodelState.ReloadOut ||
+                               _poseState == ViewmodelState.ReloadIn ||
+                               _poseState == ViewmodelState.Inspecting
+                ? 1f : 0f;
+            _supportHandBlend = Approach(_supportHandBlend, handTarget, 11f, dt);
+            _pose.SupportHandBlend = _supportHandBlend;
         }
+
+        private float _supportHandBlend;
 
         private float _magazineX;
         private float _magazineY;

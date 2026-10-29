@@ -133,7 +133,7 @@ show geometry from a fixed camera, not a viewmodel in motion; the HUD mock shows
 layout, not a live canvas.  A first-person play test in the Unity editor is still
 the verification this environment cannot perform.
 
-## 1.0.9 weapon animation and art (executed here)
+## 1.0.9 weapon animation and 1.0.10 art rewrite (executed here)
 
 The previous viewmodel smoothed a single position toward a single target. That is
 why the weapon slid between poses, the magazine teleported and the muzzle never
@@ -165,11 +165,17 @@ play test in the editor is still the verification this environment cannot perfor
 
 Art, generated here and verified by re-import:
 
-* seven weapons rebuilt from lofted profiles with swept trigger guards, domed dust
-  covers, curved magazines with stamped ribs, recessed M-LOK panels cut into the
-  handguard, iron sights or optics (red dot / prism / three turret scope), gas tube,
-  sling swivels, a folded bipod and a rebuilt sidearm; 200 434 triangles including
-  grenades;
+* seven weapons rebuilt from one layout table each: every station (bore, receiver
+  top and bottom, grip, magazine well, trigger guard, stock root) is derived from
+  the receiver, connected parts overlap by 3-5 mm, and no part is positioned by
+  hand. Bored and stepped barrels, muzzle devices with ports cut through the tube,
+  receivers with panel frames, slotted screw heads, controls and a cut ejection
+  port with the bolt carrier visible, handguards with per side M-LOK pockets,
+  solid chassis stocks with a rounded thumbhole and a hinge, collapsible stocks on
+  an exposed buffer tube, lofted raked grips with finger grooves and stipple
+  panels, curved magazines with transverse ribs and a lipped floor plate, a hooded
+  AK front sight, and hollow optics with dark coated lenses (red dot / prism /
+  three turret scope); 261 640 triangles including grenades;
 * every mesh beveled, shaded smooth with split normals at 34 degrees and UV
   unwrapped, so the generated textures have somewhere to land;
 * five weapon surfaces (`gun_metal`, `gun_bare`, `gun_wood`, `gun_olive`,
@@ -182,6 +188,50 @@ A defect this round found and fixed: regenerating the texture set silently dropp
 normal maps as plain colour. The generator now writes it, and the policy check that
 found it stays in place.
 
+## 1.0.11 hands and bodies (executed here)
+
+The first person weapon had no hands and the other players were capsules.  Both are
+now authored geometry, and both are checked the way the rest of the art is:
+
+* **weapon FBX carry two extra nodes.**  Each of the seven weapon files exports
+  `HandRight` and `HandLeft` next to the weapon and the magazine; the viewmodel finds
+  them by name and animates the support hand.  The exporter re-imports every file and
+  compares the bounding box, so a hand that lands in the wrong frame fails the build
+  (`weapons: 10 files, 375 388 triangles`).
+* **the support hand follows the magazine.** `ViewmodelPose.SupportHandBlend` is core
+  state with two tests: it stays below 0.001 with no reload, passes 0.3 within six
+  frames of `MagazineOut`, settles above 0.8, and returns below 0.08 once the reload
+  completes.  296 tests in the suite, the five newest of which cover the body gait
+  (`BodyGaitTests.cs`): standing still, cadence against speed over stride, alternating
+  legs inside their joints, a crouch that folds the knees, and a fall that ends on the
+  ground.
+* **bodies are authored, not primitives.** `Tools/blender/build_operators.py` writes
+  `operator.fbx` and `militia.fbx` (28 840 triangles each, 1.73 m to the top of the
+  helmet) plus
+  `StreamingAssets/Data/Art/operator_manifest.json`.  `RemoteOperatorView` and the
+  co-op hostile spawner load them from Resources and only fall back to a capsule when
+  the file is missing; the fallback is logged and never silent.
+* **hit volume matches the rules.** Both bodies carry a 1.74 m capsule proxy - the
+  authored body to the top of its helmet - so the server's `ZoneFromHit` (head above
+  1.5 m, thorax above 0.85 m) resolves against the silhouette a player sees, and a
+  round that passes over a helmet misses instead of counting as a headshot.
+* `docs/art/operators.png` is the body sheet, rendered from the exported geometry
+  wearing the same generated textures the game loads.
+* **the exported body is a hierarchy, not one mesh.** Nine parts sit on `HipL`,
+  `KneeL`, `ShoulderL`, `ElbowL` (and the right hand side) under one root, which is
+  what lets `OperatorBodyRig` walk the body and drop it when it dies. Re-importing the
+  FBX and turning `HipL` by -28 degrees moves the shin 0.39 m forward, which is how the
+  joint centres were checked; the build also refuses a body whose proportions are not
+  an operator (1.70-1.86 m tall, 0.52-0.72 m across, under 0.78 m deep, nothing below
+  the ground plane), which is the check that caught the volumes that were authored
+  lying down.
+
+What this does not prove: the bodies have no skeleton, so there is no walk, aim,
+reload or death animation, and a death resolves as damage rather than a ragdoll.  The
+hands are anatomy built from sweeps, not sculpted character art - they read correctly
+at viewmodel distance and they hold the weapon they are exported with, which is the
+problem they were built to solve.
+
 ## What was verified by generation (executed here)
 
 * Kit: 60 modules, 203k triangles, FBX exported, both `.blend` files saved.
@@ -191,8 +241,8 @@ found it stays in place.
 * Textures: 24 surfaces -> 66 texture sets (albedo, normal, metallic/smoothness) and
   24 Unity materials, all generated from seeded noise.
 * Weapons and thrown equipment: 7 first person weapon models + 3 grenades,
-  200 434 triangles (1.0.9 third modelling pass; 85 736 in 1.0.8, 68 636 after the
-  1.0.6 detail pass, 22 484 before it), every mesh UV unwrapped and shaded with
+  261 640 triangles (1.0.10 modeller rewrite; 200 434 in 1.0.9, 85 736 in 1.0.8,
+  68 636 after the 1.0.6 detail pass, 22 484 before it), every mesh UV unwrapped and shaded with
   split normals, FBX re-imported and bounding boxes verified; 79 synthesised
   WAV clips in total (4 new grenade sounds: fragmentation blast, distant blast,
   smoke hiss, flashbang).

@@ -85,16 +85,32 @@ SURFACES: Dict[str, dict] = {
     # Weapon-specific surfaces.  A rifle in a render at this scale needs a darker,
     # less saturated palette than a crate or a wall: oiled walnut instead of pallet
     # wood, phosphated steel instead of galvanised sheet, painted chassis green.
-    "gun_wood": dict(kind="Wood", color=(0.105, 0.058, 0.028), rough=0.42, metal=0.0,
-                     tex="gunwood", shade=0.55),
-    "gun_metal": dict(kind="Steel", color=(0.155, 0.160, 0.170), rough=0.32, metal=0.92,
-                      tex="gunmetal", shade=0.32),
-    "gun_bare": dict(kind="Steel", color=(0.30, 0.305, 0.315), rough=0.30, metal=1.0,
-                     tex="gunbare", shade=0.30),
-    "gun_olive": dict(kind="Steel", color=(0.135, 0.150, 0.085), rough=0.55, metal=0.12,
-                      tex="gunolive", shade=0.32),
-    "gun_polymer": dict(kind="Rubber", color=(0.075, 0.076, 0.080), rough=0.70, metal=0.0,
-                        tex="gunpolymer", shade=0.55),
+    "gun_wood": dict(kind="Wood", color=(0.132, 0.071, 0.033), rough=0.42, metal=0.0,
+                     tex="gunwood", shade=0.46),
+    "gun_metal": dict(kind="Steel", color=(0.160, 0.166, 0.176), rough=0.38, metal=0.78,
+                      tex="gunmetal", shade=0.34),
+    "gun_bare": dict(kind="Steel", color=(0.44, 0.445, 0.455), rough=0.24, metal=1.0,
+                     tex="gunbare", shade=0.55),
+    "gun_olive": dict(kind="Steel", color=(0.140, 0.156, 0.090), rough=0.54, metal=0.08,
+                      tex="gunolive", shade=0.36),
+    "gun_polymer": dict(kind="Rubber", color=(0.078, 0.079, 0.081), rough=0.74, metal=0.0,
+                        tex="gunpolymer", shade=0.20),
+    # First person gloves: dark oiled leather with a fine pebble grain, worn pale
+    # on the knuckles.  Its own surface, so the hands never pick up the stipple of
+    # the weapon's moulded nylon.
+    "glove_leather": dict(kind="Rubber", color=(0.120, 0.096, 0.076), rough=0.80,
+                          metal=0.0, tex="gloveleather", shade=0.30),
+    # Operator clothing.  Canvas and plate are two different materials on purpose:
+    # a uniform that renders the same as the armour over it makes a soldier look
+    # like one grey shape, which is exactly what the capsule bodies did.
+    "uniform_canvas": dict(kind="Rubber", color=(0.098, 0.118, 0.072), rough=0.92,
+                           metal=0.0, tex="uniformcanvas", shade=0.30),
+    "armor_plate": dict(kind="Rubber", color=(0.080, 0.086, 0.070), rough=0.86,
+                        metal=0.0, tex="armorplate", shade=0.30),
+    "militia_canvas": dict(kind="Rubber", color=(0.118, 0.096, 0.062), rough=0.94,
+                           metal=0.0, tex="militiacanvas", shade=0.32),
+    "militia_steel": dict(kind="Steel", color=(0.130, 0.115, 0.096), rough=0.72,
+                          metal=0.35, tex="militiasteel", shade=0.30),
 }
 
 _MATERIAL_CACHE: Dict[str, bpy.types.Material] = {}

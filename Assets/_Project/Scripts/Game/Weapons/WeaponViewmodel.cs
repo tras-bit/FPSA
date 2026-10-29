@@ -39,6 +39,17 @@ namespace Kordon.Game.Weapons
         /// <summary>Bolt/charging handle prop, cycled on BoltRelease.</summary>
         public Transform BoltProp;
 
+        /// <summary>
+        /// Support hand node of the authored model.  It rides on the fore-end until
+        /// a reload starts and then follows the magazine: a reload where the hand
+        /// never leaves the handguard is the biggest tell that a game has no first
+        /// person hands, so the hand is animated with the same magazine timeline.
+        /// </summary>
+        public Transform SupportHandProp;
+
+        /// <summary>Shooting hand node, kept for anything that wants to react to recoil.</summary>
+        public Transform ShootingHandProp;
+
         /// <summary>The authored FBX currently in the hands (null until the art is loaded).</summary>
         public GameObject ModelInstance => _modelInstance;
 
@@ -53,6 +64,7 @@ namespace Kordon.Game.Weapons
 
         private Vector3 _magSeat;
         private Vector3 _boltSeat;
+        private Vector3 _handSeat;
 
         private GameObject _modelInstance;
         private string _modelWeaponId;
@@ -294,6 +306,40 @@ namespace Kordon.Game.Weapons
                 BoltProp.localPosition = _boltSeat + new Vector3(0f, 0f, -pose.BoltTravel * 0.05f);
             }
 
+            ApplySupportHand(pose);
+        }
+
+        /// <summary>
+        /// Slide the support hand between the fore-end and the magazine well.
+        ///
+        /// The hand is authored on the weapon, so its seat is whatever the modeller
+        /// placed it at.  During a magazine change it rides the same offset the
+        /// magazine itself is given - down with the empty magazine, and back up with
+        /// the fresh one - which is what makes the hand look like it is holding the
+        /// magazine rather than floating near it.
+        /// </summary>
+        private void ApplySupportHand(ViewmodelPose pose)
+        {
+            if (SupportHandProp == null)
+            {
+                return;
+            }
+
+            float blend = Mathf.Clamp01(pose.SupportHandBlend);
+            Vector3 travel = Vector3.zero;
+            if (blend > 0.0001f)
+            {
+                // the hand travels a little less than the magazine: a hand holding a
+                // magazine drops it half the way and rotates it, it does not follow
+                // the magazine to the floor
+                travel = new Vector3(pose.MagazineX * 0.85f,
+                                     pose.MagazineY * 0.55f,
+                                     pose.MagazineZ * 0.85f);
+            }
+
+            SupportHandProp.localPosition = _handSeat + travel * blend;
+            SupportHandProp.localRotation = Quaternion.Euler(
+                pose.MagazinePitch * 0.45f * blend, 0f, pose.MagazineRoll * 0.55f * blend);
         }
 
         // --------------------------------------------------------------- model
@@ -318,6 +364,8 @@ namespace Kordon.Game.Weapons
 
             MagazineProp = null;
             BoltProp = null;
+            SupportHandProp = null;
+            ShootingHandProp = null;
             _sightHeight = 0.068f;
             _modelLength = 0.9f;
             if (string.IsNullOrEmpty(id) || WeaponRoot == null)
@@ -342,6 +390,14 @@ namespace Kordon.Game.Weapons
                 MagazineProp = magazine;
                 _magSeat = magazine.localPosition;
             }
+
+            SupportHandProp = _modelInstance.transform.Find("HandLeft");
+            if (SupportHandProp != null)
+            {
+                _handSeat = SupportHandProp.localPosition;
+            }
+
+            ShootingHandProp = _modelInstance.transform.Find("HandRight");
 
             MeasureModel(_modelInstance);
 

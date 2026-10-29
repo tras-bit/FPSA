@@ -3,6 +3,198 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.11 - 2026-10-29
+
+The player got hands, and every other player got a body.
+
+### Art
+
+* **First person gloves (`Tools/blender/build_hands.py`).** The weapon models used
+  to be held by nothing: a rifle floated in front of the camera. Every weapon FBX
+  now carries the two gloved hands that hold it, authored in the weapon's own space
+  as separate nodes (`HandRight`, `HandLeft`) so the viewmodel can find and animate
+  them without an anchor table:
+  * a right hand closed on the pistol grip - palm lofted from rounded sections,
+    four fingers curling round the front strap onto the far side, thumb over the
+    top, knuckle pads, stitched seams, a wrist strap and a jacket cuff;
+  * a left hand cradling the fore-end at that weapon's own handguard radius;
+  * the sidearm's support hand wraps the shooting hand instead of a fore-end, and
+    the pump gun's right hand closes on the stock wrist because it has no pistol
+    grip.
+  Hands are anatomy, not boxes: every finger is a swept tube through named joints
+  with a rounded joint at each knuckle and a rounded cap at the tip.
+* **Operator bodies (`Tools/blender/build_operators.py`).** Every other player in a
+  match was a Unity capsule and a sphere, and the co-op militia were the same capsule
+  tinted rust. There are now two authored bodies - `operator.fbx` and `militia.fbx`,
+  1.73 m to the top of the helmet, 28 840 triangles each - with boots, legs, knee
+  pads, a belt with pouches, a plate carrier with three magazine pouches and an
+  admin pouch, side plates, a back panel with a radio and an antenna, shoulders,
+  arms with elbow pads,
+  gloved fists, a helmet with rails, ear cups and an NVG mount, goggles with dark
+  lenses, and a rifle slung across the back with a two point sling. The two variants
+  share geometry and differ in kit: olive canvas and plate for the operator, worn
+  brown canvas and steel for the militia.
+* **Five more surfaces:** `glove_leather` (oiled leather: pebble grain, creases,
+  worn pale where it flexes), `uniform_canvas` and `militia_canvas` (ripstop with a
+  visible warp and weft, dust), `armor_plate` and `militia_steel` (composite plate in
+  a fabric cover, pitted and scuffed). 29 surfaces, 81 texture sets.
+* **375 388 triangles** of weapons and thrown equipment and 57 680 triangles of
+  bodies; `docs/art/operators.png` is the new body sheet.
+
+### Bodies that move
+
+* **The body is articulated, not one welded mesh.** The builder now joins and
+  re-origins nine parts onto hip, knee, shoulder and elbow centres, and exports them
+  under empties (`HipL`, `KneeL`, `ShoulderL`, `ElbowL` and their right hand
+  counterparts) below a single root. The FBX therefore carries a working hierarchy,
+  and a body can be posed by turning eight transforms.
+* **Walk, run and crouch are real maths (`Kordon.Core.Characters.BodyGait`).** Cadence
+  follows speed over stride, so a walking body takes steps at a walking rate and a
+  sprinting body lengthens its stride instead of twitching. The knee folds while its
+  leg travels forward and straightens as the foot plants, arms counter swing at just
+  over half the amplitude, and two bob events per cycle match the two foot plants.
+  Five core tests cover it: a standing body does not march, cadence matches
+  speed/stride, the legs alternate and stay inside their joints, a crouch folds the
+  knees, and a killed body falls.
+* **The dead fall over (`OperatorBodyRig`).** Death used to switch the renderers off,
+  so an opponent blinked out of the world the instant they were hit. A dead body now
+  pitches forward over 0.85 s, sinks the last few centimetres and stays where it fell
+  until it is cleaned up; a respawn stands it back up.
+* **Bodies no longer slide.** `RemoteOperatorView` and the co-op `HostileAgent` feed
+  the body's own frame to frame movement into the rig, so the legs match the actual
+  velocity of the body in the world - a stationary body stands.
+* **A volume that lies down fails the build.** `bw.loft` sweeps along Y by default, and
+  the belt, hips, torso, carrier, helmet and helmet rim were all authored as stacks of
+  horizontal rings without `axis="Z"`: they were lying flat, which is why the belt and
+  the helmet rim read as discs and the body was 1.9 m deep. They are vertical volumes
+  now, and `_verify_proportions` refuses to export a body that is wider, deeper,
+  shorter or taller than an operator.
+
+### Game
+
+* **`RemoteOperatorView`** loads the authored body from
+  `Resources/Kordon/Operators/operator` and drives it from the server snapshot;
+  it only falls back to the capsule if the art is missing, so a missing import can
+  never silently turn the game back into grey blocks. A 1.80 m capsule proxy gives
+  the server the same hit volume the rules already assume (head above 1.5 m,
+  thorax above 0.85 m).
+* **Co-op hostiles** load `militia` the same way, with the same hit proxy.
+* **The support hand animates.** `ViewmodelPose` gained `SupportHandBlend`: the left
+  hand stays on the fore-end while the weapon is ready and travels with the magazine
+  during a reload or an inspect, then returns. The adapter applies it to the
+  `HandLeft` node, so a magazine can no longer fall out of a rifle while both hands
+  stay put.
+
+### Fixed
+
+* `blob()` in the hand builder was built in unit space and then scaled per axis, so
+  every knuckle and pad was five times its intended size and the first hand render
+  was a set of boulders.
+* The support hand and the sleeve were authored in the wrong frame: the palm ran
+  down the grip instead of across it, which is what makes a hand read as a paddle.
+  The hands are now built in the grip's own frame and rotated into the weapon by the
+  grip rake.
+* The first person forearms were straight tubes aimed sideways at the camera, which
+  read as a pipe welded to the fist. They now drop away below the grip with a taper, a
+  rolled glove cuff at the wrist and a sleeve band, and they stay out of the sight
+  picture.
+* The operator's arms reached for a rifle that was not in their hands; the rifle is
+  slung across the back now, with a sling, so nothing floats.
+* The slung rifle stuck 0.44 m straight out of the operator's spine, because it was
+  rolled about its own barrel (`-27 degrees about Y`) and only then pitched. The pitch
+  comes first now, so the weapon lies diagonally across the shoulder blades from the
+  left shoulder to the right hip - the shape a slung rifle actually makes.
+* Six body volumes - hips, belt, torso, plate carrier, helmet and helmet rim - were
+  swept along Y instead of Z and therefore lay flat: the belt and the helmet rim read
+  as discs, the torso as a slab on the operator's back, and the body was 1.9 m deep.
+  `_verify_proportions` in the builder now fails the build on that class of mistake.
+* The boot sole was longer than the boot, so every operator stood on a grey plate that
+  stuck out in front of the toe and behind the heel. The sole is 0.215 m now, under
+  the boot.
+* The arms were authored crossing the waist, which read as hands on hips. They hang
+  along the body with a relaxed bend, and the elbow joint moved with them.
+
+### Tests
+
+296 rules tests (289 + 2 + 5): the support hand stays on the fore-end with no reload,
+reaches the magazine during one, and returns when it ends; a standing body does not
+march, cadence follows speed over stride, the legs alternate and stay inside their
+joints, a crouch folds the knees, and a killed body falls and stays down.
+
+## 1.0.10 - 2026-10-29
+
+The weapon set was modelled a fourth time. The complaints on 1.0.9 were specific -
+"holey", "flat", "not pretty" - so this pass attacked the three things that caused
+them: parts that did not touch, faces with no detail on them, and a palette where
+walnut, nylon and phosphate all rendered the same value of grey.
+
+### Art
+
+* **Placement is computed, not eyeballed.** Every weapon has one `layout()` table -
+  receiver front/rear/top/bottom, bore line, grip station, magazine station, stock
+  root - and every part is built from it. The grip, the magazine well, the trigger
+  guard and the stock can no longer drift apart, and connected parts overlap by
+  three to five millimetres on purpose: a two millimetre gap reads as a hole at
+  viewmodel distance, which is what "holey" meant.
+* **Surface detail that survives a render.** Receivers now carry raised panel
+  frames - a machined border, not a pocket, because a shallow boolean on a lofted
+  side can miss the wall and leave a floating plate - plus slotted screw heads, a
+  bolt catch, a selector on both sides, a magazine release and a forward assist.
+  The AK adds pressed receiver rivets and a channel; the shotgun a port plate and
+  pins; the SMG moulded shell panels; the bolt action action screws.
+* **Handguards.** M-LOK pockets are cut per side instead of punched through the
+  tube, so a free float handguard no longer looks like a colander; they are two
+  rows deep on the long guns. The walnut fore-end got a closed upper handguard over
+  the gas tube, the pump a ribbed slide, and every handguard a barrel nut and a cap.
+* **Grips and magazines are lofted.** A grip is a raked stack of rounded sections -
+  0.86 of full width at the top, palm swell at the middle, flare at the butt - with
+  finger grooves moulded into the front strap and stippled panels on the sides. The
+  old grip was one side profile extruded through a constant width, which is why it
+  read as a blade. Magazines are curved lofts with three transverse ribs, a lipped
+  floor plate and a collar, and the witness holes are gone: they were the last
+  deliberate holes in the set.
+* **Stocks.** The AR stock rides on an exposed buffer tube with a castle nut, a
+  clamp collar and an adjustment lever, so the butt is attached to the gun instead
+  of glued to its back. The chassis stock is one solid body with a rounded
+  thumbhole, a hinge block with a real pin and a cheek riser on posts - the previous
+  version was two 11 mm plates with a 20 mm slot through them, i.e. a hole with a
+  gun around it. The wire stock, the pump stock and the walnut AK stock were rebuilt
+  against the receiver tang.
+* **Sights and optics.** The AK front sight is a barrel band, a tower, two swept
+  ears and a hooded post instead of a box with a hole; the gas block is a real
+  block at the gas port with the tube leaving it rearwards. The red dot gained an
+  objective hood, a rear eyepiece ring and a protected body; the prism and the scope
+  kept their turrets and their coated lenses.
+* **Colour ladder.** `gun_metal` is now dark phosphated steel (0.78 metallic, 0.38
+  roughness, 0.34 albedo shade), `gun_bare` is bright machined steel at 1.0 metallic,
+  `gun_polymer` near black nylon at 0.20 shade, `gun_olive` enamel at 0.36 and
+  `gun_wood` oiled walnut at 0.46. On 1.0.9 every one of them sat within a few
+  percent of the same value, which is why a walnut stock and a steel receiver looked
+  like the same grey plastic.
+* **Studio.** Key, rim, fill, kicker and top lights plus four soft boxes for
+  reflections; the bench is placed under each weapon's own bounding box and falls to
+  black in a metre and a half; framing is solved per weapon from the bounding box
+  with the sensor aspect corrected.
+* **261 640 triangles** across seven weapons and three grenades, from 200 434.
+
+### Fixed
+
+* `disc()` rotated about Y and then translated twice, so every QD socket sat half a
+  metre behind its stock as a floating dot. It now builds a cylinder on the axis it
+  is asked for and translates once.
+* The trigger guard is swept stamped stock 11 mm thick instead of a 4.4 mm wire, and
+  the magazine, guard and grip are ordered using the layout table rather than three
+  hard coded offsets.
+* `loft()` sections were fed `(axis, scale, scale, 0, curve)` for magazines, which
+  displaces the curve along Y correctly; the old AK magazine was straight and 40 mm
+  too long.
+* Bipod legs pointed backwards along the barrel instead of folding down; the feet
+  now sit under the muzzle end of the fore-end.
+
+### Tests
+
+Unchanged: 289 rules tests, the 16 viewmodel animation tests included.
+
 ## 1.0.9 - 2026-10-29
 
 The first person weapon stopped being a lerp and became an animation system, and

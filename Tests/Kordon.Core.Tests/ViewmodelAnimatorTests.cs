@@ -318,6 +318,39 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
+        public void SupportHandStaysOnTheForeEndUntilAReload()
+        {
+            ViewmodelAnimator animator = Animator();
+            Run(animator, Input(), 90);
+            Assert.True(animator.Pose.SupportHandBlend < 0.001f,
+                "the support hand moved with no reload: " + animator.Pose.SupportHandBlend);
+
+            animator.Notify(ViewmodelEvent.MagazineOut);
+            Run(animator, Input(), 6);
+            Assert.True(animator.Pose.SupportHandBlend > 0.3f,
+                "the support hand did not leave the fore-end: " + animator.Pose.SupportHandBlend);
+        }
+
+        [Fact]
+        public void SupportHandReturnsToTheForeEndAfterTheReload()
+        {
+            ViewmodelAnimator animator = Animator();
+            animator.Notify(ViewmodelEvent.MagazineOut);
+            Run(animator, Input(), 20);
+            Assert.True(animator.Pose.SupportHandBlend > 0.8f,
+                "the support hand never reached the magazine: " + animator.Pose.SupportHandBlend);
+
+            animator.Notify(ViewmodelEvent.MagazineIn);
+            Run(animator, Input(), 20);
+            animator.Notify(ViewmodelEvent.ReloadComplete);
+            Run(animator, Input(), 90);
+
+            Assert.Equal(ViewmodelState.Ready, animator.State);
+            Assert.True(animator.Pose.SupportHandBlend < 0.08f,
+                "the support hand did not return: " + animator.Pose.SupportHandBlend);
+        }
+
+        [Fact]
         public void FumbleIsVisibleAndRecovers()
         {
             ViewmodelAnimator animator = Animator();
