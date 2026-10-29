@@ -27,6 +27,9 @@ namespace Kordon.Core.Ui
 
         public float Top => Bottom + Height;
 
+        /// <summary>Vertical band shared by both rectangles, in bottom-up pixels.</summary>
+        public bool SharesBand(HudRect other) => Bottom < other.Top && other.Bottom < Top;
+
         public bool Overlaps(HudRect other, float screenWidth)
         {
             bool apartHorizontally = Left(screenWidth) >= other.Left(screenWidth) + other.Width ||
@@ -37,64 +40,75 @@ namespace Kordon.Core.Ui
     }
 
     /// <summary>
-    /// Geometry of the HUD's bottom right column: the weapon panel and the two
-    /// magazine rows sit above it, the grenade line and the inspect line above those.
+    /// Geometry of the HUD's bottom right block, in one place:
     ///
-    /// These numbers used to live as hand written offsets inside <c>HudScreen</c>, and
-    /// the strip that showed the magazines was anchored bottom centre where it fought
-    /// with the interaction hint.  Keeping the arithmetic here means it is unit tested
-    /// against real screen sizes instead of being eyeballed on a build nobody can open
-    /// in this environment.
+    ///     inspect readout      (only while R is held)
+    ///     sidearm magazines
+    ///     primary magazines
+    ///     loadout card         the three slots, the active one lit
+    ///
+    /// This replaces hand written offsets in <c>HudScreen</c> - the first version put
+    /// the magazine strip in the bottom centre where it fought with the interaction
+    /// hint, and every row is a number somebody has to keep true.  Here it is unit
+    /// tested against real screen sizes instead.
     /// </summary>
     public static class HudLayout
     {
-        /// <summary>Inset of the whole column from the screen edges.</summary>
-        public const float EdgeInset = 28f;
+        /// <summary>Inset of the whole block from the screen edges.</summary>
+        public const float EdgeInset = 26f;
 
-        /// <summary>Width of the weapon panel and of the magazine rows above it.</summary>
-        public const float ColumnWidth = 336f;
+        /// <summary>Width of the card and of the rows above it.</summary>
+        public const float ColumnWidth = 360f;
 
-        public const float WeaponPanelHeight = 96f;
-        public const float MagazineRowHeight = 16f;
-        public const float SidearmRowHeight = 13f;
-        public const float GrenadeLineHeight = 24f;
-        public const float InspectLineHeight = 26f;
+        public const float CardHeight = 116f;
+        public const float MagazineRowHeight = 38f;
+        public const float SidearmRowHeight = 28f;
+        public const float InspectLineHeight = 28f;
 
-        /// <summary>Gap between stacked rows of the column.</summary>
-        public const float RowGap = 8f;
+        public const float CardToMagazinesGap = 8f;
+        public const float MagazinesToSidearmGap = 6f;
+        public const float SidearmToInspectGap = 8f;
 
-        public static HudRect WeaponPanel() =>
-            new HudRect(EdgeInset, EdgeInset, ColumnWidth, WeaponPanelHeight);
+        public const float MagazineIconWidth = 22f;
+        public const float MagazineIconHeight = 36f;
+        public const float MagazineIconGap = 6f;
+        public const float SidearmIconWidth = 15f;
+        public const float SidearmIconHeight = 24f;
 
-        /// <summary>Primary magazines, directly above the weapon panel.</summary>
+        /// <summary>Half the width of the centred interaction hint at the bottom.</summary>
+        public const float HintHalfWidth = 230f;
+
+        public static HudRect LoadoutCard() =>
+            new HudRect(EdgeInset, EdgeInset, ColumnWidth, CardHeight);
+
         public static HudRect MagazineRow() =>
-            new HudRect(EdgeInset, WeaponPanel().Top + RowGap, ColumnWidth, MagazineRowHeight);
+            new HudRect(EdgeInset, LoadoutCard().Top + CardToMagazinesGap, ColumnWidth,
+                MagazineRowHeight);
 
-        /// <summary>Sidearm magazines, above the primary row.</summary>
         public static HudRect SidearmRow() =>
-            new HudRect(EdgeInset, MagazineRow().Top + RowGap, ColumnWidth, SidearmRowHeight);
+            new HudRect(EdgeInset, MagazineRow().Top + MagazinesToSidearmGap, ColumnWidth,
+                SidearmRowHeight);
 
-        /// <summary>Grenade count, above the sidearm row.</summary>
-        public static HudRect GrenadeLine() =>
-            new HudRect(EdgeInset, SidearmRow().Top + RowGap, ColumnWidth, GrenadeLineHeight);
-
-        /// <summary>Magazine inspection readout, above the grenade line.</summary>
         public static HudRect InspectLine() =>
-            new HudRect(EdgeInset, GrenadeLine().Top + RowGap, ColumnWidth, InspectLineHeight);
+            new HudRect(EdgeInset, SidearmRow().Top + SidearmToInspectGap, ColumnWidth,
+                InspectLineHeight);
 
-        /// <summary>Every rectangle in the column, bottom to top.</summary>
+        /// <summary>Every rectangle in the block, bottom to top.</summary>
         public static IReadOnlyList<HudRect> Column() => new[]
         {
-            WeaponPanel(), MagazineRow(), SidearmRow(), GrenadeLine(), InspectLine()
+            LoadoutCard(), MagazineRow(), SidearmRow(), InspectLine()
         };
 
-        /// <summary>Total height the column needs from the bottom edge of the screen.</summary>
+        /// <summary>Total height the block needs from the bottom edge of the screen.</summary>
         public static float ColumnHeight => InspectLine().Top;
 
+        /// <summary>How wide a row of n magazine icons is, including the gaps.</summary>
+        public static float MagazineRowWidth(int count, float iconWidth, float gap) =>
+            count <= 0 ? 0f : count * iconWidth + (count - 1) * gap;
+
         /// <summary>
-        /// Problems with the column on a screen of this size: rows that overlap each
-        /// other, a column wider than the screen, or a column that would cover the
-        /// centre where the interaction hint and the subtitles live.
+        /// Problems with the block on a screen of this size: rows that overlap each other,
+        /// a block wider than the screen, or a block that covers the centred hint.
         /// </summary>
         public static List<string> Validate(float screenWidth, float screenHeight)
         {
@@ -123,14 +137,9 @@ namespace Kordon.Core.Ui
                 }
             }
 
-            // The hint is centred at the bottom of the screen, half of its width to each
-            // side; it must stay clear of the weapon panel.
-            // The hint is a 520 px wide, centred label at the bottom of the screen, so
-            // it reaches 260 px to each side of the centre.
-            const float hintHalfWidth = 260f;
-            if (screenWidth * 0.5f + hintHalfWidth > WeaponPanel().Left(screenWidth))
+            if (screenWidth * 0.5f + HintHalfWidth > LoadoutCard().Left(screenWidth))
             {
-                problems.Add("the bottom centre hint runs into the weapon panel");
+                problems.Add("the bottom centre hint runs into the loadout card");
             }
 
             return problems;

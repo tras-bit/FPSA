@@ -5,12 +5,12 @@ using Xunit;
 namespace Kordon.Core.Tests
 {
     /// <summary>
-    /// The bottom right HUD column: weapon panel, primary magazines, sidearm magazines,
-    /// grenade count and the magazine inspection readout.
+    /// The bottom right HUD block: loadout card (which slot is in hand), primary
+    /// magazines, sidearm magazines and the magazine inspection readout.
     ///
     /// The magazines living in the bottom centre is what made the 1.0.5 HUD read as
-    /// broken - the strip collided with the interaction hint and moved whenever the
-    /// row count changed.  These tests pin the geometry against real screen sizes.
+    /// broken - the strip collided with the interaction hint and moved whenever the row
+    /// count changed.  These tests pin the geometry against real screen sizes.
     /// </summary>
     public sealed class HudLayoutTests
     {
@@ -35,7 +35,7 @@ namespace Kordon.Core.Tests
         public void RowsStackUpwardInReadingOrder()
         {
             IReadOnlyList<HudRect> column = HudLayout.Column();
-            Assert.Equal(5, column.Count);
+            Assert.Equal(4, column.Count);
 
             for (int i = 1; i < column.Count; i++)
             {
@@ -45,43 +45,61 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
-        public void WeaponPanelSitsInTheCornerWithTheSharedInset()
+        public void LoadoutCardSitsInTheCornerWithTheSharedInset()
         {
-            HudRect panel = HudLayout.WeaponPanel();
+            HudRect card = HudLayout.LoadoutCard();
 
-            Assert.Equal(HudLayout.EdgeInset, panel.Bottom);
-            Assert.Equal(HudLayout.EdgeInset, panel.Right);
-            Assert.Equal(HudLayout.ColumnWidth, panel.Width);
-            Assert.Equal(1920f - HudLayout.EdgeInset - HudLayout.ColumnWidth,
-                panel.Left(1920f));
+            Assert.Equal(HudLayout.EdgeInset, card.Bottom);
+            Assert.Equal(HudLayout.EdgeInset, card.Right);
+            Assert.Equal(HudLayout.ColumnWidth, card.Width);
+            Assert.Equal(1920f - HudLayout.EdgeInset - HudLayout.ColumnWidth, card.Left(1920f));
         }
 
         [Fact]
-        public void PrimaryMagazinesSitDirectlyAboveTheWeaponPanel()
+        public void PrimaryMagazinesSitDirectlyAboveTheCard()
         {
-            HudRect panel = HudLayout.WeaponPanel();
+            HudRect card = HudLayout.LoadoutCard();
             HudRect magazines = HudLayout.MagazineRow();
 
-            Assert.Equal(panel.Top + HudLayout.RowGap, magazines.Bottom);
-            Assert.Equal(panel.Width, magazines.Width);
-            Assert.Equal(panel.Right, magazines.Right);
+            Assert.Equal(card.Top + HudLayout.CardToMagazinesGap, magazines.Bottom);
+            Assert.Equal(card.Width, magazines.Width);
+            Assert.Equal(card.Right, magazines.Right);
+        }
+
+        [Fact]
+        public void MagazineIconsAreTallerThanTheyAreWide()
+        {
+            // A horizontal bar reads as a progress bar, not as a magazine - the whole
+            // reason the icons became silhouettes.
+            Assert.True(HudLayout.MagazineIconHeight > HudLayout.MagazineIconWidth);
+            Assert.True(HudLayout.SidearmIconHeight > HudLayout.SidearmIconWidth);
+            Assert.True(HudLayout.SidearmIconWidth < HudLayout.MagazineIconWidth);
+        }
+
+        [Fact]
+        public void SixPrimaryMagazinesStillFitTheRow()
+        {
+            float needed = HudLayout.MagazineRowWidth(6, HudLayout.MagazineIconWidth,
+                HudLayout.MagazineIconGap);
+            Assert.True(needed < HudLayout.ColumnWidth - 80f,
+                "six magazines plus the row caption do not fit");
         }
 
         [Fact]
         public void ColumnStaysOutOfTheBottomCentreHint()
         {
             // 1280 is the narrowest supported window: the hint is centred there and the
-            // column must still start to the right of it.
+            // block must still start to the right of it.
             const float width = 1280f;
-            Assert.True(HudLayout.WeaponPanel().Left(width) > width * 0.5f + 260f);
+            Assert.True(HudLayout.LoadoutCard().Left(width) > width * 0.5f + HudLayout.HintHalfWidth);
         }
 
         [Fact]
         public void ColumnIsShortEnoughToLeaveTheCentreOfTheScreenClear()
         {
-            // Everything the column needs lives in the bottom 240 px; a 720 px window is
-            // the smallest target and the aiming reticle area starts far above that.
-            Assert.True(HudLayout.ColumnHeight < 240f);
+            // Everything the block needs lives in the bottom 260 px; a 720 px window is
+            // the smallest target and the aiming area starts far above that.
+            Assert.True(HudLayout.ColumnHeight < 260f);
             Assert.True(HudLayout.ColumnHeight < 720f * 0.4f);
         }
 
@@ -99,8 +117,8 @@ namespace Kordon.Core.Tests
         [Fact]
         public void OverlappingRowsAreReported()
         {
-            // A 200 px wide screen cannot hold the column next to the hint.
-            List<string> problems = HudLayout.Validate(200f, 300f);
+            // A 1024 wide screen cannot hold the block next to the centred hint.
+            List<string> problems = HudLayout.Validate(1024f, 600f);
             Assert.NotEmpty(problems);
         }
     }

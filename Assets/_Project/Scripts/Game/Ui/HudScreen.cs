@@ -1,7 +1,7 @@
-using Kordon.Core.Settings;
 using System.Collections.Generic;
 using Kordon.Core.Ammo;
 using Kordon.Core.Loadout;
+using Kordon.Core.Settings;
 using Kordon.Core.Ui;
 using Kordon.Game.Input;
 using Kordon.Game.Weapons;
@@ -22,20 +22,43 @@ namespace Kordon.Game.Ui
     }
 
     /// <summary>
-    /// The in-match HUD and nothing more than the rules allow: the magazine strip
-    /// (white full / yellow partial / red empty), the inspect readout which is the
-    /// only place an exact round count may appear, the tap-R / hold-R hint, match
-    /// line, objective, subtitles, hit marker and the hold-Tab scoreboard.
+    /// The in-match HUD and nothing more than the rules allow: the loadout card (which
+    /// slot is in hand), the two magazine rows, the inspect readout which is the only
+    /// place an exact round count may appear, the tap-R / hold-R hint, match line,
+    /// objective, subtitles, hit marker and the hold-Tab scoreboard.
+    ///
     /// There is no crosshair and no permanent ammo counter anywhere in this codebase.
+    /// The whole bottom right block is measured by <see cref="HudLayout"/> in the
+    /// engine free core, so the geometry is unit tested instead of eyeballed.
     /// </summary>
     public sealed class HudScreen : MonoBehaviour, IUiScreen
     {
+        /// <summary>Bottom right card colours, kept here so the icon textures match.</summary>
+        private static readonly Color CardFill = new Color(0.045f, 0.055f, 0.065f, 0.74f);
+        private static readonly Color CardBorder = new Color(1f, 1f, 1f, 0.10f);
+        private static readonly Color ChipFill = new Color(1f, 1f, 1f, 0.07f);
+        private static readonly Color ActiveFill = new Color(0.88f, 0.46f, 0.13f, 0.16f);
+
         public WeaponController Weapons;
         public GrenadeThrower Grenades;
         public bool ShowHints = true;
 
         private Canvas _canvas;
+
+        private RectTransform _loadoutCard;
+        private readonly Image[] _rowBackdrops = new Image[3];
+        private readonly Image[] _rowPip = new Image[3];
+        private readonly Image[] _keyChips = new Image[3];
+        private readonly Text[] _keyLabels = new Text[3];
+        private readonly Text[] _weaponNames = new Text[3];
+        private readonly Text[] _weaponStates = new Text[3];
+
         private RectTransform _strip;
+        private RectTransform _sidearmStrip;
+        private readonly List<Image> _slotIcons = new List<Image>();
+        private readonly List<Image> _sidearmIcons = new List<Image>();
+        private AmmoHudSnapshot _secondarySnapshot;
+
         private Text _inspect;
         private Text _hint;
         private Text _matchLine;
@@ -43,30 +66,21 @@ namespace Kordon.Game.Ui
         private Text _subtitle;
         private Text _toast;
         private Text _stateLine;
+        private Text _voiceLine;
+
         private RectTransform _scoreboard;
         private RectTransform _scoreRows;
         private Image _hitMarker;
         private Image _damageFlash;
         private Image _lowHealthEdge;
         private Image _flashOverlay;
-        private Text _voiceLine;
-        private Text _grenadeLine;
-        private RectTransform _weaponPanel;
-        private readonly Text[] _weaponNames = new Text[3];
-        private readonly Text[] _weaponCounts = new Text[3];
-        private readonly Image[] _weaponTabs = new Image[3];
-        private RectTransform _secondaryStrip;
-        private readonly List<Image> _secondarySlots = new List<Image>();
-        private AmmoHudSnapshot _secondarySnapshot;
 
-        private readonly List<Image> _slotImages = new List<Image>();
-        private readonly List<Text> _slotMarks = new List<Text>();
         private float _hitMarkerAt = -10f;
         private float _toastAt = -10f;
         private float _damageFlashAt = -10f;
         private float _blindUntil = -10f;
         private float _blindStartedAt = -10f;
-        private string _lastCount = "";
+        private string _lastCount = string.Empty;
         private int _lastScoreVersion = -1;
         private List<ScoreRow> _rows = new List<ScoreRow>();
         private int _scoreVersion;
@@ -82,6 +96,8 @@ namespace Kordon.Game.Ui
 
         public void OnShow() => Root.gameObject.SetActive(true);
         public void OnHide() => Root.gameObject.SetActive(false);
+
+        // ----------------------------------------------------------------- build
 
         private void Build()
         {
@@ -99,159 +115,192 @@ namespace Kordon.Game.Ui
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000f, 4000f));
             _flashOverlay.raycastTarget = false;
 
-            BuildMagazineRows(root);
+            BuildLoadoutBlock(root);
+            BuildScoreboard(root);
 
-            _inspect = UiBuilder.LabelAt(root, "Inspect", "", 24, UiBuilder.Paper,
-                new Vector2(1f, 0f),
-                new Vector2(-HudLayout.EdgeInset, HudLayout.InspectLine().Bottom),
-                new Vector2(HudLayout.ColumnWidth, HudLayout.InspectLineHeight),
-                TextAnchor.MiddleRight);
-
-            _hint = UiBuilder.LabelAt(root, "Hint",
-                "tap R  reload     hold R  inspect magazine", 18,
-                new Color(0.78f, 0.80f, 0.77f, 0.7f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 24f), new Vector2(520f, 28f), TextAnchor.MiddleCenter);
-
-            _stateLine = UiBuilder.LabelAt(root, "State", "", 20, UiBuilder.Warning,
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(1200f, 30f),
-                TextAnchor.MiddleCenter);
-
-            _matchLine = UiBuilder.LabelAt(root, "MatchLine", "", 24, UiBuilder.Paper,
-                new Vector2(0f, 1f), new Vector2(32f, -26f), new Vector2(900f, 34f),
+            _matchLine = UiBuilder.LabelAt(root, "MatchLine", "", 22, UiBuilder.Paper,
+                new Vector2(0f, 1f), new Vector2(30f, -24f), new Vector2(760f, 30f),
                 TextAnchor.UpperLeft);
 
-            _objective = UiBuilder.LabelAt(root, "Objective", "", 20, UiBuilder.Accent,
-                new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(1100f, 30f),
+            _objective = UiBuilder.LabelAt(root, "Objective", "", 19, UiBuilder.Accent,
+                new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(900f, 28f),
                 TextAnchor.UpperCenter);
 
-            _subtitle = UiBuilder.LabelAt(root, "Subtitle", "", 24,
+            _subtitle = UiBuilder.LabelAt(root, "Subtitle", "", 22,
                 new Color(0.96f, 0.96f, 0.93f, 0.96f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 138f), new Vector2(1100f, 34f), TextAnchor.MiddleCenter);
+                new Vector2(0f, 96f), new Vector2(1000f, 30f), TextAnchor.MiddleCenter);
 
-            _toast = UiBuilder.LabelAt(root, "Toast", "", 30, UiBuilder.Danger,
-                new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 44f),
+            _stateLine = UiBuilder.LabelAt(root, "State", "", 19, UiBuilder.Warning,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(1100f, 28f),
+                TextAnchor.MiddleCenter);
+
+            _toast = UiBuilder.LabelAt(root, "Toast", "", 27, UiBuilder.Danger,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 170f), new Vector2(1200f, 40f),
                 TextAnchor.MiddleCenter);
 
             _hitMarker = UiBuilder.Panel(root, "HitMarker", new Color(1f, 1f, 1f, 0.85f),
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7f, 7f));
             _hitMarker.raycastTarget = false;
 
-            _voiceLine = UiBuilder.LabelAt(root, "Voice", "VOICE   not configured", 17,
-                UiBuilder.Dim, new Vector2(0f, 0f), new Vector2(230f, 28f),
-                new Vector2(420f, 24f), TextAnchor.MiddleCenter);
-
-            _grenadeLine = UiBuilder.LabelAt(root, "Grenade", "", 18, UiBuilder.Paper,
-                new Vector2(1f, 0f),
-                new Vector2(-HudLayout.EdgeInset, HudLayout.GrenadeLine().Bottom),
-                new Vector2(HudLayout.ColumnWidth, HudLayout.GrenadeLineHeight),
-                TextAnchor.MiddleRight);
-
-            BuildWeaponPanel(root);
-            BuildScoreboard(root);
+            _voiceLine = UiBuilder.LabelAt(root, "Voice", "VOICE   not configured", 16,
+                UiBuilder.Dim, new Vector2(0f, 0f), new Vector2(200f, 22f),
+                new Vector2(360f, 22f), TextAnchor.MiddleLeft);
         }
 
         /// <summary>
-        /// Which weapon is in hand, bottom right.  The magazine strip alone never said
-        /// that: with a primary, a sidearm and a grenade slot the player had to
-        /// remember the last key they pressed.  One row per slot, the active one lit in
-        /// the accent colour, the others dimmed, each row carrying how many magazines
-        /// of that weapon are left.
+        /// The whole bottom right block, bottom to top: loadout card, primary magazines,
+        /// sidearm magazines, inspect readout.  The card states which slot is in hand and
+        /// what is in its pouches; the rows show the magazines themselves as silhouettes
+        /// (white full, yellow partial, red empty) and never a round count.
         /// </summary>
-        private void BuildWeaponPanel(RectTransform root)
+        private void BuildLoadoutBlock(RectTransform root)
         {
-            _weaponPanel = UiBuilder.Node(root, "WeaponPanel");
-            _weaponPanel.anchorMin = new Vector2(1f, 0f);
-            _weaponPanel.anchorMax = new Vector2(1f, 0f);
-            _weaponPanel.pivot = new Vector2(1f, 0f);
-            _weaponPanel.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.WeaponPanelHeight);
-            _weaponPanel.anchoredPosition =
-                new Vector2(-HudLayout.EdgeInset, HudLayout.WeaponPanel().Bottom);
-            Image background = _weaponPanel.gameObject.AddComponent<Image>();
-            background.color = new Color(0.05f, 0.06f, 0.07f, 0.55f);
-            background.raycastTarget = false;
+            HudRect card = HudLayout.LoadoutCard();
+            _loadoutCard = Panel(root, "LoadoutCard", card, HudIcons.Rounded(CardFill, CardBorder));
+
+            Text title = UiBuilder.Label(_loadoutCard, "Title", "LOADOUT", 12,
+                new Color(0.62f, 0.66f, 0.64f, 0.9f), TextAnchor.MiddleLeft);
+            RectTransform titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(0f, 1f);
+            titleRect.pivot = new Vector2(0f, 1f);
+            titleRect.sizeDelta = new Vector2(160f, 16f);
+            titleRect.anchoredPosition = new Vector2(14f, -9f);
+            title.fontStyle = FontStyle.Bold;
+
+            Image rule = UiBuilder.Panel(_loadoutCard, "Rule", new Color(1f, 1f, 1f, 0.08f),
+                new Vector2(0.5f, 1f), Vector2.zero, new Vector2(HudLayout.ColumnWidth - 24f, 1f));
+            rule.rectTransform.anchoredPosition = new Vector2(0f, -24f);
+            rule.raycastTarget = false;
 
             string[] keys = { "1", "2", "3" };
             for (int i = 0; i < 3; i++)
             {
-                RectTransform tab = UiBuilder.Node(_weaponPanel, "Slot" + i);
-                tab.anchorMin = new Vector2(0f, 1f);
-                tab.anchorMax = new Vector2(1f, 1f);
-                tab.pivot = new Vector2(0.5f, 1f);
-                tab.sizeDelta = new Vector2(-16f, 24f);
-                tab.anchoredPosition = new Vector2(0f, -(14f + i * 28f));
-                _weaponTabs[i] = tab.gameObject.AddComponent<Image>();
-                _weaponTabs[i].color = new Color(1f, 1f, 1f, 0f);
-                _weaponTabs[i].raycastTarget = false;
+                RectTransform row = UiBuilder.Node(_loadoutCard, "Slot" + i);
+                row.anchorMin = new Vector2(0f, 1f);
+                row.anchorMax = new Vector2(1f, 1f);
+                row.pivot = new Vector2(0.5f, 1f);
+                row.sizeDelta = new Vector2(-16f, 26f);
+                row.anchoredPosition = new Vector2(0f, -(27f + i * 27f));
 
-                Text key = UiBuilder.Label(tab, "Key", keys[i], 15, UiBuilder.Dim,
-                    TextAnchor.MiddleLeft);
-                RectTransform keyRect = key.rectTransform;
-                keyRect.anchorMin = Vector2.zero;
-                keyRect.anchorMax = new Vector2(0f, 1f);
-                keyRect.pivot = new Vector2(0f, 0.5f);
-                keyRect.sizeDelta = new Vector2(22f, 0f);
-                keyRect.anchoredPosition = new Vector2(4f, 0f);
+                _rowBackdrops[i] = row.gameObject.AddComponent<Image>();
+                _rowBackdrops[i].sprite = HudIcons.Rounded(ActiveFill, new Color(0f, 0f, 0f, 0f));
+                _rowBackdrops[i].type = Image.Type.Sliced;
+                _rowBackdrops[i].raycastTarget = false;
 
-                Text name = UiBuilder.Label(tab, "Name", string.Empty, 16, UiBuilder.Dim,
+                _rowPip[i] = UiBuilder.Panel(row, "Pip", UiBuilder.Accent,
+                    new Vector2(0f, 0.5f), new Vector2(4f, 0f), new Vector2(3f, 16f));
+                _rowPip[i].raycastTarget = false;
+
+                RectTransform chip = UiBuilder.Node(row, "Key");
+                chip.anchorMin = new Vector2(0f, 0.5f);
+                chip.anchorMax = new Vector2(0f, 0.5f);
+                chip.pivot = new Vector2(0f, 0.5f);
+                chip.sizeDelta = new Vector2(22f, 18f);
+                chip.anchoredPosition = new Vector2(11f, 0f);
+                _keyChips[i] = chip.gameObject.AddComponent<Image>();
+                _keyChips[i].sprite = HudIcons.Rounded(ChipFill, new Color(1f, 1f, 1f, 0.06f));
+                _keyChips[i].type = Image.Type.Sliced;
+                _keyChips[i].raycastTarget = false;
+
+                _keyLabels[i] = UiBuilder.Label(chip, "Key", keys[i], 12, UiBuilder.Dim,
+                    TextAnchor.MiddleCenter);
+                Stretch(_keyLabels[i].rectTransform, 0f, 0f);
+
+                _weaponNames[i] = UiBuilder.Label(row, "Name", string.Empty, 16, UiBuilder.Dim,
                     TextAnchor.MiddleLeft);
-                RectTransform nameRect = name.rectTransform;
+                RectTransform nameRect = _weaponNames[i].rectTransform;
                 nameRect.anchorMin = Vector2.zero;
                 nameRect.anchorMax = Vector2.one;
-                nameRect.offsetMin = new Vector2(28f, 0f);
-                nameRect.offsetMax = new Vector2(-84f, 0f);
-                _weaponNames[i] = name;
+                nameRect.offsetMin = new Vector2(40f, 0f);
+                nameRect.offsetMax = new Vector2(-78f, 0f);
+                _weaponNames[i].fontStyle = FontStyle.Bold;
 
-                Text count = UiBuilder.Label(tab, "Count", string.Empty, 15, UiBuilder.Dim,
+                _weaponStates[i] = UiBuilder.Label(row, "State", string.Empty, 14, UiBuilder.Dim,
                     TextAnchor.MiddleRight);
-                RectTransform countRect = count.rectTransform;
-                countRect.anchorMin = new Vector2(1f, 0f);
-                countRect.anchorMax = new Vector2(1f, 1f);
-                countRect.pivot = new Vector2(1f, 0.5f);
-                countRect.sizeDelta = new Vector2(80f, 0f);
-                countRect.anchoredPosition = new Vector2(-6f, 0f);
-                _weaponCounts[i] = count;
+                RectTransform stateRect = _weaponStates[i].rectTransform;
+                stateRect.anchorMin = new Vector2(1f, 0f);
+                stateRect.anchorMax = new Vector2(1f, 1f);
+                stateRect.pivot = new Vector2(1f, 0.5f);
+                stateRect.sizeDelta = new Vector2(74f, 0f);
+                stateRect.anchoredPosition = new Vector2(-10f, 0f);
             }
+
+            HudRect mags = HudLayout.MagazineRow();
+            _strip = Panel(root, "PrimaryMags", mags, null);
+            HorizontalLayoutGroup primary = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
+            primary.spacing = HudLayout.MagazineIconGap;
+            primary.childAlignment = TextAnchor.MiddleRight;
+            primary.childControlWidth = false;
+            primary.childControlHeight = false;
+            primary.childForceExpandWidth = false;
+            primary.childForceExpandHeight = false;
+            RowCaption(root, mags, "PRIMARY");
+
+            HudRect sidearm = HudLayout.SidearmRow();
+            _sidearmStrip = Panel(root, "SidearmMags", sidearm, null);
+            HorizontalLayoutGroup secondary =
+                _sidearmStrip.gameObject.AddComponent<HorizontalLayoutGroup>();
+            secondary.spacing = HudLayout.MagazineIconGap;
+            secondary.childAlignment = TextAnchor.MiddleRight;
+            secondary.childControlWidth = false;
+            secondary.childControlHeight = false;
+            secondary.childForceExpandWidth = false;
+            secondary.childForceExpandHeight = false;
+            RowCaption(root, sidearm, "SIDEARM");
+
+            HudRect inspect = HudLayout.InspectLine();
+            _inspect = UiBuilder.LabelAt(root, "Inspect", string.Empty, 22, UiBuilder.Accent,
+                new Vector2(1f, 0f),
+                new Vector2(-inspect.Right, inspect.Bottom),
+                new Vector2(inspect.Width, inspect.Height), TextAnchor.MiddleRight);
+
+            _hint = UiBuilder.LabelAt(root, "Hint",
+                "tap R  reload     hold R  inspect", 16,
+                new Color(0.78f, 0.80f, 0.77f, 0.72f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 28f), new Vector2(HudLayout.HintHalfWidth * 2f, 24f),
+                TextAnchor.MiddleCenter);
         }
 
-        /// <summary>
-        /// Both magazine rows live in the lower right, above the weapon panel: the
-        /// reference the design follows puts the magazines there, and the strip in the
-        /// bottom centre competed with the subtitle line and the interaction hint.
-        /// The sidearm magazines are their own row because they are a separate pouch -
-        /// stacking them with the rifle magazines made the two look like one pool.
-        /// </summary>
-        private void BuildMagazineRows(RectTransform root)
+        /// <summary>A fixed size, bottom-right anchored panel rectangle.</summary>
+        private static RectTransform Panel(RectTransform root, string name, HudRect rect,
+            Sprite sprite)
         {
-            _strip = UiBuilder.Node(root, "MagazineStrip");
-            _strip.anchorMin = new Vector2(1f, 0f);
-            _strip.anchorMax = new Vector2(1f, 0f);
-            _strip.pivot = new Vector2(1f, 0f);
-            _strip.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.MagazineRowHeight);
-            _strip.anchoredPosition = new Vector2(-HudLayout.EdgeInset, HudLayout.MagazineRow().Bottom);
-            HorizontalLayoutGroup line = _strip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            line.spacing = 5f;
-            line.childAlignment = TextAnchor.LowerRight;
-            line.childControlWidth = false;
-            line.childControlHeight = false;
-            line.childForceExpandWidth = false;
-            line.childForceExpandHeight = false;
+            RectTransform node = UiBuilder.Node(root, name);
+            node.anchorMin = new Vector2(1f, 0f);
+            node.anchorMax = new Vector2(1f, 0f);
+            node.pivot = new Vector2(1f, 0f);
+            node.sizeDelta = new Vector2(rect.Width, rect.Height);
+            node.anchoredPosition = new Vector2(-rect.Right, rect.Bottom);
+            if (sprite == null)
+            {
+                return node;
+            }
 
-            _secondaryStrip = UiBuilder.Node(root, "SecondaryStrip");
-            _secondaryStrip.anchorMin = new Vector2(1f, 0f);
-            _secondaryStrip.anchorMax = new Vector2(1f, 0f);
-            _secondaryStrip.pivot = new Vector2(1f, 0f);
-            _secondaryStrip.sizeDelta = new Vector2(HudLayout.ColumnWidth, HudLayout.SidearmRowHeight);
-            _secondaryStrip.anchoredPosition =
-                new Vector2(-HudLayout.EdgeInset, HudLayout.SidearmRow().Bottom);
-            HorizontalLayoutGroup sidearm =
-                _secondaryStrip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            sidearm.spacing = 5f;
-            sidearm.childAlignment = TextAnchor.LowerRight;
-            sidearm.childControlWidth = false;
-            sidearm.childControlHeight = false;
-            sidearm.childForceExpandWidth = false;
-            sidearm.childForceExpandHeight = false;
+            Image image = node.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.raycastTarget = false;
+            return node;
         }
+
+        private void RowCaption(RectTransform root, HudRect rect, string caption)
+        {
+            Text label = UiBuilder.LabelAt(root, caption + " MAGS", caption + " MAGS",
+                11, new Color(0.62f, 0.66f, 0.64f, 0.78f), new Vector2(1f, 0f),
+                new Vector2(-rect.Right - rect.Width + 2f, rect.Bottom + 6f),
+                new Vector2(160f, 16f), TextAnchor.MiddleLeft);
+            label.fontStyle = FontStyle.Bold;
+        }
+
+        private static void Stretch(RectTransform rect, float horizontal, float vertical)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(horizontal, vertical);
+            rect.offsetMax = new Vector2(-horizontal, -vertical);
+        }
+
         private void BuildScoreboard(RectTransform root)
         {
             Image board = UiBuilder.Panel(root, "Scoreboard", UiBuilder.Ink,
@@ -358,12 +407,13 @@ namespace Kordon.Game.Ui
 
             if (Weapons != null && Weapons.Loadout != null)
             {
-                AmmoHudSnapshot snapshot = Weapons.Loadout.BuildHudSnapshot(now);
-                RefreshStrip(snapshot);
+                LoadoutKit loadout = Weapons.Loadout;
+                AmmoHudSnapshot snapshot = loadout.BuildHudSnapshot(now);
+                RefreshMagazines(snapshot, _strip, _slotIcons,
+                    HudLayout.MagazineIconWidth, HudLayout.MagazineIconHeight);
+                RefreshSidearm(now);
+                RefreshLoadoutCard(snapshot);
                 RefreshInspect(snapshot);
-                RefreshGrenade(snapshot);
-                RefreshSecondaryStrip(now);
-                RefreshWeaponPanel(snapshot, _secondarySnapshot);
             }
 
             bool wantScoreboard = KordonInput.Held(InputAction.Scoreboard);
@@ -395,187 +445,147 @@ namespace Kordon.Game.Ui
             }
         }
 
-        private void RefreshWeaponPanel(AmmoHudSnapshot snapshot, AmmoHudSnapshot sidearm)
+        /// <summary>
+        /// The card: three slots with their key, name and pouch contents.  The active slot
+        /// is the only one in the accent colour, so "which weapon is in hand" is one
+        /// glance; the grenade row becomes the live fuze readout while one is cooking.
+        /// </summary>
+        private void RefreshLoadoutCard(AmmoHudSnapshot snapshot)
         {
-            if (Weapons == null || Weapons.Loadout == null)
-            {
-                return;
-            }
-
             LoadoutKit loadout = Weapons.Loadout;
             string primary = loadout.Primary != null && loadout.Primary.Weapon != null
-                ? loadout.Primary.Weapon.DisplayName
-                : "no primary";
+                ? loadout.Primary.Weapon.DisplayName.ToUpperInvariant()
+                : "NO PRIMARY";
             string secondary = loadout.Secondary != null && loadout.Secondary.Weapon != null
-                ? loadout.Secondary.Weapon.DisplayName
-                : "no sidearm";
-            string grenade = loadout.Grenade != null && !string.IsNullOrEmpty(loadout.Grenade.DisplayName)
-                ? loadout.Grenade.DisplayName
-                : "grenade";
+                ? loadout.Secondary.Weapon.DisplayName.ToUpperInvariant()
+                : "NO SIDEARM";
+            string grenade = loadout.Grenade != null &&
+                             !string.IsNullOrEmpty(loadout.Grenade.DisplayName)
+                ? loadout.Grenade.DisplayName.ToUpperInvariant()
+                : "GRENADE";
 
-            string[] labels = { primary, secondary, grenade + "   x" + loadout.GrenadesRemaining };
-            string[] counts =
+            string grenadeState = GrenadeReadout(loadout, snapshot, out Color grenadeColour);
+            string[] names = { primary, secondary, grenade };
+            string[] states = { MagazineCount(snapshot), MagazineCount(_secondarySnapshot), grenadeState };
+
+            for (int i = 0; i < 3; i++)
             {
-                MagazineCount(snapshot),
-                MagazineCount(sidearm),
-                loadout.GrenadesRemaining > 0 ? "HELD" : "NONE"
-            };
-
-            for (int i = 0; i < _weaponNames.Length; i++)
-            {
-                if (_weaponNames[i] == null)
-                {
-                    continue;
-                }
-
                 bool active = (int)loadout.Active == i;
-                _weaponNames[i].text = labels[i].ToUpperInvariant();
-                _weaponNames[i].color = active ? UiBuilder.Accent : UiBuilder.Dim;
-                if (_weaponCounts[i] != null)
-                {
-                    _weaponCounts[i].text = counts[i];
-                    _weaponCounts[i].color = active ? UiBuilder.Accent : UiBuilder.Dim;
-                }
+                Color text = active ? UiBuilder.Accent : UiBuilder.Dim;
+                _weaponNames[i].text = names[i];
+                _weaponNames[i].color = text;
+                _weaponStates[i].text = states[i];
+                _weaponStates[i].color = i == 2 ? grenadeColour : text;
 
-                if (_weaponTabs[i] != null)
-                {
-                    _weaponTabs[i].color = active
-                        ? new Color(0.88f, 0.46f, 0.13f, 0.16f)
-                        : new Color(1f, 1f, 1f, 0f);
-                }
+                _rowBackdrops[i].enabled = active;
+                _rowPip[i].enabled = active;
+                _keyChips[i].sprite = HudIcons.Rounded(
+                    active ? new Color(0.88f, 0.46f, 0.13f, 0.85f) : ChipFill, CardBorder);
+                _keyLabels[i].color = active ? UiBuilder.Ink : UiBuilder.Dim;
             }
         }
 
-        /// <summary>"4 MAG" style pouch summary. Never a round count: the pouch holds
-        /// magazines, and their contents stay unknown until the magazine is checked, so
-        /// this line deliberately shows only how many are left.</summary>
-        private static string MagazineCount(AmmoHudSnapshot snapshot) =>
-            snapshot == null || snapshot.Slots == null ? string.Empty : snapshot.Slots.Count + " MAG";
-
-        private void RefreshSecondaryStrip(float now)
+        /// <summary>
+        /// The grenade row doubles as the fuze readout: the count while they are carried,
+        /// and the burning fuze in warning or danger colour while one is cooked.  The
+        /// count of grenades is equipment, not ammunition, so it is always on screen.
+        /// </summary>
+        private string GrenadeReadout(LoadoutKit loadout, AmmoHudSnapshot snapshot,
+            out Color colour)
         {
-            if (_secondaryStrip == null || Weapons == null || Weapons.Loadout == null ||
-                Weapons.Loadout.Secondary == null)
+            colour = UiBuilder.Dim;
+            if (loadout.Grenade == null)
+            {
+                return string.Empty;
+            }
+
+            if (Grenades != null && Grenades.IsCooking)
+            {
+                float left = Mathf.Max(0f, loadout.Grenade.FuseSeconds - Grenades.CookSeconds);
+                colour = left <= loadout.Grenade.CookableMinFuse + 0.4f
+                    ? UiBuilder.Danger
+                    : UiBuilder.Warning;
+                return left.ToString("0.0") + " s";
+            }
+
+            int count = snapshot.GrenadesRemaining;
+            colour = count > 0 ? UiBuilder.Paper : UiBuilder.Danger;
+            return count > 0 ? "x" + count : "NONE";
+        }
+
+        /// <summary>"4 MAG" style pouch summary.  Never a round count: the pouch holds
+        /// magazines, and their contents stay unknown until the magazine is checked.</summary>
+        private static string MagazineCount(AmmoHudSnapshot snapshot) =>
+            snapshot == null || snapshot.Slots == null
+                ? string.Empty
+                : snapshot.Slots.Count + " MAG";
+
+        private void RefreshSidearm(float now)
+        {
+            if (Weapons == null || Weapons.Loadout == null || Weapons.Loadout.Secondary == null)
             {
                 return;
             }
 
-            AmmoHudSnapshot snapshot = Weapons.Loadout.Secondary.BuildHudSnapshot(now);
-            _secondarySnapshot = snapshot;
-            while (_secondarySlots.Count < snapshot.Slots.Count)
-            {
-                Image slot = UiBuilder.Panel(_secondaryStrip, "SideMag" + _secondarySlots.Count,
-                    UiBuilder.MagazineColor("empty"), new Vector2(0.5f, 0.5f), Vector2.zero,
-                    new Vector2(30f, 12f));
-                slot.raycastTarget = false;
-                LayoutElement element = slot.gameObject.AddComponent<LayoutElement>();
-                element.preferredWidth = 30f;
-                element.preferredHeight = 12f;
-                _secondarySlots.Add(slot);
-            }
-
-            for (int i = 0; i < _secondarySlots.Count; i++)
-            {
-                bool present = i < snapshot.Slots.Count;
-                _secondarySlots[i].gameObject.SetActive(present);
-                if (present)
-                {
-                    _secondarySlots[i].color = UiBuilder.MagazineColor(snapshot.Slots[i].ColorKey);
-                }
-            }
+            _secondarySnapshot = Weapons.Loadout.Secondary.BuildHudSnapshot(now);
+            RefreshMagazines(_secondarySnapshot, _sidearmStrip, _sidearmIcons,
+                HudLayout.SidearmIconWidth, HudLayout.SidearmIconHeight);
         }
 
-        private void RefreshStrip(AmmoHudSnapshot snapshot)
+        /// <summary>
+        /// Draws one row of magazine silhouettes, right aligned.  The icon carries the
+        /// pocket state as a colour (white full, yellow partial, red empty) and a bright
+        /// round on top when the magazine is chambered.
+        /// </summary>
+        private void RefreshMagazines(AmmoHudSnapshot snapshot, RectTransform row,
+            List<Image> icons, float width, float height)
         {
-            EnsureSlots(snapshot.Slots.Count);
+            if (row == null || snapshot == null || snapshot.Slots == null)
+            {
+                return;
+            }
 
-            for (int i = 0; i < _slotImages.Count; i++)
+            while (icons.Count < snapshot.Slots.Count)
+            {
+                RectTransform node = UiBuilder.Node(row, "Mag" + icons.Count);
+                node.anchorMin = new Vector2(1f, 0.5f);
+                node.anchorMax = new Vector2(1f, 0.5f);
+                node.pivot = new Vector2(0.5f, 0.5f);
+                node.sizeDelta = new Vector2(width, height);
+                Image icon = node.gameObject.AddComponent<Image>();
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                LayoutElement element = node.gameObject.AddComponent<LayoutElement>();
+                element.preferredWidth = width;
+                element.preferredHeight = height;
+                icons.Add(icon);
+            }
+
+            for (int i = 0; i < icons.Count; i++)
             {
                 bool present = i < snapshot.Slots.Count;
-                _slotImages[i].gameObject.SetActive(present);
-                _slotMarks[i].gameObject.SetActive(present);
+                icons[i].gameObject.SetActive(present);
                 if (!present)
                 {
                     continue;
                 }
 
                 MagazineHudSlot slot = snapshot.Slots[i];
-                _slotImages[i].color = UiBuilder.MagazineColor(slot.ColorKey);
-                _slotMarks[i].text = slot.IsChambered ? "|" : "";
+                Color colour = UiBuilder.MagazineColor(slot.ColorKey);
+                icons[i].sprite = HudIcons.Magazine(colour, slot.IsChambered);
             }
-        }
-
-        private void EnsureSlots(int count)
-        {
-            while (_slotImages.Count < count)
-            {
-                Image slot = UiBuilder.Panel(_strip, "Mag" + _slotImages.Count,
-                    UiBuilder.MagazineColor("empty"), new Vector2(0.5f, 0.5f), Vector2.zero,
-                    new Vector2(44f, 15f));
-                slot.raycastTarget = false;
-                LayoutElement element = slot.gameObject.AddComponent<LayoutElement>();
-                element.preferredWidth = 44f;
-                element.preferredHeight = 15f;
-                _slotImages.Add(slot);
-                _slotMarks.Add(UiBuilder.LabelAt(slot.transform, "Mark", "", 13,
-                    UiBuilder.Ink, new Vector2(0.5f, 0.5f), Vector2.zero,
-                    new Vector2(44f, 15f), TextAnchor.MiddleCenter));
-            }
-        }
-
-        /// <summary>
-        /// Grenade line: the count of carried grenades is equipment, not magazine
-        /// ammunition, so it is always visible.  While a grenade is cooked the line
-        /// shows the burning fuze instead - a warning you can read without a crosshair.
-        /// </summary>
-        private void RefreshGrenade(AmmoHudSnapshot snapshot)
-        {
-            if (_grenadeLine == null)
-            {
-                return;
-            }
-
-            GrenadeDefinition grenade = Weapons != null && Weapons.Loadout != null
-                ? Weapons.Loadout.Grenade
-                : null;
-            if (grenade == null)
-            {
-                _grenadeLine.text = string.Empty;
-                return;
-            }
-
-            string name = grenade.DisplayName.ToUpperInvariant();
-            if (Grenades != null && Grenades.IsCooking)
-            {
-                float left = Mathf.Max(0f, grenade.FuseSeconds - Grenades.CookSeconds);
-                _grenadeLine.color = left <= grenade.CookableMinFuse + 0.4f
-                    ? UiBuilder.Danger
-                    : UiBuilder.Warning;
-                _grenadeLine.text = name + "   HELD   " + left.ToString("0.0") + " s";
-                return;
-            }
-
-            int count = snapshot.GrenadesRemaining;
-            _grenadeLine.color = count > 0 ? UiBuilder.Paper : UiBuilder.Dim;
-            _grenadeLine.text = count > 0
-                ? name + "   x" + count + "   3 select"
-                : name + "   none left";
         }
 
         private void RefreshInspect(AmmoHudSnapshot snapshot)
         {
             if (snapshot.MayShowExactCount)
             {
-                _inspect.text = snapshot.InspectedMagazineName + "   " +
-                                snapshot.InspectedRounds + " / " + snapshot.InspectedCapacity +
-                                (snapshot.HasReserveAmmunition
-                                    ? "   spares in pouch"
-                                    : "   last magazine");
+                _inspect.text = snapshot.InspectedRounds + " / " + snapshot.InspectedCapacity;
                 _hint.gameObject.SetActive(false);
             }
             else
             {
-                _inspect.text = "";
+                _inspect.text = string.Empty;
                 _hint.gameObject.SetActive(ShowHints);
             }
         }

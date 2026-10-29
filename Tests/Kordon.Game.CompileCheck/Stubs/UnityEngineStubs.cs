@@ -633,6 +633,8 @@ namespace UnityEngine
 
     public struct Vector4
     {
+        public static Vector4 zero => new Vector4(0f, 0f, 0f, 0f);
+
         public float x;
         public float y;
         public float z;
@@ -647,10 +649,35 @@ namespace UnityEngine
         }
     }
 
+    public enum FilterMode
+    {
+        Point = 0,
+        Bilinear = 1,
+        Trilinear = 2,
+    }
+
+    public enum TextureWrapMode
+    {
+        Repeat = 0,
+        Clamp = 1,
+        Mirror = 2,
+    }
+
+    public enum TextureFormat
+    {
+        Alpha8 = 1,
+        RGB24 = 3,
+        RGBA32 = 4,
+        ARGB32 = 5,
+        BGRA32 = 14,
+    }
+
     public class Texture : Object
     {
         public int width { get; set; }
         public int height { get; set; }
+        public FilterMode filterMode { get; set; }
+        public TextureWrapMode wrapMode { get; set; }
     }
 
     public class RenderTexture : Texture
@@ -678,6 +705,12 @@ namespace UnityEngine
     public class Texture2D : Texture
     {
         public Texture2D(int width, int height)
+        {
+            this.width = width;
+            this.height = height;
+        }
+
+        public Texture2D(int width, int height, TextureFormat format, bool mipChain)
         {
             this.width = width;
             this.height = height;

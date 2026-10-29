@@ -84,9 +84,19 @@ namespace UnityEngine
         }
     }
 
+    public enum SpriteMeshType
+    {
+        FullRect = 0,
+        Tight = 1,
+    }
+
     public class Sprite : Object
     {
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot) => new Sprite();
+
+        public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot,
+            float pixelsPerUnit, uint extrude, SpriteMeshType meshType, Vector4 border) =>
+            new Sprite();
     }
 
     public class Font : Object
@@ -168,6 +178,7 @@ namespace UnityEngine.UI
         public float fillAmount { get; set; } = 1f;
         public bool fillCenter { get; set; } = true;
         public float pixelsPerUnitMultiplier { get; set; } = 1f;
+        public bool preserveAspect { get; set; }
         public Image.Type type { get; set; }
 
         public enum Type
