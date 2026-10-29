@@ -286,6 +286,91 @@ def check_package_manifest():
                      "and the package versions are pinned")
 
 
+# Import settings the game's look depends on.  These are invisible to a compiler
+# and to a static analyser, and wrong values do not error: they just make the art
+# look flat and unfinished at runtime.
+def check_texture_import_settings():
+    textures = os.path.join(ROOT, "Assets", "_Project", "Art", "Textures")
+    if not os.path.isdir(textures):
+        failures.append("texture folder missing: Assets/_Project/Art/Textures")
+        return
+
+    checked = 0
+    problems = []
+    for name in sorted(os.listdir(textures)):
+        if not name.endswith(".png"):
+            continue
+        meta_path = os.path.join(textures, name + ".meta")
+        if not os.path.exists(meta_path):
+            problems.append(f"{name}: no .meta (import settings would be guessed by Unity)")
+            continue
+        meta = read(meta_path)
+        checked += 1
+        srgb = re.search(r"sRGBTexture:\s*(\d)", meta)
+        kind = (re.search(r"^\s*textureType:\s*(\d)", meta, re.M) or [None, "0"])[1]
+        if name.endswith("_normal.png"):
+            if kind != "1":
+                problems.append(f"{name}: textureType is {kind}, must be 1 (NormalMap) - "
+                                "otherwise the surface normal map is sampled as plain colour")
+            if srgb and srgb.group(1) != "0":
+                problems.append(f"{name}: normal map must be linear, sRGB is on")
+        elif name.endswith("_metsmo.png"):
+            if srgb and srgb.group(1) != "0":
+                problems.append(f"{name}: metallic/smoothness mask must be linear, sRGB is on")
+        elif name.endswith("_albedo.png"):
+            if srgb and srgb.group(1) != "1":
+                problems.append(f"{name}: albedo must be sRGB, it is linear")
+
+    if problems:
+        failures.append("texture import settings that would make the art look wrong:\n  " +
+                        "\n  ".join(problems))
+    elif checked:
+        notes.append(f"{checked} texture .meta files carry the import settings the art needs "
+                     "(sRGB albedo, linear normal and mask maps, normals typed as NormalMap)")
+
+
+def check_imported_material_contract():
+    """Every material a Blender FBX carries must resolve to an authored material.
+
+    The kit exports its materials as KRD_<surface>; the game strips that prefix
+    and loads Kordon/Materials/M_<surface>.  If a name does not resolve, Unity
+    happily renders the untextured imported material - the map looks flat grey and
+    nothing errors.  That is a content contract, so it is checked like one.
+    """
+    models = os.path.join(ROOT, "Assets", "_Project", "Art", "Models")
+    materials = os.path.join(ROOT, "Assets", "_Project", "Art", "Resources", "Kordon",
+                             "Materials")
+    if not os.path.isdir(models) or not os.path.isdir(materials):
+        failures.append("art folder missing: Models/ or Resources/Kordon/Materials/")
+        return
+
+    authored = {name[: -len(".mat")] for name in os.listdir(materials) if name.endswith(".mat")}
+    prefix = "KRD_"
+    imported = {}
+    for base, _, files in os.walk(models):
+        for name in files:
+            if not name.lower().endswith(".fbx"):
+                continue
+            path = os.path.join(base, name)
+            with open(path, "rb") as handle:
+                data = handle.read()
+            for match in re.finditer(rb"KRD_[a-z_0-9]+", data):
+                imported.setdefault(match.group().decode(), set()).add(name)
+
+    unmapped = []
+    for material, owners in sorted(imported.items()):
+        surface = material[len(prefix):].lower()
+        if "M_" + surface not in authored:
+            unmapped.append(f"{material} (in {', '.join(sorted(owners)[:3])}) has no "
+                            f"M_{surface}.mat")
+
+    if unmapped:
+        failures.append("FBX materials that would render untextured:\n  " + "\n  ".join(unmapped))
+    elif imported:
+        notes.append(f"{len(imported)} imported FBX materials all resolve to an authored "
+                     "material (the map and weapons never fall back to a grey import)")
+
+
 def check_build_scene():
     scenes = os.path.join(ROOT, "Assets", "_Project", "Scenes")
     script = os.path.join(SCRIPTS, "Editor", "BuildScript.cs")
@@ -304,6 +389,8 @@ def main() -> int:
     check_compile_coverage()
     check_content_ids()
     check_build_scene()
+    check_imported_material_contract()
+    check_texture_import_settings()
     check_package_manifest()
     check_shaders_ship_in_build()
 

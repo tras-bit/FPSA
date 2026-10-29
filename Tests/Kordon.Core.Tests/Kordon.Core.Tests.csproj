@@ -8,9 +8,10 @@
     so every game rule - 50 kill victory, magazine/reload/inspect behaviour,
     ammo hiding, damage/penetration, respawn, match end, anti-cheat validators -
     can be compiled and executed by plain `dotnet test`, with no Unity editor
-    and no Unity licence.  The very same tests also run inside Unity through
-    Assets/_Project/Scripts/Tests/EditMode (Unity Test Framework), which links
-    against the identical source files.
+    and no Unity licence.  The suite is xunit based on purpose: it runs in CI on
+    every push and needs no editor, no licence and no Test Runner.  It is not
+    mirrored into an in-editor NUnit assembly, because a second copy of the same
+    assertions is a second thing to keep true.
   -->
 
   <PropertyGroup>

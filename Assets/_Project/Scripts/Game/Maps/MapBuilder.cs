@@ -64,9 +64,10 @@ namespace Kordon.Game.Maps
     /// </summary>
     public static class SurfaceMaterialLibrary
     {
-        private const string ResourceRoot = "Kordon/Materials/M_";
+        private const string ResourceRoot = "Kordon/Materials/" + SurfaceNaming.MaterialPrefix;
         private static readonly Dictionary<string, Material> Cache =
             new Dictionary<string, Material>();
+        private static readonly HashSet<string> Warned = new HashSet<string>();
 
         public static Material ForSurface(string surface)
         {
@@ -79,7 +80,7 @@ namespace Kordon.Game.Maps
             {
                 material = Resources.Load<Material>(ResourceRoot + surface);
                 Cache[surface] = material;
-                if (material == null)
+                if (material == null && Warned.Add(surface))
                 {
                     Debug.LogWarning("[kordon] no material for surface '" + surface + "'");
                 }
@@ -87,6 +88,10 @@ namespace Kordon.Game.Maps
 
             return material;
         }
+
+        /// <summary>Imported material name ("KRD_steel_rust") to surface id ("steel_rust").</summary>
+        public static string SurfaceFromImportedName(string materialName) =>
+            SurfaceNaming.FromImportedMaterial(materialName);
 
         /// <summary>Replace every imported slot material with the authored one.</summary>
         public static void Apply(GameObject instance)
@@ -102,12 +107,10 @@ namespace Kordon.Game.Maps
                         continue;
                     }
 
-                    string surface = slots[i].name;
-                    // Unity suffixes instantiated material names; imported ones are bare.
-                    int space = surface.IndexOf(' ');
-                    if (space > 0)
+                    string surface = SurfaceFromImportedName(slots[i].name);
+                    if (string.IsNullOrEmpty(surface))
                     {
-                        surface = surface.Substring(0, space);
+                        continue;
                     }
 
                     Material authored = ForSurface(surface);
