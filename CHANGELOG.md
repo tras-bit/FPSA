@@ -3,6 +3,44 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.7 - 2026-10-29
+
+The HUD is redesigned. 1.0.6 moved the magazines into the lower right but drew them
+as flat bars inside a cramped black box, which is what the screenshot of that build
+showed; this round rebuilds the whole block around a proper loadout card.
+
+### Changed
+
+* **Loadout card.** A rounded card with a header rule and one row per slot: a key
+  chip, the weapon name and what its pouch holds (`4 MAG`, `x2` grenades). The active
+  slot is the only row in the accent colour and the only one with a lit backdrop and
+  a left pip, so "which weapon is in hand" is one glance instead of a remembered
+  keypress. The grenade row becomes the live fuze readout (`1.8 s`, warning then
+  danger colour) while a grenade is cooked.
+* **Magazines are magazines.** The HUD icon used to be a 44 x 15 coloured rectangle,
+  which reads as a progress bar. Icons are now drawn as curved box magazine
+  silhouettes - tapered body, floor plate, feed lips, ribs, and a bright round on top
+  when the magazine is chambered - generated at runtime into cached textures by
+  `HudIcons`, so the project ships no extra image files and the match pays nothing
+  after the first frame. Primary magazines are 22 x 36 px and the sidearm's are
+  smaller (15 x 24) so the two pouches read as different things.
+* **Row captions and spacing.** PRIMARY MAGS and SIDEARM MAGS label their rows; the
+  inspect readout (`14 / 30`) sits above them and is the only place an exact count
+  ever appears. The whole block is 258 px tall and 360 wide on 720p and up.
+* **Subtitles moved above the block.** At 138 px from the bottom they shared a band
+  with the card on a 1280 wide screen, so a long subtitle would have been drawn
+  across it.
+
+### Verified
+
+* The block's geometry lives in `Kordon.Core.Ui.HudLayout` and is unit tested on six
+  screen sizes from 1280x720 to 3440x1440: rows never overlap, the block stays clear
+  of the centred hint, subtitles clear the block, six primary magazines plus captions
+  fit the row, and the icons are taller than they are wide.
+* `docs/art/ui-hud-layout.png` is drawn from those same numbers by
+  `Tools/blender/draw_hud.py`. It is a layout reference, honestly labelled as such -
+  this environment has no Unity editor, so the HUD cannot be captured in game.
+
 ## 1.0.6 - 2026-10-29
 
 The map is playable again, the weapons have real detail, the magazine reload is

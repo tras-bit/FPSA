@@ -7,7 +7,7 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (265 tests) | **265 passed, 0 failed** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (268 tests) | **268 passed, 0 failed** |
 | Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **106 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
@@ -78,6 +78,33 @@ What this does **not** prove: that the collider fix feels right in a live game.
 That needs the Unity editor and a Windows build, neither of which exists here. The
 geometry audit and the compile check cover the failure that was actually observed,
 but a first person play test remains the missing verification.
+
+## 1.0.7 HUD verification (executed here)
+
+The 1.0.6 HUD put the magazines in the lower right but drew them as flat bars in a
+cramped box.  This round replaces the block with a loadout card plus magazine
+silhouettes; the geometry and the icon rasteriser are what was verified.
+
+* **Geometry is unit tested, not eyeballed.** `Kordon.Core.Ui.HudLayout` owns the
+  edge inset, column width, the four row heights and the gaps, and
+  `HudLayoutTests` (15 tests) checks six screen sizes from 1280x720 to 3440x1440:
+  no row overlaps another, the block never reaches the centred interaction hint,
+  subtitles sit above the block, six primary magazines plus their caption fit the
+  row, and the magazine icons are taller than they are wide (a horizontal bar was
+  exactly the 1.0.6 mistake).
+* **Icons are generated, not loaded.** `HudIcons` rasterises a rounded nine-sliced
+  panel, a curved magazine (tapered body, floor plate, feed lips, three ribs, a
+  bright round when chambered) and a disc into `Texture2D`s cached by colour, so the
+  pocket rule still comes from `UiBuilder.MagazineColor` and no image files ship.
+  This cannot be rendered here - there is no Unity - so what is verified is that it
+  compiles against the Unity API stubs with 0 errors and 0 warnings, and that
+  `Tools/blender/draw_hud.py` draws the same silhouettes from the same numbers for
+  the reference image.
+* **The reference image is labelled as a reference.** `docs/art/ui-hud-layout.png`
+  is a layout mock, not a screenshot; the caption inside the image says so.
+
+What this does not prove: how the HUD looks in game. Font rendering, sprite
+filtering and the real 1280x720 output need the Unity editor.
 
 ## What was verified by generation (executed here)
 
@@ -176,7 +203,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 265 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 268 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity
