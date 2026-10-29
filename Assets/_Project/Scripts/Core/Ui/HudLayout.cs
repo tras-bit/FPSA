@@ -102,6 +102,16 @@ namespace Kordon.Core.Ui
         /// <summary>Total height the block needs from the bottom edge of the screen.</summary>
         public static float ColumnHeight => InspectLine().Top;
 
+        /// <summary>Lift of the subtitle line above the top of the block.</summary>
+        public const float SubtitleLift = 16f;
+
+        /// <summary>
+        /// Bottom edge of the subtitle line.  Subtitles used to sit at 138 px from the
+        /// bottom, which is inside the block's band on a 1280 wide screen - a long
+        /// subtitle would have been drawn over the loadout card.
+        /// </summary>
+        public static float SubtitleBottom => ColumnHeight + SubtitleLift;
+
         /// <summary>How wide a row of n magazine icons is, including the gaps.</summary>
         public static float MagazineRowWidth(int count, float iconWidth, float gap) =>
             count <= 0 ? 0f : count * iconWidth + (count - 1) * gap;

@@ -104,6 +104,15 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
+        public void SubtitlesClearTheBlock()
+        {
+            // Subtitles are centred and can be long; they must sit above every row of the
+            // block instead of across the card.
+            Assert.True(HudLayout.SubtitleBottom > HudLayout.ColumnHeight);
+            Assert.True(HudLayout.SubtitleBottom < 720f * 0.5f);
+        }
+
+        [Fact]
         public void OverlapTestIsNotVacuous()
         {
             HudRect left = new HudRect(300f, 100f, 200f, 50f);

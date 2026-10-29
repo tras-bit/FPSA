@@ -128,7 +128,8 @@ namespace Kordon.Game.Ui
 
             _subtitle = UiBuilder.LabelAt(root, "Subtitle", "", 22,
                 new Color(0.96f, 0.96f, 0.93f, 0.96f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 96f), new Vector2(1000f, 30f), TextAnchor.MiddleCenter);
+                new Vector2(0f, HudLayout.SubtitleBottom), new Vector2(1000f, 30f),
+                TextAnchor.MiddleCenter);
 
             _stateLine = UiBuilder.LabelAt(root, "State", "", 19, UiBuilder.Warning,
                 new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(1100f, 28f),
