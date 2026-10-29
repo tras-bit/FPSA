@@ -133,7 +133,7 @@ namespace Kordon.Game.Maps
     public sealed class BuiltMap : MonoBehaviour
     {
         /// <summary>The map the local player is in, so the fall guard can find it.</summary>
-        public static BuiltMap Active { get; private set; }
+        public static BuiltMap Active { get; internal set; }
 
         public MapLayout Layout;
         public NavGraph Nav;
