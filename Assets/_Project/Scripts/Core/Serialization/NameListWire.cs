@@ -117,9 +117,12 @@ namespace Kordon.Core.Serialization
             for (int i = 0; i < name.Length && builder.Length < MaxNameLength; i++)
             {
                 char character = name[i];
+
+                // A newline or a tab is whitespace, not something to delete: dropping
+                // it would glue two words together in the scoreboard.
                 if (char.IsControl(character))
                 {
-                    continue;
+                    character = ' ';
                 }
 
                 if (char.IsWhiteSpace(character))
