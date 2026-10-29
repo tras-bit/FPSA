@@ -230,6 +230,62 @@ def check_shaders_ship_in_build():
                      "path resolves (build safe, never stripped)")
 
 
+# Built-in packages the project cannot compile without.  These are not gameplay
+# rules, they are the reason the project opens: a missing module is a hard
+# compile error inside someone else's package, which is exactly the kind of thing
+# the static checks used to miss.  Each entry states who needs it.
+REQUIRED_MODULES = {
+    "com.unity.modules.physics": "colliders, hitscan and grenade bounces",
+    "com.unity.modules.physics2d": "Netcode for GameObjects (NetworkRigidbodyBase uses Rigidbody2D/FixedJoint2D)",
+    "com.unity.modules.animation": "the bodycam and viewmodel motion",
+    "com.unity.modules.audio": "AudioSource, positional footsteps and gunfire",
+    "com.unity.modules.particlesystem": "grenade flash, smoke and sparks",
+    "com.unity.modules.imageconversion": "texture handling at import",
+    "com.unity.modules.imgui": "the editor tooling fallbacks",
+    "com.unity.modules.jsonserialize": "reading the JSON definitions",
+    "com.unity.modules.ui": "uGUI (Canvas, Image, Text, InputField)",
+    "com.unity.modules.uielements": "the editor UI layer",
+    "com.unity.modules.unitywebrequest": "content loading paths",
+}
+
+
+def check_package_manifest():
+    """Packages/manifest.json must actually contain what the project compiles against."""
+    path = os.path.join(ROOT, "Packages", "manifest.json")
+    if not os.path.exists(path):
+        failures.append("Packages/manifest.json missing: the project has no package set")
+        return
+    try:
+        manifest = json.loads(read(path))
+    except json.JSONDecodeError as error:
+        failures.append(f"Packages/manifest.json is not valid JSON: {error}")
+        return
+
+    dependencies = manifest.get("dependencies", {})
+    missing = [name for name in REQUIRED_MODULES if name not in dependencies]
+    for name in missing:
+        failures.append(f"built-in package missing from Packages/manifest.json: {name} "
+                        f"({REQUIRED_MODULES[name]})")
+
+    for package, version in (("com.unity.netcode.gameobjects", "2.2.0"),
+                             ("com.unity.test-framework", "1.4.5"),
+                             ("com.unity.ugui", "2.0.0")):
+        if dependencies.get(package) != version:
+            failures.append(f"{package} must be pinned to {version}, "
+                            f"found {dependencies.get(package)!r}")
+
+    # A module listed but never needed hides the next missing one; report drift
+    # without failing, so removing a module stays a deliberate choice.
+    unused = [name for name in dependencies
+              if name.startswith("com.unity.modules.") and name not in REQUIRED_MODULES]
+    if unused:
+        notes.append("unrequested built-in modules kept in the manifest: " + ", ".join(sorted(unused)))
+
+    if not missing:
+        notes.append(f"all {len(REQUIRED_MODULES)} required built-in packages are declared "
+                     "and the package versions are pinned")
+
+
 def check_build_scene():
     scenes = os.path.join(ROOT, "Assets", "_Project", "Scenes")
     script = os.path.join(SCRIPTS, "Editor", "BuildScript.cs")
@@ -248,6 +304,7 @@ def main() -> int:
     check_compile_coverage()
     check_content_ids()
     check_build_scene()
+    check_package_manifest()
     check_shaders_ship_in_build()
 
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)

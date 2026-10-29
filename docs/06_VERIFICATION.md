@@ -57,6 +57,15 @@ folder compiled by the type check, every content id referenced by code present i
   `ShaderLibrary` resource path stops resolving. Without this, `Shader.Find` would
   return null in a player build and the bodycam pass would vanish silently.
 
+* First real editor open (2026-10-29, Unity 6000.0.32f1) surfaced a defect the
+  static checks could not see: the manifest did not enable the built-in
+  **Physics 2D** package, so Netcode for GameObjects failed to compile
+  (`CS1069: Rigidbody2D ... UnityEngine.Physics2DModule`). Fixed by declaring
+  `com.unity.modules.physics2d`, and `Tools/verify/policy_check.py` now fails if a
+  required built-in package is missing or if the three package versions drift.
+  This is the honest cost of building without an editor: package-level errors only
+  appear when the project is actually opened.
+
 ## What could NOT be executed here, and why
 
 This sandbox is a Debian container with **no Unity Editor, no Windows machine, no

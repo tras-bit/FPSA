@@ -3,6 +3,31 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.1 - 2026-10-29
+
+Fixes found by opening the project in a real Unity 6000.0.32f1 editor - the first
+time the package layer was ever resolved by an actual editor rather than by static
+checks.
+
+### Fixed
+
+* `Packages/manifest.json` did not enable the built-in **Physics 2D** package, so
+  Netcode for GameObjects failed to compile on a fresh clone:
+  `CS1069: The type name 'Rigidbody2D' could not be found ... forwarded to assembly
+  'UnityEngine.Physics2DModule'` in `NetworkRigidbodyBase.cs`. The module is now
+  declared; every other required built-in module is declared too.
+
+### Added
+
+* `Tools/verify/policy_check.py` now checks the package manifest: every built-in
+  module the project (and Netcode for GameObjects) compiles against must be
+  declared, and Netcode for GameObjects 2.2.0 / Test Framework 1.4.5 / uGUI 2.0.0
+  must stay pinned. The check was verified by removing the module and watching CI
+  fail.
+* README "If the first open reports errors": the Physics 2D error, and the stale
+  `Library/ScriptAssemblies` (`Unity.Collections.CodeGen ... Unable to resolve
+  reference 'Unity.Collections'`) that a failed resolve leaves behind.
+
 ## 1.0.0 - 2026-10-29
 
 First release. Everything below is in this repository and is verified by the
