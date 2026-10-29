@@ -96,10 +96,10 @@ namespace Kordon.Core.Tests
         [Fact]
         public void SettingsScreenBudgetsFitTheirPanels()
         {
-            const float panelHeight = 940f;
-
-            // Left column: padding 24, spacing 8.
-            VerticalLayout left = new VerticalLayout(panelHeight, 24f, 24f, 8f);
+            // Left column: padding 24, spacing 8, 700 px panel.
+            const float leftPanelHeight = 700f;
+            const float rightPanelHeight = 820f;
+            VerticalLayout left = new VerticalLayout(leftPanelHeight, 24f, 24f, 8f);
             left.Allocate(44f);   // title
             left.Allocate(20f);   // section
             left.Allocate(1f);    // rule
@@ -119,9 +119,11 @@ namespace Kordon.Core.Tests
             left.Allocate(52f);   // apply
             left.Allocate(62f);   // note
             Assert.True(left.Spare >= 0f, "left column overflows by " + -left.Spare + " px");
+            // A panel much taller than its content leaves a dead band at the bottom.
+            Assert.True(left.Spare < 90f, "left panel has " + left.Spare + " px of empty space");
 
             // Right column: padding 24, spacing 5, 16 bindable rows of 33.
-            VerticalLayout right = new VerticalLayout(panelHeight, 24f, 24f, 5f);
+            VerticalLayout right = new VerticalLayout(rightPanelHeight, 24f, 24f, 5f);
             right.Allocate(44f);  // title
             right.Allocate(22f);  // hint
             for (int i = 0; i < 16; i++)
@@ -132,6 +134,7 @@ namespace Kordon.Core.Tests
             right.Allocate(24f);  // capture hint
             right.Allocate(46f);  // reset / back
             Assert.True(right.Spare >= 0f, "controls column overflows by " + -right.Spare + " px");
+            Assert.True(right.Spare < 90f, "controls panel has " + right.Spare + " px of empty space");
         }
 
         [Fact]

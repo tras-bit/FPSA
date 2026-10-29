@@ -24,7 +24,11 @@ namespace Kordon.Game.Ui
     {
         public override string Name => "settings";
 
-        private const float PanelHeight = 940f;
+        // Panel heights are derived from the content stacks, not guessed: the columns
+        // are 547 px and 759 px of rows respectively, so a fixed 940 left a dead band
+        // at the bottom of both panels.
+        private const float LeftPanelHeight = 700f;
+        private const float RightPanelHeight = 820f;
         private const float LeftWidth = 600f;
         private const float RightWidth = 860f;
 
@@ -58,9 +62,11 @@ namespace Kordon.Game.Ui
             background.raycastTarget = true;
 
             Image left = UiBuilder.Panel(Root, "AudioVideo", UiBuilder.Ink,
-                new Vector2(0.5f, 0.5f), new Vector2(-450f, 0f), new Vector2(LeftWidth, PanelHeight));
+                new Vector2(0.5f, 0.5f), new Vector2(-450f, 0f),
+                new Vector2(LeftWidth, LeftPanelHeight));
             Image right = UiBuilder.Panel(Root, "Controls", UiBuilder.Ink,
-                new Vector2(0.5f, 0.5f), new Vector2(300f, 0f), new Vector2(RightWidth, PanelHeight));
+                new Vector2(0.5f, 0.5f), new Vector2(300f, 0f),
+                new Vector2(RightWidth, RightPanelHeight));
 
             BuildAudioVideo(left.transform);
             BuildControls(right.transform);
@@ -72,7 +78,7 @@ namespace Kordon.Game.Ui
 
         private void BuildAudioVideo(Transform panel)
         {
-            UiStack stack = new UiStack(panel, "Stack", LeftWidth - 56f, PanelHeight,
+            UiStack stack = new UiStack(panel, "Stack", LeftWidth - 56f, LeftPanelHeight,
                 paddingTop: 24f, paddingBottom: 24f, spacing: 8f);
 
             Text title = stack.Text("SETTINGS", 34, UiBuilder.Paper, 44f, TextAnchor.MiddleCenter);
@@ -145,7 +151,7 @@ namespace Kordon.Game.Ui
 
         private void BuildControls(Transform panel)
         {
-            UiStack stack = new UiStack(panel, "Stack", RightWidth - 56f, PanelHeight,
+            UiStack stack = new UiStack(panel, "Stack", RightWidth - 56f, RightPanelHeight,
                 paddingTop: 24f, paddingBottom: 24f, spacing: 5f);
 
             Text title = stack.Text("CONTROLS", 34, UiBuilder.Paper, 44f, TextAnchor.MiddleCenter);
