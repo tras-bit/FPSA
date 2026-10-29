@@ -34,18 +34,16 @@ namespace Kordon.Game.Ui
         private int _primaryMagCount;
         private int _secondaryMagCount;
         private int _primarySight;
-        private int _secondarySight;
         private string _primaryMagId = string.Empty;
 
         private Text _primaryLabel;
         private Text _secondaryLabel;
         private Text _armorLabel;
-        private Text _grenadeLabel;
+        private Button _grenadeButton;
         private Text _planLabel;
         private Text _summaryLabel;
         private Text _sightLabel;
         private Button _sightButton;
-        private Text _secondarySightLabel;
         private Text _warningLabel;
 
         protected override void Build()
@@ -118,8 +116,8 @@ namespace Kordon.Game.Ui
                 TextAnchor.MiddleLeft);
             UiBuilder.Button(panel.transform, "CHANGE PLATES", () => CycleArmor(),
                 new Vector2(-330f, -92f), new Vector2(220f, 46f), 16);
-            UiBuilder.Button(panel.transform, "GRENADE: FRAG x2", () => CycleGrenade(),
-                new Vector2(-90f, -92f), new Vector2(240f, 46f), 16);
+            _grenadeButton = UiBuilder.Button(panel.transform, "GRENADE: FRAG x2",
+                () => CycleGrenade(), new Vector2(-90f, -92f), new Vector2(240f, 46f), 16);
 
             _summaryLabel = UiBuilder.LabelAt(panel.transform, "Summary", "", 18, UiBuilder.Dim,
                 new Vector2(0.5f, 0.5f), new Vector2(0f, -168f), new Vector2(1000f, 90f),
@@ -270,6 +268,18 @@ namespace Kordon.Game.Ui
 
         private static int Wrap(int value, int length) => ((value % length) + length) % length;
 
+        /// <summary>Kit screen caption: "FRAG x2", "SMOKE x2", "FLASH x2".</summary>
+        private static string GrenadeName(int index)
+        {
+            switch (Grenades[Wrap(index, Grenades.Length)])
+            {
+                case "frag_f1": return "FRAG x2";
+                case "smoke_rdg": return "SMOKE x2";
+                case "flash_zarya": return "FLASH x2";
+                default: return Grenades[Wrap(index, Grenades.Length)].ToUpperInvariant() + " x2";
+            }
+        }
+
         // --------------------------------------------------------------- refresh
 
         private void Refresh()
@@ -281,6 +291,11 @@ namespace Kordon.Game.Ui
                 : Primaries[_primary];
 
             _secondaryLabel.text = Secondaries[_secondary].ToUpperInvariant() + "  sidearm";
+            if (_grenadeButton != null)
+            {
+                UiBuilder.SetButtonText(_grenadeButton, "GRENADE: " + GrenadeName(_grenade));
+            }
+
             if (_sightButton != null)
             {
                 UiBuilder.SetButtonText(_sightButton,

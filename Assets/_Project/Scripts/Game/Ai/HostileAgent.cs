@@ -48,6 +48,13 @@ namespace Kordon.Game.Ai
         private readonly List<int> _path = new List<int>();
         private int _pathIndex;
         private float _repathTimer;
+
+        /// <summary>
+        /// Path searches are the expensive part of a hostile's think, so they are
+        /// throttled instead of running on every think tick. A completed path forces
+        /// an immediate one, so the agent never stalls waiting for the timer.
+        /// </summary>
+        private const float RepathIntervalSeconds = 0.9f;
         private float _fireTimer;
         private float _thinkTimer;
         private Vector3 _lastKnownTarget;
@@ -125,6 +132,7 @@ namespace Kordon.Game.Ai
             }
 
             float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.1f);
+            _repathTimer -= dt;
             _thinkTimer -= dt;
             if (_thinkTimer <= 0f)
             {
@@ -138,6 +146,7 @@ namespace Kordon.Game.Ai
 
         private void Think()
         {
+            Transform previousTarget = _target;
             _target = null;
             float bestDistance = float.MaxValue;
             if (Targets != null)
@@ -177,7 +186,7 @@ namespace Kordon.Game.Ai
                 _alerted = true;
                 _lastKnownTarget = _target.position;
                 _patrolGoal = _lastKnownTarget;
-                RequestPath(_lastKnownTarget);
+                MoveTo(_lastKnownTarget, _target != previousTarget);
                 return;
             }
 
@@ -186,7 +195,19 @@ namespace Kordon.Game.Ai
                 PickPatrolGoal();
             }
 
-            RequestPath(_patrolGoal);
+            MoveTo(_patrolGoal, _pathIndex >= _path.Count);
+        }
+
+        /// <summary>Repath at most once per interval, or immediately when forced.</summary>
+        private void MoveTo(Vector3 worldGoal, bool immediate)
+        {
+            if (!immediate && _repathTimer > 0f)
+            {
+                return;
+            }
+
+            _repathTimer = RepathIntervalSeconds;
+            RequestPath(worldGoal);
         }
 
         private void PickPatrolGoal()

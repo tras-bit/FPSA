@@ -65,7 +65,6 @@ namespace Kordon.Net
         private float _snapshotTimer;
         private float _spawnTimer;
         private int _hostilesSpawned;
-        private bool _extractionCalled;
         private bool _finished;
         private int _hostilesRemoved;
         private Transform _hostileRoot;
