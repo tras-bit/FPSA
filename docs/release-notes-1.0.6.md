@@ -42,6 +42,10 @@ animated.
 * **A panel shows which weapon is in hand.** One row per slot with its key, the
   weapon name and how many magazines that pouch has left; the active row is lit.
 
+`docs/art/ui-hud-layout.png` in this repository shows the new lower right column,
+drawn from the same numbers the game uses (`Kordon.Core.Ui.HudLayout`, unit tested
+against six screen sizes).
+
 ## The map was audited inside Blender
 
 `Tools/blender/audit_map.py` opens the real `ArtSource/Blender/<map>.blend` - the

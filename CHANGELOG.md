@@ -55,6 +55,9 @@ sliver of ground with nothing else in the world, then flying off the map.
   with its key, the weapon name and the number of magazines left in that pouch, the
   active row lit in the accent colour. Before this the HUD only showed magazines,
   so the player had to remember which key they pressed last.
+* **HUD layout reference** `docs/art/ui-hud-layout.png`, drawn by
+  `Tools/blender/draw_hud.py` from the same numbers the game uses, so the picture
+  and the code cannot drift apart.
 * **Map audit in Blender** (`Tools/blender/audit_map.py`). It opens the authored
   `.blend`, ray casts a 2 m grid downward over the playable bounds (1496 samples on
   Zavod-7, 1050 on Silent Kiln: 0 holes on both), checks every spawn has floor
