@@ -185,13 +185,14 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     parts.append(palm)
 
     # the heel of the palm, riding the backstrap, and the web at the thumb base
+    parts.append(_stitch("wrist_crease", 0.0245 * s, depth * 1.16, -0.056 * s, 0.030 * s))
     parts.append(blob("palm_heel", (0.0210 * s, depth * 0.95, -0.070 * s),
                       (0.0170 * s, 0.0210 * s, 0.0250 * s), GLOVE))
     parts.append(blob("palm_web", (0.0195 * s, depth * 0.55, -0.022 * s),
                       (0.0165 * s, 0.0180 * s, 0.0180 * s), GLOVE))
 
     # ---- four fingers, wrapping the front strap and closing on the far side
-    finger_z = (-0.030, -0.047, -0.064, -0.080)
+    finger_z = (-0.0295, -0.0477, -0.0659, -0.0841)
     for index, z in enumerate(finger_z):
         t = z * s
         lean = -0.004 * s * index if index < 2 else 0.004 * s * (index - 1)
@@ -201,13 +202,11 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
         distal = (-0.0110 * s, -depth - 0.004 * s, t - 0.005 * s)
         tip = (-0.0165 * s, depth * 0.35, t - 0.007 * s)
         points = [knuckle, mid_right, mid_front, distal, tip]
-        radii = [0.0102 * s, 0.0098 * s, 0.0092 * s, 0.0085 * s, 0.0074 * s]
+        radii = [0.0089 * s, 0.0086 * s, 0.0081 * s, 0.0075 * s, 0.0066 * s]
         parts.append(chain("finger", points, radii, GLOVE))
         # knuckle: a pad on the outside of the first joint, plus a seam behind it
         parts.append(blob("knuckle", (0.0330 * s + lean, 0.012 * s, t + 0.001 * s),
                           (0.0060 * s, 0.0085 * s, 0.0082 * s), GLOVE))
-        parts.append(_stitch("finger_seam", 0.0, 0.0, 0.0, 0.0))  # placeholder guard
-        parts.pop()
 
     # ---- thumb: crosses the top of the grip toward the far side
     parts.append(chain("thumb",
