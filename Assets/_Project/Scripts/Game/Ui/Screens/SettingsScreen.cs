@@ -13,10 +13,20 @@ namespace Kordon.Game.Ui
     /// Settings and controls.  Everything here is a real setting, including full
     /// key rebinding: press a row, then press the key.  Bodycam processing and the
     /// lack of a crosshair are not listed because they are not options.
+    ///
+    /// Both columns are laid out by <see cref="UiStack"/>, top to bottom: the previous
+    /// version mixed top, centre and bottom anchors with hand written offsets, so the
+    /// slider labels sat underneath the slider tracks, the quality readout collided
+    /// with the subtitles button, and the last control rows were hidden behind the
+    /// footer buttons.
     /// </summary>
     public sealed class SettingsScreen : UiScreenBase
     {
         public override string Name => "settings";
+
+        private const float PanelHeight = 940f;
+        private const float LeftWidth = 600f;
+        private const float RightWidth = 860f;
 
         private static readonly InputAction[] Rebindable =
         {
@@ -27,15 +37,18 @@ namespace Kordon.Game.Ui
             InputAction.Pause, InputAction.VoiceLocal, InputAction.VoiceTeam,
         };
 
-        private readonly List<Text> _rows = new List<Text>();
+        private readonly Text[] _rowActions = new Text[Rebindable.Length];
+        private readonly Text[] _rowKeys = new Text[Rebindable.Length];
+
         private InputAction? _capturing;
         private Text _captureHint;
-        private Text _sensitivityLabel;
-        private Text _volumeLabel;
-        private Text _qualityLabel;
-        private Slider _sensitivity;
-        private Slider _master;
-        private Slider _effects;
+        private Text _sensitivityValue;
+        private Text _volumeValue;
+        private Text _effectsValue;
+        private Button _subtitlesButton;
+        private Button _qualityButton;
+        private Button _fullscreenButton;
+        private Button _resolutionButton;
 
         protected override void Build()
         {
@@ -45,100 +58,122 @@ namespace Kordon.Game.Ui
             background.raycastTarget = true;
 
             Image left = UiBuilder.Panel(Root, "AudioVideo", UiBuilder.Ink,
-                new Vector2(0.5f, 0.5f), new Vector2(-330f, 0f), new Vector2(600f, 860f));
+                new Vector2(0.5f, 0.5f), new Vector2(-450f, 0f), new Vector2(LeftWidth, PanelHeight));
             Image right = UiBuilder.Panel(Root, "Controls", UiBuilder.Ink,
-                new Vector2(0.5f, 0.5f), new Vector2(330f, 0f), new Vector2(600f, 860f));
+                new Vector2(0.5f, 0.5f), new Vector2(300f, 0f), new Vector2(RightWidth, PanelHeight));
 
-            Text title = UiBuilder.LabelAt(left.transform, "Title", "SETTINGS", 32, UiBuilder.Paper,
-                new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(520f, 40f),
-                TextAnchor.MiddleCenter);
-            title.fontStyle = FontStyle.Bold;
+            BuildAudioVideo(left.transform);
+            BuildControls(right.transform);
+            UpdateLabels();
+            UpdateRows();
+        }
 
-            _sensitivityLabel = UiBuilder.LabelAt(left.transform, "SensitivityLabel", "",
-                18, UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -100f),
-                new Vector2(520f, 24f), TextAnchor.MiddleLeft);
-            _sensitivity = UiBuilder.Slider(left.transform, new Vector2(0f, 326f),
-                new Vector2(520f, 18f), 0.4f, 8f, Flow.Settings.MouseSensitivity, value =>
+        // ------------------------------------------------------------- left column
+
+        private void BuildAudioVideo(Transform panel)
+        {
+            UiStack stack = new UiStack(panel, "Stack", LeftWidth - 56f, PanelHeight,
+                paddingTop: 24f, paddingBottom: 24f, spacing: 8f);
+
+            Text title = stack.Text("SETTINGS", 34, UiBuilder.Paper, 44f, TextAnchor.MiddleCenter);
+            if (title != null)
+            {
+                title.fontStyle = FontStyle.Bold;
+            }
+
+            stack.Section("input");
+            Slider sensitivity = stack.SliderRow("Look sensitivity", 0.4f, 8f,
+                Flow.Settings.MouseSensitivity, value =>
                 {
                     Flow.Settings.MouseSensitivity = value;
                     UpdateLabels();
-                });
+                }, out _sensitivityValue);
+            if (sensitivity != null)
+            {
+                sensitivity.wholeNumbers = false;
+            }
 
-            _volumeLabel = UiBuilder.LabelAt(left.transform, "VolumeLabel", "", 18,
-                UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -172f),
-                new Vector2(520f, 24f), TextAnchor.MiddleLeft);
-            _master = UiBuilder.Slider(left.transform, new Vector2(0f, 254f),
-                new Vector2(520f, 18f), 0f, 1f, Flow.Settings.MasterVolume, value =>
+            stack.Space(4f);
+            stack.Section("audio");
+            Slider master = stack.SliderRow("Master volume", 0f, 1f,
+                Flow.Settings.MasterVolume, value =>
                 {
                     Flow.Settings.MasterVolume = value;
                     UpdateLabels();
-                });
+                }, out _volumeValue);
 
-            UiBuilder.LabelAt(left.transform, "EffectsLabel", "effects volume", 18, UiBuilder.Paper,
-                new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(520f, 24f),
-                TextAnchor.MiddleLeft);
-            _effects = UiBuilder.Slider(left.transform, new Vector2(0f, 194f),
-                new Vector2(520f, 18f), 0f, 1f, Flow.Settings.EffectsVolume, value =>
+            Slider effects = stack.SliderRow("Effects volume", 0f, 1f,
+                Flow.Settings.EffectsVolume, value =>
                 {
                     Flow.Settings.EffectsVolume = value;
                     UpdateLabels();
-                });
+                }, out _effectsValue);
+            if (master != null)
+            {
+                master.wholeNumbers = false;
+            }
 
-            UiBuilder.Button(left.transform, "SUBTITLES: ON", () => ToggleSubtitles(),
-                new Vector2(0f, 110f), new Vector2(520f, 48f), 18);
-            _qualityLabel = UiBuilder.LabelAt(left.transform, "QualityLabel", "", 18,
-                UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -300f),
-                new Vector2(520f, 24f), TextAnchor.MiddleLeft);
-            UiBuilder.Button(left.transform, "QUALITY", () => CycleQuality(),
-                new Vector2(-140f, 30f), new Vector2(240f, 46f), 17);
-            UiBuilder.Button(left.transform, "FULLSCREEN", () => ToggleFullscreen(),
-                new Vector2(140f, 30f), new Vector2(240f, 46f), 17);
-            UiBuilder.Button(left.transform, "1920 x 1080", () => CycleResolution(),
-                new Vector2(0f, -26f), new Vector2(520f, 44f), 16);
-            UiBuilder.Button(left.transform, "APPLY AND SAVE", () => SaveAndApply(),
-                new Vector2(0f, -100f), new Vector2(520f, 52f), 18);
-            UiBuilder.LabelAt(left.transform, "BodycamNote",
-                "The bodycam feed is always on and cannot be disabled.\nThere is no crosshair; aim with your sights.",
-                16, UiBuilder.Dim, new Vector2(0.5f, 0f), new Vector2(0f, 96f),
-                new Vector2(520f, 60f), TextAnchor.MiddleCenter);
+            if (effects != null)
+            {
+                effects.wholeNumbers = false;
+            }
 
-            Text controlsTitle = UiBuilder.LabelAt(right.transform, "Title", "CONTROLS", 32,
-                UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -42f),
-                new Vector2(520f, 40f), TextAnchor.MiddleCenter);
-            controlsTitle.fontStyle = FontStyle.Bold;
-            UiBuilder.LabelAt(right.transform, "Hint",
-                "click a row, then press the new key (Esc cancels)", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 1f), new Vector2(0f, -78f), new Vector2(520f, 22f),
-                TextAnchor.MiddleCenter);
+            stack.Space(4f);
+            _subtitlesButton = stack.Button("SUBTITLES: ON", () => ToggleSubtitles(), 44f, 17);
+
+            stack.Space(4f);
+            stack.Section("video");
+            stack.Pair("QUALITY: HIGH", () => CycleQuality(), "FULLSCREEN: ON",
+                () => ToggleFullscreen(), 44f, out _qualityButton, out _fullscreenButton);
+            _resolutionButton = stack.Button("1920 x 1080", () => CycleResolution(), 44f, 17);
+
+            stack.Space(14f);
+            stack.Button("APPLY AND SAVE", () => SaveAndApply(), 52f, 19);
+
+            // The note sits on the bottom edge of the panel, whatever is above it.
+            if (stack.Spare > 70f)
+            {
+                stack.Space(stack.Spare - 70f);
+            }
+
+            stack.Text("The bodycam feed is always on and cannot be disabled.\n" +
+                       "There is no crosshair; aim with your sights.",
+                15, UiBuilder.Dim, 62f, TextAnchor.MiddleCenter);
+        }
+
+        // ------------------------------------------------------------ right column
+
+        private void BuildControls(Transform panel)
+        {
+            UiStack stack = new UiStack(panel, "Stack", RightWidth - 56f, PanelHeight,
+                paddingTop: 24f, paddingBottom: 24f, spacing: 6f);
+
+            Text title = stack.Text("CONTROLS", 34, UiBuilder.Paper, 44f, TextAnchor.MiddleCenter);
+            if (title != null)
+            {
+                title.fontStyle = FontStyle.Bold;
+            }
+
+            stack.Text("Click a row, then press the new key.  Esc cancels.", 15,
+                UiBuilder.Dim, 22f, TextAnchor.MiddleCenter);
 
             for (int i = 0; i < Rebindable.Length; i++)
             {
-                InputAction action = Rebindable[i];
-                float y = 330f - i * 44f;
-                Text row = UiBuilder.LabelAt(right.transform, "Row" + i, "", 18, UiBuilder.Paper,
-                    new Vector2(0.5f, 0.5f), new Vector2(0f, y), new Vector2(520f, 32f),
-                    TextAnchor.MiddleLeft);
-                _rows.Add(row);
                 int index = i;
-                Button button = UiBuilder.Button(right.transform, "", () => BeginCapture(index),
-                    new Vector2(0f, y), new Vector2(520f, 32f), 1);
-                Image image = button.GetComponent<Image>();
-                image.color = new Color(0f, 0f, 0f, 0f);
-                Text label = button.GetComponentInChildren<Text>();
-                label.gameObject.SetActive(false);
+                Button row = stack.RowButton(() => BeginCapture(index), 34f,
+                    out Text action, out Text key);
+                if (row != null)
+                {
+                    _rowActions[i] = action;
+                    _rowKeys[i] = key;
+                }
             }
 
-            _captureHint = UiBuilder.LabelAt(right.transform, "CaptureHint", "", 18,
-                UiBuilder.Accent, new Vector2(0.5f, 0f), new Vector2(0f, 60f),
-                new Vector2(520f, 28f), TextAnchor.MiddleCenter);
-
-            UiBuilder.Button(right.transform, "RESET TO DEFAULTS", () => ResetBindings(),
-                new Vector2(-120f, -330f), new Vector2(240f, 46f), 16);
-            UiBuilder.Button(right.transform, "BACK", () => Back(),
-                new Vector2(150f, -330f), new Vector2(200f, 46f), 16);
-
-            UpdateLabels();
-            UpdateRows();
+            stack.Space(4f);
+            _captureHint = stack.Text(string.Empty, 16, UiBuilder.Accent, 24f,
+                TextAnchor.MiddleCenter);
+            stack.Pair("RESET TO DEFAULTS", () => ResetBindings(), "BACK", () => Back(), 46f,
+                12f, 16f);
         }
 
         public override void OnShow()
@@ -146,29 +181,70 @@ namespace Kordon.Game.Ui
             UpdateLabels();
             UpdateRows();
             _capturing = null;
-            _captureHint.text = string.Empty;
+            if (_captureHint != null)
+            {
+                _captureHint.text = string.Empty;
+            }
         }
 
         private void UpdateLabels()
         {
-            _sensitivityLabel.text = "look sensitivity: " +
-                                     Flow.Settings.MouseSensitivity.ToString("0.00");
-            _volumeLabel.text = "master volume: " +
-                                Mathf.RoundToInt(Flow.Settings.MasterVolume * 100f) + "%";
-            _qualityLabel.text = "quality: " + SettingsStore.QualityName(Flow.Settings.Quality) +
-                                 "     fullscreen: " + (Flow.Settings.Fullscreen ? "on" : "off") +
-                                 "\nresolution: " + Flow.Settings.ResolutionWidth + " x " +
-                                 Flow.Settings.ResolutionHeight;
+            if (_sensitivityValue != null)
+            {
+                _sensitivityValue.text = Flow.Settings.MouseSensitivity.ToString("0.00");
+            }
+
+            if (_volumeValue != null)
+            {
+                _volumeValue.text = Mathf.RoundToInt(Flow.Settings.MasterVolume * 100f) + "%";
+            }
+
+            if (_effectsValue != null)
+            {
+                _effectsValue.text = Mathf.RoundToInt(Flow.Settings.EffectsVolume * 100f) + "%";
+            }
+
+            if (_subtitlesButton != null)
+            {
+                UiBuilder.SetButtonText(_subtitlesButton,
+                    "SUBTITLES: " + (Flow.Settings.SubtitlesEnabled ? "ON" : "OFF"));
+            }
+
+            if (_qualityButton != null)
+            {
+                UiBuilder.SetButtonText(_qualityButton,
+                    "QUALITY: " + SettingsStore.QualityName(Flow.Settings.Quality).ToUpperInvariant());
+            }
+
+            if (_fullscreenButton != null)
+            {
+                UiBuilder.SetButtonText(_fullscreenButton,
+                    "FULLSCREEN: " + (Flow.Settings.Fullscreen ? "ON" : "OFF"));
+            }
+
+            if (_resolutionButton != null)
+            {
+                UiBuilder.SetButtonText(_resolutionButton,
+                    Flow.Settings.ResolutionWidth + " x " + Flow.Settings.ResolutionHeight);
+            }
+
             AudioListener.volume = Flow.Settings.MasterVolume;
         }
 
         private void UpdateRows()
         {
-            for (int i = 0; i < Rebindable.Length && i < _rows.Count; i++)
+            for (int i = 0; i < Rebindable.Length; i++)
             {
                 InputAction action = Rebindable[i];
-                _rows[i].text = ActionName(action) + "     " +
-                                KordonInput.Bindings.GetKeyName(action).ToUpperInvariant();
+                if (_rowActions[i] != null)
+                {
+                    _rowActions[i].text = ActionName(action);
+                }
+
+                if (_rowKeys[i] != null)
+                {
+                    _rowKeys[i].text = KordonInput.Bindings.GetKeyName(action).ToUpperInvariant();
+                }
             }
         }
 
@@ -199,7 +275,10 @@ namespace Kordon.Game.Ui
         private void BeginCapture(int index)
         {
             _capturing = Rebindable[index];
-            _captureHint.text = "press a key for " + ActionName(Rebindable[index]);
+            if (_captureHint != null)
+            {
+                _captureHint.text = "press a key for " + ActionName(Rebindable[index]);
+            }
         }
 
         private void Update()
@@ -226,12 +305,11 @@ namespace Kordon.Game.Ui
                 KeyBindings bindings = KordonInput.Bindings;
                 bindings.Rebind(_capturing.Value, (int)key, out List<InputAction> displaced);
                 KordonInput.Rebind(bindings);
-                if (displaced != null && displaced.Count > 0)
-                {
-                    _captureHint.text = ActionName(displaced[0]) + " was unbound";
-                }
+                string note = displaced != null && displaced.Count > 0
+                    ? ActionName(displaced[0]) + " was unbound"
+                    : "bound to " + key;
                 _capturing = null;
-                _captureHint.text = "bound to " + key;
+                _captureHint.text = note;
                 UpdateRows();
                 return;
             }

@@ -6,22 +6,26 @@ using UnityEngine.UI;
 namespace Kordon.Game.Ui
 {
     /// <summary>
-    /// Match creation and joining.  The address always comes from this form or the
-    /// region configuration - never from a hard coded loopback, and a loopback
-    /// address is rejected unless the server config explicitly allows development
-    /// loopback.  Regions list exactly what net_config.json declares (EU first).
+    /// Mode select and connection screen.
+    ///
+    /// Laid out top to bottom by <see cref="UiStack"/>: the previous version anchored
+    /// the address label to the top of the panel and the address field to its centre,
+    /// which left the PORT and REGION captions floating well below their fields.
     /// </summary>
     public sealed class ConnectScreen : UiScreenBase
     {
         public override string Name => "connect";
 
-        private InputField _address;
-        private InputField _port;
-        private Text _regionLabel;
-        private Text _status;
-        private Text _kitLabel;
+        private const float PanelWidth = 920f;
+        private const float PanelHeight = 880f;
+
         private Text _title;
         private Text _subtitle;
+        private Text _regionLabel;
+        private Text _kitLabel;
+        private Text _status;
+        private InputField _address;
+        private InputField _port;
         private int _regionIndex;
 
         protected override void Build()
@@ -32,70 +36,150 @@ namespace Kordon.Game.Ui
             background.raycastTarget = true;
 
             Image panel = UiBuilder.Panel(Root, "Panel", UiBuilder.Ink, new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(880f, 700f));
+                Vector2.zero, new Vector2(PanelWidth, PanelHeight));
 
-            _title = UiBuilder.LabelAt(panel.transform, "Title", "FREE-FOR-ALL", 40,
-                UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -54f),
-                new Vector2(800f, 50f), TextAnchor.MiddleCenter);
-            _title.fontStyle = FontStyle.Bold;
-            _subtitle = UiBuilder.LabelAt(panel.transform, "Sub",
-                "20 human slots - no teams - first operator to 50 kills wins", 18, UiBuilder.Dim,
-                new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(800f, 26f),
-                TextAnchor.MiddleCenter);
-            UiBuilder.Button(panel.transform, "FREE-FOR-ALL", () => SetMode(false),
-                new Vector2(-130f, 300f), new Vector2(240f, 44f), 17);
-            UiBuilder.Button(panel.transform, "CO-OP OPERATION", () => SetMode(true),
-                new Vector2(130f, 300f), new Vector2(240f, 44f), 17);
+            UiStack stack = new UiStack(panel.transform, "Stack", PanelWidth - 64f, PanelHeight,
+                paddingTop: 28f, paddingBottom: 24f, spacing: 8f);
 
-            UiBuilder.LabelAt(panel.transform, "AddressLabel",
-                "SERVER ADDRESS  (DNS name or IP, port below)", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(700f, 22f),
-                TextAnchor.MiddleLeft);
-            _address = UiBuilder.Field(panel.transform, "server address", new Vector2(0f, 74f),
-                new Vector2(700f, 50f), DefaultAddress());
+            _title = stack.Text("FREE-FOR-ALL", 38, UiBuilder.Paper, 46f, TextAnchor.MiddleCenter);
+            if (_title != null)
+            {
+                _title.fontStyle = FontStyle.Bold;
+            }
 
-            UiBuilder.LabelAt(panel.transform, "PortLabel", "PORT", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 0f), new Vector2(-260f, 210f), new Vector2(160f, 22f),
-                TextAnchor.MiddleLeft);
-            _port = UiBuilder.Field(panel.transform, "port", new Vector2(-260f, 176f),
-                new Vector2(160f, 46f), DefaultPort().ToString());
+            _subtitle = stack.Text("20 human slots - no teams - first operator to 50 kills wins",
+                17, UiBuilder.Dim, 24f, TextAnchor.MiddleCenter);
 
-            UiBuilder.LabelAt(panel.transform, "RegionLabel", "REGION", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 0f), new Vector2(90f, 210f), new Vector2(260f, 22f),
-                TextAnchor.MiddleLeft);
-            _regionLabel = UiBuilder.LabelAt(panel.transform, "Region", "", 20, UiBuilder.Paper,
-                new Vector2(0.5f, 0f), new Vector2(150f, 176f), new Vector2(300f, 46f),
-                TextAnchor.MiddleCenter);
-            UiBuilder.Button(panel.transform, "<", () => CycleRegion(-1),
-                new Vector2(20f, 176f), new Vector2(56f, 46f), 20);
-            UiBuilder.Button(panel.transform, ">", () => CycleRegion(1),
-                new Vector2(330f, 176f), new Vector2(56f, 46f), 20);
+            stack.Space(4f);
+            stack.Pair("FREE-FOR-ALL", () => SetMode(false), "CO-OP OPERATION", () => SetMode(true),
+                44f, 12f, 17);
 
-            UiBuilder.LabelAt(panel.transform, "KitLabel", "KIT", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 0f), new Vector2(-300f, 108f), new Vector2(200f, 22f),
-                TextAnchor.MiddleLeft);
-            _kitLabel = UiBuilder.LabelAt(panel.transform, "Kit", "", 18, UiBuilder.Paper,
-                new Vector2(0.5f, 0f), new Vector2(70f, 108f), new Vector2(620f, 24f),
-                TextAnchor.MiddleLeft);
-            UiBuilder.Button(panel.transform, "CHANGE KIT", () => Flow.OpenPrep(),
-                new Vector2(-230f, 30f), new Vector2(240f, 48f), 18);
+            stack.Space(4f);
+            stack.Section("server");
+            InputField address = stack.Field("Server address (DNS name or IP)",
+                DefaultAddress(), 50f, out _);
+            _address = address;
+            if (_address != null)
+            {
+                _address.characterLimit = 64;
+            }
 
-            UiBuilder.Button(panel.transform, "HOST DEDICATED-STYLE LOBBY",
-                () => HostMatch(), new Vector2(90f, -62f), new Vector2(420f, 56f), 18);
-            UiBuilder.Button(panel.transform, "JOIN", () => JoinMatch(),
-                new Vector2(90f, -128f), new Vector2(420f, 56f), 20);
-            UiBuilder.Button(panel.transform, "BACK", () => Back(),
-                new Vector2(-230f, -128f), new Vector2(200f, 56f), 18);
+            BuildPortAndRegion(stack);
 
-            UiBuilder.Button(panel.transform, "PRACTICE OFFLINE INSTEAD", () => Flow.StartPractice(),
-                new Vector2(0f, -210f), new Vector2(420f, 46f), 17);
+            stack.Space(4f);
+            stack.Section("kit");
+            _kitLabel = stack.Text(string.Empty, 18, UiBuilder.Paper, 26f);
+            stack.Button("CHANGE KIT", () => Flow.OpenPrep(), 44f, 17);
 
-            _status = UiBuilder.LabelAt(panel.transform, "Status", "", 17, UiBuilder.Warning,
-                new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(800f, 60f),
-                TextAnchor.MiddleCenter);
+            stack.Space(6f);
+            stack.Button("HOST DEDICATED-STYLE LOBBY", () => HostMatch(), 52f, 18);
+            stack.Button("JOIN", () => JoinMatch(), 56f, 21);
+            stack.Pair("BACK", () => Back(), "PRACTICE OFFLINE INSTEAD",
+                () => Flow.StartPractice(), 44f, 12f, 16);
+
+            _status = stack.Text(string.Empty, 16, UiBuilder.Warning, 58f, TextAnchor.MiddleCenter);
 
             RefreshRegion();
             RefreshKit();
+        }
+
+        /// <summary>Port field and region stepper on one line, captions directly above.</summary>
+        private void BuildPortAndRegion(UiStack stack)
+        {
+            RectTransform row = stack.RawRow(72f);
+            if (row == null)
+            {
+                return;
+            }
+
+            RectTransform portBlock = UiBuilder.Node(row, "PortBlock");
+            portBlock.anchorMin = new Vector2(0f, 0f);
+            portBlock.anchorMax = new Vector2(0f, 1f);
+            portBlock.pivot = new Vector2(0f, 0.5f);
+            portBlock.offsetMin = Vector2.zero;
+            portBlock.offsetMax = Vector2.zero;
+            portBlock.sizeDelta = new Vector2(200f, 0f);
+
+            UiBuilder.LabelAt(portBlock, "PortCaption", "PORT", 15, UiBuilder.Dim,
+                new Vector2(0f, 1f), new Vector2(80f, -10f), new Vector2(160f, 20f),
+                TextAnchor.MiddleLeft);
+
+            Image portBackground = UiBuilder.Panel(portBlock, "PortField",
+                new Color(0.1f, 0.11f, 0.12f, 1f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 24f), new Vector2(200f, 46f));
+            Text portText = UiBuilder.Label(portBackground.transform, "Text",
+                DefaultPort().ToString(), 20, UiBuilder.Paper, TextAnchor.MiddleLeft);
+            portText.rectTransform.anchorMin = Vector2.zero;
+            portText.rectTransform.anchorMax = Vector2.one;
+            portText.rectTransform.offsetMin = new Vector2(14f, 0f);
+            portText.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            portText.supportRichText = false;
+            _port = portBackground.gameObject.AddComponent<InputField>();
+            _port.textComponent = portText;
+            _port.text = DefaultPort().ToString();
+            _port.characterLimit = 5;
+            _port.contentType = InputField.ContentType.IntegerNumber;
+
+            RectTransform regionBlock = UiBuilder.Node(row, "RegionBlock");
+            regionBlock.anchorMin = new Vector2(0f, 0f);
+            regionBlock.anchorMax = new Vector2(1f, 1f);
+            regionBlock.offsetMin = new Vector2(224f, 0f);
+            regionBlock.offsetMax = Vector2.zero;
+
+            UiBuilder.LabelAt(regionBlock, "RegionCaption", "REGION  (EU FIRST)", 15, UiBuilder.Dim,
+                new Vector2(0f, 1f), new Vector2(0f, -10f), new Vector2(360f, 20f),
+                TextAnchor.MiddleLeft);
+
+            RectTransform stepper = UiBuilder.Node(regionBlock, "Stepper");
+            stepper.anchorMin = new Vector2(0f, 0f);
+            stepper.anchorMax = new Vector2(1f, 0f);
+            stepper.pivot = new Vector2(0.5f, 0f);
+            stepper.offsetMin = new Vector2(0f, 0f);
+            stepper.offsetMax = new Vector2(0f, 0f);
+            stepper.sizeDelta = new Vector2(0f, 46f);
+
+            UiBuilder.ButtonIn(stepper, "<", () => CycleRegion(-1), LeftSlot(stepper, 52f), 20);
+            UiBuilder.ButtonIn(stepper, ">", () => CycleRegion(1), RightSlot(stepper, 52f), 20);
+
+            Image regionBackground = UiBuilder.Panel(stepper, "RegionValue",
+                new Color(0.1f, 0.11f, 0.12f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 23f),
+                new Vector2(0f, 46f));
+            RectTransform regionRect = (RectTransform)regionBackground.transform;
+            regionRect.anchorMin = new Vector2(0f, 0f);
+            regionRect.anchorMax = new Vector2(1f, 1f);
+            regionRect.offsetMin = new Vector2(64f, 0f);
+            regionRect.offsetMax = new Vector2(-64f, 0f);
+
+            _regionLabel = UiBuilder.Label(regionBackground.transform, "Label", string.Empty, 19,
+                UiBuilder.Paper, TextAnchor.MiddleCenter);
+            _regionLabel.rectTransform.anchorMin = Vector2.zero;
+            _regionLabel.rectTransform.anchorMax = Vector2.one;
+            _regionLabel.rectTransform.offsetMin = Vector2.zero;
+            _regionLabel.rectTransform.offsetMax = Vector2.zero;
+        }
+
+        private static RectTransform LeftSlot(Transform parent, float width)
+        {
+            RectTransform rect = UiBuilder.Node(parent, "Left");
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.sizeDelta = new Vector2(width, 0f);
+            return rect;
+        }
+
+        private static RectTransform RightSlot(Transform parent, float width)
+        {
+            RectTransform rect = UiBuilder.Node(parent, "Right");
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.sizeDelta = new Vector2(width, 0f);
+            return rect;
         }
 
         public override void OnShow()
@@ -103,7 +187,10 @@ namespace Kordon.Game.Ui
             RefreshRegion();
             RefreshKit();
             SetMode(Flow.CoopRequested);
-            _status.text = "Server list is configured by address: press HOST or JOIN.";
+            if (_status != null)
+            {
+                _status.text = "Server list is configured by address: press HOST or JOIN.";
+            }
         }
 
         private void SetMode(bool coop)
@@ -118,16 +205,28 @@ namespace Kordon.Game.Ui
             }
         }
 
+        private static string DefaultAddress()
+        {
+            ServerRegion region = Flow.Database.Net.DefaultRegion;
+            return region != null ? region.Address : string.Empty;
+        }
+
+        private static int DefaultPort() => Flow.Database.Net.ServerPort;
+
         private void CycleRegion(int direction)
         {
-            NetConfig net = Flow.Database.Net;
-            int count = Mathf.Max(1, net.Regions.Count);
+            int count = Mathf.Max(1, Flow.Database.Net.Regions.Count);
             _regionIndex = ((_regionIndex + direction) % count + count) % count;
             RefreshRegion();
         }
 
         private void RefreshRegion()
         {
+            if (_regionLabel == null)
+            {
+                return;
+            }
+
             NetConfig net = Flow.Database.Net;
             if (net.Regions.Count == 0)
             {
@@ -149,9 +248,9 @@ namespace Kordon.Game.Ui
             }
 
             _kitLabel.text = Flow.Loadout.PrimaryWeaponId.ToUpperInvariant() + " + " +
-                       Flow.Loadout.SecondaryWeaponId.ToUpperInvariant() + "   " +
-                       Flow.Loadout.TotalMagazines() + " magazines   " +
-                       Flow.Loadout.ArmorKitId + " plates   (locked at round start)";
+                             Flow.Loadout.SecondaryWeaponId.ToUpperInvariant() + "   " +
+                             Flow.Loadout.TotalMagazines() + " magazines   " +
+                             Flow.Loadout.ArmorKitId + " plates   (locked at round start)";
         }
 
         private string CurrentRegionId()
@@ -162,18 +261,9 @@ namespace Kordon.Game.Ui
                 : net.Regions[Mathf.Clamp(_regionIndex, 0, net.Regions.Count - 1)].Id;
         }
 
-        private string DefaultAddress()
-        {
-            NetConfig net = Flow.Database.Net;
-            ServerRegion region = net.DefaultRegion;
-            return region != null ? region.Address : string.Empty;
-        }
-
-        private int DefaultPort() => Flow.Database.Net.ServerPort;
-
         private void HostMatch()
         {
-            string address = _address.text;
+            string address = _address != null ? _address.text.Trim() : DefaultAddress();
             int port = ParsePort();
             if (Flow.CoopRequested)
             {
@@ -183,13 +273,14 @@ namespace Kordon.Game.Ui
             {
                 Flow.StartNetworkMatch(address, port, true, CurrentRegionId());
             }
+
             _status.text = "hosting: " + address + ":" + port + " - waiting for players";
         }
 
         private void JoinMatch()
         {
-            string address = _address.text;
-            if (string.IsNullOrEmpty(address) || address.Trim().Length == 0)
+            string address = _address != null ? _address.text.Trim() : string.Empty;
+            if (address.Length == 0)
             {
                 _status.text = "enter the server address you were given";
                 return;
@@ -198,7 +289,7 @@ namespace Kordon.Game.Ui
             int port = ParsePort();
             ClientConnectionRequest request = new ClientConnectionRequest
             {
-                Address = address.Trim(),
+                Address = address,
                 Port = port,
                 PlayerName = PlayerProfile.Name,
                 RegionId = CurrentRegionId(),
@@ -218,12 +309,13 @@ namespace Kordon.Game.Ui
             {
                 Flow.StartNetworkMatch(request.Address, request.Port, false, CurrentRegionId());
             }
-            _status.text = "connecting to " + address.Trim() + ":" + port;
+
+            _status.text = "connecting to " + address + ":" + port;
         }
 
         private int ParsePort()
         {
-            return int.TryParse(_port.text, out int port) && port > 0 && port < 65536
+            return _port != null && int.TryParse(_port.text, out int port) && port > 0 && port < 65536
                 ? port
                 : Flow.Database.Net.ServerPort;
         }

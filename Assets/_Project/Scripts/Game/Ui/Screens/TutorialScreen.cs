@@ -23,7 +23,11 @@ namespace Kordon.Game.Ui
         private Text _body;
         private Text _binding;
         private Text _progress;
-        private Text _stepList;
+
+        private const float PanelWidth = 1100f;
+        private const float PanelHeight = 780f;
+        private Text _stepsLeft;
+        private Text _stepsRight;
 
         protected override void Build()
         {
@@ -33,38 +37,47 @@ namespace Kordon.Game.Ui
             background.raycastTarget = true;
 
             Image panel = UiBuilder.Panel(Root, "Panel", UiBuilder.Ink, new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(1100f, 720f));
+                Vector2.zero, new Vector2(PanelWidth, PanelHeight));
 
-            _title = UiBuilder.LabelAt(panel.transform, "Title", "", 34, UiBuilder.Paper,
-                new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(1000f, 44f),
-                TextAnchor.MiddleLeft);
-            _title.fontStyle = FontStyle.Bold;
+            UiStack stack = new UiStack(panel.transform, "Stack", PanelWidth - 64f, PanelHeight,
+                paddingTop: 24f, paddingBottom: 22f, spacing: 8f);
 
-            _progress = UiBuilder.LabelAt(panel.transform, "Progress", "", 18, UiBuilder.Accent,
-                new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(1000f, 24f),
-                TextAnchor.MiddleLeft);
+            _title = stack.Text(string.Empty, 32, UiBuilder.Paper, 40f, TextAnchor.MiddleLeft);
+            if (_title != null)
+            {
+                _title.fontStyle = FontStyle.Bold;
+            }
 
-            _body = UiBuilder.LabelAt(panel.transform, "Body", "", 20, UiBuilder.Paper,
-                new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(1000f, 180f),
-                TextAnchor.UpperLeft);
-            _body.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _progress = stack.Text(string.Empty, 17, UiBuilder.Accent, 22f, TextAnchor.MiddleLeft);
+            stack.Rule(1f);
+            _body = stack.Text(string.Empty, 19, UiBuilder.Paper, 150f, TextAnchor.UpperLeft);
+            _binding = stack.Text(string.Empty, 21, UiBuilder.Warning, 30f, TextAnchor.MiddleLeft);
 
-            _binding = UiBuilder.LabelAt(panel.transform, "Binding", "", 22, UiBuilder.Warning,
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(1000f, 34f),
-                TextAnchor.MiddleLeft);
+            stack.Section("steps");
 
-            _stepList = UiBuilder.LabelAt(panel.transform, "Steps", "", 16, UiBuilder.Dim,
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(1000f, 180f),
-                TextAnchor.UpperLeft);
+            // 14 steps in one 180 px box used to run off the bottom; two columns fit.
+            RectTransform stepsRow = stack.RawRow(152f);
+            if (stepsRow != null)
+            {
+                _stepsLeft = UiBuilder.Label(stepsRow, "StepsLeft", string.Empty, 15,
+                    UiBuilder.Dim, TextAnchor.UpperLeft);
+                _stepsLeft.rectTransform.anchorMin = new Vector2(0f, 0f);
+                _stepsLeft.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+                _stepsLeft.rectTransform.offsetMin = new Vector2(8f, 0f);
+                _stepsLeft.rectTransform.offsetMax = Vector2.zero;
 
-            UiBuilder.Button(panel.transform, "BACK", () => Back(), new Vector2(-380f, -300f),
-                new Vector2(200f, 48f), 17);
-            UiBuilder.Button(panel.transform, "PREVIOUS", () => Step(-1), new Vector2(-140f, -300f),
-                new Vector2(200f, 48f), 17);
-            UiBuilder.Button(panel.transform, "NEXT", () => Step(1), new Vector2(100f, -300f),
-                new Vector2(200f, 48f), 17);
-            UiBuilder.Button(panel.transform, "START PRACTICE", () => Flow.StartPractice(),
-                new Vector2(360f, -300f), new Vector2(260f, 48f), 16);
+                _stepsRight = UiBuilder.Label(stepsRow, "StepsRight", string.Empty, 15,
+                    UiBuilder.Dim, TextAnchor.UpperLeft);
+                _stepsRight.rectTransform.anchorMin = new Vector2(0.5f, 0f);
+                _stepsRight.rectTransform.anchorMax = new Vector2(1f, 1f);
+                _stepsRight.rectTransform.offsetMin = new Vector2(16f, 0f);
+                _stepsRight.rectTransform.offsetMax = Vector2.zero;
+            }
+
+            stack.Space(2f);
+            stack.Pair("PREVIOUS", () => Step(-1), "NEXT", () => Step(1), 46f, 12f, 17);
+            stack.Pair("BACK", () => Back(), "START PRACTICE", () => Flow.StartPractice(), 46f,
+                12f, 16);
         }
 
         public override void OnShow()
@@ -111,8 +124,16 @@ namespace Kordon.Game.Ui
                                 (step.RequiredCount > 1 ? "   x" + step.RequiredCount : string.Empty);
             }
 
+            int half = (_script.Steps.Count + 1) / 2;
+            _stepsLeft.text = StepColumn(0, half);
+            _stepsRight.text = StepColumn(half, _script.Steps.Count);
+        }
+
+        /// <summary>One column of the step list, current step marked.</summary>
+        private string StepColumn(int from, int to)
+        {
             System.Text.StringBuilder list = new System.Text.StringBuilder();
-            for (int i = 0; i < _script.Steps.Count; i++)
+            for (int i = from; i < to && i < _script.Steps.Count; i++)
             {
                 list.Append(i == _index ? "> " : "   ")
                     .Append(i + 1)
@@ -121,7 +142,7 @@ namespace Kordon.Game.Ui
                     .Append('\n');
             }
 
-            _stepList.text = list.ToString();
+            return list.ToString();
         }
     }
 }

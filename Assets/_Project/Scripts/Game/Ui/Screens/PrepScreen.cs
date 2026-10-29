@@ -42,9 +42,11 @@ namespace Kordon.Game.Ui
         private Button _grenadeButton;
         private Text _planLabel;
         private Text _summaryLabel;
-        private Text _sightLabel;
         private Button _sightButton;
         private Text _warningLabel;
+
+        private const float PanelWidth = 1180f;
+        private const float PanelHeight = 880f;
 
         protected override void Build()
         {
@@ -54,95 +56,135 @@ namespace Kordon.Game.Ui
             background.raycastTarget = true;
 
             Image panel = UiBuilder.Panel(Root, "Panel", UiBuilder.Ink, new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(1180f, 860f));
+                Vector2.zero, new Vector2(PanelWidth, PanelHeight));
 
-            Text title = UiBuilder.LabelAt(panel.transform, "Title", "KIT PREPARATION", 36,
-                UiBuilder.Paper, new Vector2(0.5f, 1f), new Vector2(0f, -46f),
-                new Vector2(1000f, 44f), TextAnchor.MiddleCenter);
-            title.fontStyle = FontStyle.Bold;
-            UiBuilder.LabelAt(panel.transform, "Sub",
-                "The kit locks when the round starts. Magazines are chosen here, once.",
-                17, UiBuilder.Dim, new Vector2(0.5f, 1f), new Vector2(0f, -84f),
-                new Vector2(1000f, 24f), TextAnchor.MiddleCenter);
+            UiStack stack = new UiStack(panel.transform, "Stack", PanelWidth - 64f, PanelHeight,
+                paddingTop: 22f, paddingBottom: 22f, spacing: 7f);
 
-            UiBuilder.LabelAt(panel.transform, "PrimaryHeader", "PRIMARY", 20, UiBuilder.Accent,
-                new Vector2(0.5f, 0.5f), new Vector2(-470f, 354f), new Vector2(300f, 26f),
-                TextAnchor.MiddleLeft);
-            _primaryLabel = UiBuilder.LabelAt(panel.transform, "PrimaryValue", "", 24,
-                UiBuilder.Paper, new Vector2(0.5f, 0.5f), new Vector2(-120f, 354f),
-                new Vector2(560f, 34f), TextAnchor.MiddleLeft);
-            UiBuilder.Button(panel.transform, "<", () => CyclePrimary(-1),
-                new Vector2(-420f, 314f), new Vector2(54f, 44f), 20);
-            UiBuilder.Button(panel.transform, ">", () => CyclePrimary(1),
-                new Vector2(-70f, 314f), new Vector2(54f, 44f), 20);
-            Button sightButton = UiBuilder.Button(panel.transform, "SIGHT: IRON",
-                () => CycleSight(), new Vector2(200f, 314f), new Vector2(260f, 44f), 17);
-            _sightButton = sightButton;
-            _sightLabel = sightButton.GetComponentInChildren<Text>();
+            Text title = stack.Text("KIT - PREPARE FOR DEPLOYMENT", 32, UiBuilder.Paper, 42f,
+                TextAnchor.MiddleCenter);
+            if (title != null)
+            {
+                title.fontStyle = FontStyle.Bold;
+            }
 
-            UiBuilder.LabelAt(panel.transform, "SecondaryHeader", "SECONDARY", 20,
-                UiBuilder.Accent, new Vector2(0.5f, 0.5f), new Vector2(-470f, 269f),
-                new Vector2(300f, 26f), TextAnchor.MiddleLeft);
-            _secondaryLabel = UiBuilder.LabelAt(panel.transform, "SecondaryValue", "", 24,
-                UiBuilder.Paper, new Vector2(0.5f, 0.5f), new Vector2(-120f, 269f),
-                new Vector2(560f, 34f), TextAnchor.MiddleLeft);
-            UiBuilder.Button(panel.transform, "<", () => CycleSecondary(-1),
-                new Vector2(-420f, 229f), new Vector2(54f, 44f), 20);
-            UiBuilder.Button(panel.transform, ">", () => CycleSecondary(1),
-                new Vector2(-70f, 229f), new Vector2(54f, 44f), 20);
+            stack.Text("The kit locks when the round starts. Magazines are chosen here, once.",
+                16, UiBuilder.Dim, 22f, TextAnchor.MiddleCenter);
 
-            // Magazine plan.
-            UiBuilder.LabelAt(panel.transform, "PlanHeader", "MAGAZINE PLAN", 20, UiBuilder.Accent,
-                new Vector2(0.5f, 0.5f), new Vector2(-470f, 150f), new Vector2(300f, 26f),
-                TextAnchor.MiddleLeft);
-            _planLabel = UiBuilder.LabelAt(panel.transform, "Plan", "", 20, UiBuilder.Paper,
-                new Vector2(0.5f, 0.5f), new Vector2(-200f, 106f), new Vector2(660f, 30f),
-                TextAnchor.MiddleLeft);
-            UiBuilder.Button(panel.transform, "FEWER MAGAZINES", () => CyclePrimaryMags(-1),
-                new Vector2(-330f, 60f), new Vector2(220f, 46f), 16);
-            UiBuilder.Button(panel.transform, "MORE MAGAZINES", () => CyclePrimaryMags(1),
-                new Vector2(-90f, 60f), new Vector2(220f, 46f), 16);
-            UiBuilder.Button(panel.transform, "MAG TYPE", () => CycleMagType(),
-                new Vector2(150f, 60f), new Vector2(180f, 46f), 16);
-            UiBuilder.Button(panel.transform, "PISTOL MAGAZINES", () => CycleSecondaryMags(1),
-                new Vector2(370f, 60f), new Vector2(240f, 46f), 16);
+            stack.Section("primary");
+            BuildWeaponRow(stack, "Primary", CyclePrimary, CycleSight, out _primaryLabel,
+                out _sightButton);
+            stack.Section("secondary");
+            BuildWeaponRow(stack, "Secondary", CycleSecondary, null, out _secondaryLabel, out _);
 
-            // Armour and grenades.
-            UiBuilder.LabelAt(panel.transform, "ArmorHeader", "PLATES", 20, UiBuilder.Accent,
-                new Vector2(0.5f, 0.5f), new Vector2(-470f, -10f), new Vector2(300f, 26f),
-                TextAnchor.MiddleLeft);
-            _armorLabel = UiBuilder.LabelAt(panel.transform, "Armor", "", 20, UiBuilder.Paper,
-                new Vector2(0.5f, 0.5f), new Vector2(-200f, -46f), new Vector2(660f, 30f),
-                TextAnchor.MiddleLeft);
-            UiBuilder.Button(panel.transform, "CHANGE PLATES", () => CycleArmor(),
-                new Vector2(-330f, -92f), new Vector2(220f, 46f), 16);
-            _grenadeButton = UiBuilder.Button(panel.transform, "GRENADE: FRAG x2",
-                () => CycleGrenade(), new Vector2(-90f, -92f), new Vector2(240f, 46f), 16);
+            stack.Section("magazines");
+            _planLabel = stack.Text(string.Empty, 19, UiBuilder.Paper, 26f);
+            stack.RawButtons(46f, new (string, UnityEngine.Events.UnityAction)[]
+            {
+                ("- MAG", () => CyclePrimaryMags(-1)),
+                ("+ MAG", () => CyclePrimaryMags(1)),
+                ("MAG TYPE", () => CycleMagType()),
+                ("+ PISTOL MAGS", () => CycleSecondaryMags(1)),
+            }, 15);
 
-            _summaryLabel = UiBuilder.LabelAt(panel.transform, "Summary", "", 18, UiBuilder.Dim,
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -168f), new Vector2(1000f, 90f),
-                TextAnchor.UpperCenter);
+            stack.Section("equipment");
+            _armorLabel = stack.Text(string.Empty, 17, UiBuilder.Dim, 22f);
+            stack.Pair("CHANGE PLATES", () => CycleArmor(), "GRENADE: FRAG x2",
+                () => CycleGrenade(), 46f, out _, out _grenadeButton, 12f, 16);
+            stack.Space(2f);
+            stack.RawButtons(44f, new (string, UnityEngine.Events.UnityAction)[]
+            {
+                ("PRESET: ASSAULT", () => ApplyPreset(0)),
+                ("PRESET: BREACHER", () => ApplyPreset(1)),
+                ("PRESET: MARKSMAN", () => ApplyPreset(2)),
+                ("PROFILES", () => CycleControlProfile()),
+            }, 14);
 
-            _warningLabel = UiBuilder.LabelAt(panel.transform, "Warning", "", 18,
-                UiBuilder.Danger, new Vector2(0.5f, 0f), new Vector2(0f, 150f),
-                new Vector2(1000f, 40f), TextAnchor.MiddleCenter);
+            _summaryLabel = stack.Text(string.Empty, 17, UiBuilder.Dim, 76f,
+                TextAnchor.MiddleCenter);
+            _warningLabel = stack.Text(string.Empty, 16, UiBuilder.Danger, 26f,
+                TextAnchor.MiddleCenter);
 
-            UiBuilder.Button(panel.transform, "PRESET: ASSAULT", () => ApplyPreset(0),
-                new Vector2(-390f, -246f), new Vector2(220f, 44f), 15);
-            UiBuilder.Button(panel.transform, "PRESET: BREACHER", () => ApplyPreset(1),
-                new Vector2(-150f, -246f), new Vector2(220f, 44f), 15);
-            UiBuilder.Button(panel.transform, "PRESET: MARKSMAN", () => ApplyPreset(2),
-                new Vector2(90f, -246f), new Vector2(220f, 44f), 15);
-            UiBuilder.Button(panel.transform, "NEXT CONTROL PROFILE", () => CycleControlProfile(),
-                new Vector2(340f, -246f), new Vector2(220f, 44f), 13);
+            stack.Space(2f);
+            RectTransform footer = stack.RawRow(56f);
+            if (footer != null)
+            {
+                RectTransform deploy = UiBuilder.Node(footer, "Deploy");
+                deploy.anchorMin = new Vector2(0f, 0f);
+                deploy.anchorMax = new Vector2(1f, 1f);
+                deploy.offsetMin = Vector2.zero;
+                deploy.offsetMax = new Vector2(-220f, 0f);
+                UiBuilder.ButtonIn(footer, "LOCK KIT AND DEPLOY TO PRACTICE",
+                    () => LockInPractice(), deploy, 18);
 
-            UiBuilder.Button(panel.transform, "LOCK KIT AND DEPLOY TO PRACTICE",
-                () => LockInPractice(), new Vector2(-230f, -320f), new Vector2(460f, 56f), 18);
-            UiBuilder.Button(panel.transform, "BACK", () => Back(),
-                new Vector2(280f, -320f), new Vector2(200f, 56f), 18);
+                RectTransform back = UiBuilder.Node(footer, "Back");
+                back.anchorMin = new Vector2(1f, 0f);
+                back.anchorMax = new Vector2(1f, 1f);
+                back.pivot = new Vector2(1f, 0.5f);
+                back.offsetMin = Vector2.zero;
+                back.offsetMax = Vector2.zero;
+                back.sizeDelta = new Vector2(200f, 0f);
+                UiBuilder.ButtonIn(footer, "BACK", () => Back(), back, 17);
+            }
 
             SelectDefaults();
             Refresh();
+        }
+
+        /// <summary>Weapon line: stepper on the left, optional sight button on the right.</summary>
+        private static void BuildWeaponRow(UiStack stack, string caption, System.Action<int> step,
+            UnityEngine.Events.UnityAction sightAction, out Text valueLabel, out Button sightButton)
+        {
+            sightButton = null;
+            valueLabel = null;
+
+            RectTransform row = stack.RawRow(46f);
+            if (row == null)
+            {
+                return;
+            }
+
+            RectTransform left = UiBuilder.Node(row, "Left");
+            left.anchorMin = new Vector2(0f, 0f);
+            left.anchorMax = new Vector2(0f, 1f);
+            left.pivot = new Vector2(0f, 0.5f);
+            left.offsetMin = Vector2.zero;
+            left.offsetMax = Vector2.zero;
+            left.sizeDelta = new Vector2(54f, 0f);
+            UiBuilder.ButtonIn(row, "<", () => step(-1), left, 20);
+
+            RectTransform right = UiBuilder.Node(row, "Right");
+            right.anchorMin = new Vector2(0f, 0f);
+            right.anchorMax = new Vector2(0f, 1f);
+            right.pivot = new Vector2(0f, 0.5f);
+            right.offsetMin = Vector2.zero;
+            right.offsetMax = Vector2.zero;
+            right.sizeDelta = new Vector2(54f, 0f);
+            right.anchoredPosition = new Vector2(62f, 0f);
+            UiBuilder.ButtonIn(row, ">", () => step(1), right, 20);
+
+            valueLabel = UiBuilder.Label(row, "Value", string.Empty, 22, UiBuilder.Paper,
+                TextAnchor.MiddleLeft);
+            valueLabel.rectTransform.anchorMin = new Vector2(0f, 0f);
+            valueLabel.rectTransform.anchorMax = new Vector2(1f, 1f);
+            valueLabel.rectTransform.offsetMin = new Vector2(134f, 0f);
+            valueLabel.rectTransform.offsetMax = new Vector2(-280f, 0f);
+
+            RectTransform sight = UiBuilder.Node(row, "Sight");
+            sight.anchorMin = new Vector2(1f, 0f);
+            sight.anchorMax = new Vector2(1f, 1f);
+            sight.pivot = new Vector2(1f, 0.5f);
+            sight.offsetMin = Vector2.zero;
+            sight.offsetMax = Vector2.zero;
+            sight.sizeDelta = new Vector2(260f, 0f);
+            if (sightAction != null)
+            {
+                sightButton = UiBuilder.ButtonIn(row, "SIGHT: IRON", sightAction, sight, 16);
+            }
+            else
+            {
+                sight.gameObject.SetActive(false);
+            }
         }
 
         // ------------------------------------------------------------ selections

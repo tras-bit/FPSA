@@ -20,6 +20,13 @@ namespace Kordon.Game.Ui
         public static readonly Color Warning = new Color(0.85f, 0.66f, 0.16f, 1f);
         public static readonly Color Danger = new Color(0.78f, 0.18f, 0.16f, 1f);
 
+        /// <summary>Raised surface used for controls: buttons must read as buttons.</summary>
+        public static readonly Color Surface = new Color(0.13f, 0.145f, 0.16f, 1f);
+        public static readonly Color SurfaceHover = new Color(0.2f, 0.225f, 0.245f, 1f);
+        public static readonly Color SurfacePressed = new Color(0.09f, 0.1f, 0.11f, 1f);
+        public static readonly Color Rule = new Color(0.25f, 0.27f, 0.29f, 1f);
+        public static readonly Color Track = new Color(0.17f, 0.185f, 0.2f, 1f);
+
         public static Font Font
         {
             get
@@ -111,20 +118,80 @@ namespace Kordon.Game.Ui
             return label;
         }
 
+        /// <summary>
+        /// Button that looks like a button: raised surface, hover and pressed colours,
+        /// centred label. The old version drew the label on the panel colour, so every
+        /// control on a dark panel read as floating text.
+        /// </summary>
+        public static Button ButtonIn(Transform parent, string caption, UnityAction onClick,
+            RectTransform rect, int fontSize = 20, Color? background = null)
+        {
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.color = background ?? Surface;
+
+            Text label = Label(rect, "Label", caption, fontSize, Paper, TextAnchor.MiddleCenter);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(10f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-10f, 0f);
+            label.alignByGeometry = false;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.55f, 1.6f, 1.65f, 1f);
+            colors.pressedColor = new Color(0.62f, 0.65f, 0.68f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(0.7f, 0.7f, 0.7f, 0.4f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+            if (onClick != null)
+            {
+                button.onClick.AddListener(onClick);
+            }
+
+            return button;
+        }
+
         public static Button Button(Transform parent, string caption, UnityAction onClick,
             Vector2 position, Vector2 size, int fontSize = 22)
         {
-            Image background = Panel(parent, "Btn_" + caption, Ink, new Vector2(0.5f, 0.5f),
-                position, size);
-            Text label = Label(background.transform, "Label", caption, fontSize, Paper,
-                TextAnchor.MiddleCenter);
-            FullRect(label.transform, "LabelRect");
-            ((RectTransform)label.transform).offsetMin = Vector2.zero;
-            ((RectTransform)label.transform).offsetMax = Vector2.zero;
-            label.rectTransform.anchorMin = Vector2.zero;
-            label.rectTransform.anchorMax = Vector2.one;
-            Button button = background.gameObject.AddComponent<Button>();
-            button.onClick.AddListener(onClick);
+            RectTransform rect = Node(parent, "Btn_" + caption);
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            return ButtonIn(parent, caption, onClick, rect, fontSize);
+        }
+
+        /// <summary>
+        /// Rebindable controls row: action on the left, current key on the right, the
+        /// whole row clickable.  Returns the two labels so the caller can refresh them.
+        /// </summary>
+        public static Button RowButtonIn(Transform parent, RectTransform rect,
+            UnityAction onClick, out Text left, out Text right)
+        {
+            Button button = ButtonIn(parent, string.Empty, onClick, rect, 18, Surface);
+            Text label = button.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.text = string.Empty;
+            }
+
+            left = Label(rect, "Action", string.Empty, 18, Paper, TextAnchor.MiddleLeft);
+            left.rectTransform.anchorMin = new Vector2(0f, 0f);
+            left.rectTransform.anchorMax = new Vector2(0.7f, 1f);
+            left.rectTransform.offsetMin = new Vector2(16f, 0f);
+            left.rectTransform.offsetMax = new Vector2(0f, 0f);
+
+            right = Label(rect, "Key", string.Empty, 18, Accent, TextAnchor.MiddleRight);
+            right.rectTransform.anchorMin = new Vector2(0.7f, 0f);
+            right.rectTransform.anchorMax = new Vector2(1f, 1f);
+            right.rectTransform.offsetMin = new Vector2(0f, 0f);
+            right.rectTransform.offsetMax = new Vector2(-16f, 0f);
             return button;
         }
 
@@ -157,21 +224,43 @@ namespace Kordon.Game.Ui
             return field;
         }
 
-        public static Slider Slider(Transform parent, Vector2 position, Vector2 size,
-            float min, float max, float value, UnityAction<float> onChanged)
+        /// <summary>
+        /// Horizontal slider: a track, a fill and a handle, all wired to the uGUI
+        /// <see cref="Slider"/> so dragging works and the fill follows the value.
+        /// A Slider with no fillRect/handleRect assigned looks like a dead grey bar,
+        /// which is what the settings screen shipped with.
+        /// </summary>
+        public static Slider SliderIn(Transform parent, RectTransform rect, float min, float max,
+            float value, UnityAction<float> onChanged)
         {
-            Image background = Panel(parent, "Slider", new Color(0.18f, 0.19f, 0.2f, 1f),
-                new Vector2(0.5f, 0.5f), position, size);
-            Image fill = Panel(background.transform, "Fill", Accent, new Vector2(0f, 0.5f),
-                new Vector2(0f, 0f), new Vector2(size.x * Mathf.InverseLerp(min, max, value),
-                    size.y));
-            fill.rectTransform.anchorMin = new Vector2(0f, 0f);
-            fill.rectTransform.anchorMax = new Vector2(0f, 1f);
-            fill.rectTransform.sizeDelta = new Vector2(0f, 0f);
-            fill.rectTransform.anchoredPosition = Vector2.zero;
-            Slider slider = background.gameObject.AddComponent<Slider>();
+            Image track = rect.gameObject.AddComponent<Image>();
+            track.color = Track;
+
+            RectTransform fillRect = Node(rect, "Fill");
+            fillRect.anchorMin = new Vector2(0f, 0f);
+            fillRect.anchorMax = new Vector2(Mathf.InverseLerp(min, max, value), 1f);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            Image fill = fillRect.gameObject.AddComponent<Image>();
+            fill.color = Accent;
+            fill.raycastTarget = false;
+
+            RectTransform handleRect = Node(rect, "Handle");
+            handleRect.anchorMin = new Vector2(Mathf.InverseLerp(min, max, value), 0.5f);
+            handleRect.anchorMax = new Vector2(Mathf.InverseLerp(min, max, value), 0.5f);
+            handleRect.sizeDelta = new Vector2(10f, 26f);
+            Image handle = handleRect.gameObject.AddComponent<Image>();
+            handle.color = Paper;
+            handle.raycastTarget = false;
+
+            Slider slider = rect.gameObject.AddComponent<Slider>();
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = track;
+            slider.direction = UnityEngine.UI.Slider.Direction.LeftToRight;
             slider.minValue = min;
             slider.maxValue = max;
+            slider.wholeNumbers = false;
             slider.value = value;
             if (onChanged != null)
             {
@@ -179,6 +268,18 @@ namespace Kordon.Game.Ui
             }
 
             return slider;
+        }
+
+        /// <summary>Slider placed by centre offset, for screens not using a stack yet.</summary>
+        public static Slider Slider(Transform parent, Vector2 position, Vector2 size,
+            float min, float max, float value, UnityAction<float> onChanged)
+        {
+            RectTransform rect = Node(parent, "Slider");
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            return SliderIn(parent, rect, min, max, value, onChanged);
         }
 
         public static VerticalLayoutGroup Column(Transform parent, string name, float spacing,
