@@ -10,24 +10,29 @@ namespace Kordon.Game.Maps
     /// Where authored content lives, and how Blender map space maps into Unity.
     ///
     /// The kit is exported with the Blender FBX settings axis_forward = -Z and
-    /// axis_up = Y, which puts a Blender point (x, y, z) at Unity (x, z, y); a
-    /// Blender yaw of +90 degrees (facing north, +Y) faces Unity +Z, so the Unity
-    /// yaw is the negated Blender yaw about Y.  One place, one convention.
+    /// axis_up = Y, which puts a Blender point (x, y, z) at Unity (x, z, -y): up
+    /// becomes up, and Blender's front (-Y) becomes Unity's front (+Z). The maths and
+    /// the reason it must not be a mirror live in Kordon.Core.Maps.MapOrientation,
+    /// where it is covered by tests. One place, one convention.
     /// </summary>
     public static class MapSpace
     {
-        public static Vector3 ToUnity(KordonVec3 blender) =>
-            new Vector3(blender.X, blender.Z, blender.Y);
+        public static Vector3 ToUnity(KordonVec3 blender)
+        {
+            KordonVec3 engine = Kordon.Core.Maps.MapOrientation.ToEngine(blender);
+            return new Vector3(engine.X, engine.Y, engine.Z);
+        }
 
         public static Quaternion ToUnityYaw(float yawDegrees) =>
-            Quaternion.Euler(0f, -yawDegrees, 0f);
+            Quaternion.Euler(0f, Kordon.Core.Maps.MapOrientation.YawToEngine(yawDegrees), 0f);
 
         /// <summary>Unity world direction/velocity back into authored map space.</summary>
-        public static KordonVec3 ToCore(Vector3 unity) => new KordonVec3(unity.x, unity.z, unity.y);
+        public static KordonVec3 ToCore(Vector3 unity) =>
+            Kordon.Core.Maps.MapOrientation.ToAuthored(new KordonVec3(unity.x, unity.y, unity.z));
 
-        /// <summary>Horizontal heading in authored degrees (north = +Y = Unity +Z).</summary>
+        /// <summary>Horizontal heading in authored degrees (north = +Y).</summary>
         public static float YawDegrees(Vector3 unityDirection) =>
-            -Mathf.Atan2(unityDirection.x, unityDirection.z) * Mathf.Rad2Deg;
+            Kordon.Core.Maps.MapOrientation.YawFromEngineDirection(unityDirection.x, unityDirection.z);
     }
 
     /// <summary>StreamingAssets layout, independent of the editor or a build target.</summary>

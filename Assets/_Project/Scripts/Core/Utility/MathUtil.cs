@@ -79,6 +79,10 @@ namespace Kordon.Core.Utility
 
         public static float Cos(float radians) => (float)Math.Cos(radians);
 
+        /// <summary>atan2 in degrees, so map/orientation code never repeats the conversion.</summary>
+        public static float Atan2Degrees(float y, float x) =>
+            (float)Math.Atan2(y, x) * Rad2Deg;
+
         public static float WrapAngle(float degrees)
         {
             degrees %= 360f;

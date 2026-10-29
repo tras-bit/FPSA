@@ -3,6 +3,29 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.12 - 2026-10-30
+
+The first run in a real Unity editor, and the two things it broke on.
+
+### Fixed
+
+* **The game booted into a dead screen.** `UiBuilder.Font` asked for `Arial.ttf`,
+  and Unity 6000 answers that with `ArgumentException: Arial.ttf is no longer a valid
+  built in font`. The exception walked out of `GameFlow.Awake` before a single screen
+  was built. The builtin is `LegacyRuntime.ttf` now, it is resolved once and cached,
+  an OS font is the fallback, and a missing font logs instead of throwing - a font
+  rename can never take the whole UI down again.
+* **The map was assembled as a mirror, not a rotation.** Blender exports with the
+  Unity preset (`axis_forward = -Z`, `axis_up = Y`), so an authored point (x, y, z)
+  arrives in Unity as (x, z, -y). `MapSpace` used (x, z, y) and negated the yaw with
+  it: positions and rotations were mirrored together, but the module geometry comes
+  out of the FBX unmirrored, so every asymmetric module - stairs, doors, conveyors,
+  gates, gantries - was turned the wrong way relative to the gap it was built to fill.
+  A level built that way reads as collapsed pieces standing in a grid, which is what
+  the first editor run showed. The conversion is a rotation now, the yaw keeps its
+  sign, and both live in `Kordon.Core.Maps.MapOrientation` under four tests instead of
+  in a comment.
+
 ## 1.0.11 - 2026-10-29
 
 The player got hands, and every other player got a body.

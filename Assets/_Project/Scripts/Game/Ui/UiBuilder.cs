@@ -27,12 +27,52 @@ namespace Kordon.Game.Ui
         public static readonly Color Rule = new Color(0.25f, 0.27f, 0.29f, 1f);
         public static readonly Color Track = new Color(0.17f, 0.185f, 0.2f, 1f);
 
+        private static Font _font;
+        private static bool _fontResolved;
+
+        /// <summary>
+        /// The runtime's built in font.
+        ///
+        /// Unity 6000 renamed the builtin font: asking for "Arial.ttf" now throws
+        /// ArgumentException ("Arial.ttf is no longer a valid built in font") and that
+        /// exception propagated out of GameFlow.Awake, so the game booted into a dead
+        /// screen.  LegacyRuntime.ttf is the 6000 name; the older name is only tried
+        /// afterwards for an editor that still has it, and an OS font is the last
+        /// resort so a font change can never take the whole UI down again.
+        /// </summary>
         public static Font Font
         {
             get
             {
-                // Unity ships a default font; Arial.ttf is the documented builtin name.
-                return Resources.GetBuiltinResource<Font>("Arial.ttf");
+                if (_fontResolved)
+                {
+                    return _font;
+                }
+
+                _fontResolved = true;
+                _font = LoadBuiltinFont("LegacyRuntime.ttf")
+                        ?? LoadBuiltinFont("Arial.ttf")
+                        ?? UnityEngine.Font.CreateDynamicFontFromOSFont(
+                            new[] { "Segoe UI", "Arial", "DejaVu Sans", "Liberation Sans" }, 16);
+                if (_font == null)
+                {
+                    Debug.LogError("No font available: UI text will not render.");
+                }
+
+                return _font;
+            }
+        }
+
+        private static Font LoadBuiltinFont(string name)
+        {
+            try
+            {
+                return Resources.GetBuiltinResource<Font>(name);
+            }
+            catch (System.ArgumentException)
+            {
+                // The name does not exist in this Unity version; try the next one.
+                return null;
             }
         }
 
