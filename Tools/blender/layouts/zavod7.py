@@ -497,6 +497,30 @@ def build_placements() -> Tuple[List[dict], Dict[str, list]]:
     out.append(lay.placement("sign_plate", (-22.4, 20.0, 2.4), 270.0, "signage"))
     out.append(lay.placement("sign_plate", (-0.4, 33.4, 2.4), 180.0, "signage"))
 
+    # ---- lane breaks ------------------------------------------------------
+    #
+    # The first audit that actually tested sightlines found the map's real defect: the
+    # four corner spawns sat at the ends of three open service corridors - the west strip
+    # between the office block and the fence, the east yard between the pipe racks and
+    # the fence, and the strip behind the furnace hall - and a player spawning at one
+    # end could be shot from the other, 53 to 79 m away, through twenty-seven clear
+    # lines.  Props only covered the middle of the map; nothing stood in those strips.
+    #
+    # These five objects cut every one of those lines without walling the strips off:
+    # two of them sit beside a 3-4 m gap that a player can still walk through, and the
+    # blast wall across the north strip stands 1 m off the hall so the strip stays
+    # walkable behind it.  They are placed where the kit already had nothing, so no
+    # spawn shelter and no scatter prop moved.
+    # Solid hoppers, not a conveyor run and not a thin wall: measured against the real
+    # lines, the conveyor's lattice let an eye-height ray through between its legs, and
+    # the blast wall at y 28.8-29.2 missed the eastern spawn slots by ten centimetres -
+    # they sit at y 29.3, so the line ran just past the wall's face.  These four
+    # footprints are solid at 1.6 m and they cover every line with margin.
+    out.append(lay.placement("hopper_3", (37.5, -18.0, 0.0), 0.0, "lane_break"))
+    out.append(lay.placement("hopper_3", (40.5, -18.0, 0.0), 0.0, "lane_break"))
+    out.append(lay.placement("hopper_3", (-40.6, -12.0, 0.0), 0.0, "lane_break"))
+    out.append(lay.placement("hopper_3", (0.0, 29.8, 0.0), 0.0, "lane_break"))
+
     # ---- spawn shelters: four corners, five slots each -------------------
     #
     # The walls belong on the corner side of the shelter, with the opening towards the

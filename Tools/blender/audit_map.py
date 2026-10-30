@@ -22,6 +22,11 @@ What it checks, in the authored .blend (the same scene the FBX files come from)
   at least 1.85 m of clear headroom above it, and sit inside the map bounds;
 * shells: every shell declared in the JSON must exist in the scene, and a shell
   that the player stands on (``walkable``) must actually cover the play area;
+* side lanes: every spawn pair at least 8 m apart is ray cast along the straight line
+  between them at eye height.  A clear line is a spawn-to-spawn firing lane and a
+  finding; spawns inside one shelter are exempt;
+* sight out: each spawn must have at least 6 m of clear sight in one of sixteen sampled
+  directions, so that closing the lanes above cannot wall a player in;
 * the JSON contract itself: exactly one walkable ground shell, and any shell that
   is walkable must not be marked as a non-collider in the movement flags.
 
@@ -58,6 +63,10 @@ GRID_STEP = 2.0
 PROBE_TOP_Z = 6.0
 SPAWN_GROUND_TOLERANCE = 0.6
 SPAWN_HEADROOM = 1.85
+EYE_HEIGHT = 1.62          # matches the camera height in PlayerCamera
+CLUSTER_RADIUS = 8.0       # spawns closer than this are one cluster, not a lane
+SIGHT_CLEAR = 6.0          # a spawn must see at least this far in some direction
+SIGHT_DIRECTIONS = 16
 
 
 def base_name(name: str) -> str:
@@ -84,6 +93,121 @@ def ray_up(x: float, y: float, from_z: float, distance: float) -> str:
     if not hit or obj is None:
         return ""
     return obj.name
+
+
+def ray_between(origin: Sequence[float], target: Sequence[float]) -> str:
+    """First object crossed by a straight line between two points, or '' if clear."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    start = mathutils.Vector(origin)
+    finish = mathutils.Vector(target)
+    delta = finish - start
+    distance = delta.length
+    if distance < 1e-4:
+        return ""
+    hit, _location, _normal, _index, obj, _matrix = bpy.context.scene.ray_cast(
+        depsgraph, start, delta.normalized(), distance=distance - 0.05)
+    if not hit or obj is None:
+        return ""
+    return obj.name
+
+
+def audit_sight(data: dict) -> Dict[str, object]:
+    """Spawns must see out, and must not see each other.
+
+    Two requirements pull against each other here.  A spawn in a sealed box is as
+    broken as a spawn you can snipe from across the map: the player needs open floor
+    in front of them the moment they spawn, and the far end of the map must not have
+    a straight line to them.  Both are ray casts at eye height, which is the only
+    height that matters - cover that stops a chest-high line but not a standing one
+    is a waist-high crate, and this is a shooter where everyone stands up.
+    """
+    # The range has to cover the map, not an arbitrary number: at 45 m a 98 m
+    # corner-to-corner line was never tested, and the audit reported a clean sheet that
+    # had not looked at the one case it exists for.
+    bounds = data["bounds"]
+    lane_range = math.dist(bounds["min"][:2], bounds["max"][:2])
+
+    spawns = data["spawns"]
+    eyes: Dict[str, Tuple[float, float, float]] = {}
+    for spawn in spawns:
+        sx, sy, sz = spawn["position"]
+        eyes[spawn["id"]] = (sx, sy, sz + EYE_HEIGHT)
+
+    # ---- group the slots into clusters ------------------------------------
+    # A co-op insertion puts six slots inside one 8 m landing zone; a flat distance cut
+    # would call the far end of that zone a firing lane.  Single linkage groups them
+    # instead, so only slots in *different* clusters are compared.
+    parent = {sid: sid for sid in eyes}
+
+    def find(sid: str) -> str:
+        while parent[sid] != sid:
+            parent[sid] = parent[parent[sid]]
+            sid = parent[sid]
+        return sid
+
+    ids = list(eyes)
+    for first in range(len(ids)):
+        for second in range(first + 1, len(ids)):
+            if math.dist(eyes[ids[first]], eyes[ids[second]]) <= CLUSTER_RADIUS:
+                left, right = find(ids[first]), find(ids[second])
+                if left != right:
+                    parent[right] = left
+    cluster = {sid: find(sid) for sid in eyes}
+
+    # ---- spawn to spawn: any clear line is a firing lane -------------------
+    lanes: List[Tuple[str, str, float, str]] = []
+    blocked = 0
+    compared = 0
+    for first in range(len(ids)):
+        for second in range(first + 1, len(ids)):
+            a, b = eyes[ids[first]], eyes[ids[second]]
+            gap = math.dist(a, b)
+            if cluster[ids[first]] == cluster[ids[second]]:
+                continue          # the next body over in the same spawn cluster
+            compared += 1
+            hit = ray_between(a, b)
+            if hit:
+                blocked += 1
+            else:
+                lanes.append((ids[first], ids[second], gap, "clear"))
+
+    # ---- sight out: how far each spawn can see, and in how many ways ------
+    sight_problems: List[str] = []
+    sight_table: List[Tuple[str, int, float]] = []
+    for spawn in spawns:
+        sx, sy, sz = spawn["position"]
+        origin = (sx, sy, sz + EYE_HEIGHT)
+        if sz + EYE_HEIGHT > PROBE_TOP_Z:
+            origin = (sx, sy, sz + EYE_HEIGHT)
+        clear_directions = 0
+        furthest = 0.0
+        for step in range(SIGHT_DIRECTIONS):
+            angle = 2.0 * math.pi * step / SIGHT_DIRECTIONS
+            target = (sx + math.cos(angle) * lane_range,
+                      sy + math.sin(angle) * lane_range,
+                      sz + EYE_HEIGHT)
+            hit = ray_between(origin, target)
+            if not hit:
+                distance = lane_range
+            else:
+                # re-cast to measure how far the ray actually got
+                depsgraph = bpy.context.evaluated_depsgraph_get()
+                delta = mathutils.Vector(target) - mathutils.Vector(origin)
+                stop = mathutils.Vector(target)
+                _h, location, _n, _i, _o, _m = bpy.context.scene.ray_cast(
+                    depsgraph, origin, delta.normalized())
+                distance = (location - mathutils.Vector(origin)).length
+            furthest = max(furthest, distance)
+            if distance >= SIGHT_CLEAR:
+                clear_directions += 1
+        sight_table.append((spawn["id"], clear_directions, round(furthest, 1)))
+        if clear_directions == 0:
+            sight_problems.append(
+                f"{spawn['id']}: no direction with {SIGHT_CLEAR:.0f} m of clear "
+                f"sight - the spawn is walled in")
+
+    return dict(lanes=lanes, compared=compared, blocked=blocked,
+                sight_table=sight_table, sight_problems=sight_problems)
 
 
 def audit_geometry(data: dict) -> Dict[str, object]:
@@ -167,7 +291,10 @@ def audit_geometry(data: dict) -> Dict[str, object]:
                     f"ground shell {span[0]:.1f} x {span[1]:.1f} m is smaller than the "
                     f"{max_x - min_x:.0f} x {max_y - min_y:.0f} m bounds")
 
+    sight = audit_sight(data)
+
     return dict(
+        sight=sight,
         samples=samples,
         holes=holes,
         covered_by_other=covered_by_other,
@@ -257,7 +384,11 @@ def write_report(map_id: str, data: dict, result: Dict[str, object],
     missing: List[str] = result["missing_shells"]  # type: ignore[assignment]
     spawns: List[str] = result["spawn_problems"]  # type: ignore[assignment]
     contract: List[str] = result["contract_problems"]  # type: ignore[assignment]
-    failures = len(holes) + len(missing) + len(spawns) + len(contract)
+    sight: Dict[str, object] = result["sight"]  # type: ignore[assignment]
+    lanes: List[Tuple[str, str, float, str]] = sight["lanes"]  # type: ignore[assignment]
+    sight_problems: List[str] = sight["sight_problems"]  # type: ignore[assignment]
+    failures = (len(holes) + len(missing) + len(spawns) + len(contract)
+                + len(lanes) + len(sight_problems))
 
     lines = [
         f"# Map audit: {map_id}",
@@ -294,6 +425,39 @@ def write_report(map_id: str, data: dict, result: Dict[str, object],
     else:
         lines.append(f"All {len(data['spawns'])} spawns stand on the ground shell with "
                      f"{SPAWN_HEADROOM:.2f} m of clear headroom.")
+    lines.append("")
+
+    lines += ["## Side lanes: spawn to spawn", ""]
+    lines.append(
+        f"Eye height {EYE_HEIGHT:.2f} m, every spawn pair whose distance is at least "
+        f"{CLUSTER_RADIUS:.0f} m ({sight['compared']} pairs) is ray cast along the "
+        f"straight line between them. Neighbours inside one spawn cluster are exempt: "
+        f"five slots in a shelter are 2-4 m apart by design.")
+    lines.append("")
+    if lanes:
+        lines.append(f"**{len(lanes)} clear line(s) - a spawn can be shot from another "
+                     f"spawn:**")
+        lines.append("")
+        lines += [f"* `{a}` sees `{b}` at {gap:.1f} m with nothing in between"
+                  for a, b, gap, _ in sorted(lanes, key=lambda row: -row[2])]
+    else:
+        lines.append(f"None of the {sight['compared']} pairs has a clear line: "
+                     f"{sight['blocked']} are broken by geometry.")
+    lines.append("")
+
+    lines += ["## Sight out of each spawn", ""]
+    if sight_problems:
+        lines += [f"* {problem}" for problem in sight_problems]
+    else:
+        lines.append(
+            f"Every spawn has at least {SIGHT_CLEAR:.0f} m of clear sight in one of "
+            f"{SIGHT_DIRECTIONS} sampled directions. A spawn walled in is as broken as "
+            f"a spawn that can be sniped from the other corner.")
+    lines.append("")
+    lines.append("| spawn | clear directions | furthest clear |")
+    lines.append("| --- | --- | --- |")
+    for spawn_id, clear, furthest in sight["sight_table"]:  # type: ignore[misc]
+        lines.append(f"| `{spawn_id}` | {clear} / {SIGHT_DIRECTIONS} | {furthest} m |")
     lines.append("")
 
     lines += ["## Shell contract", ""]
@@ -340,12 +504,15 @@ def main() -> None:
         result = audit_geometry(data)
         images = render_review(map_id, data) if args.render else []
         report = write_report(map_id, data, result, images)
+        sight = result["sight"]
         count = (len(result["holes"]) + len(result["missing_shells"]) +
-                 len(result["spawn_problems"]) + len(result["contract_problems"]))
+                 len(result["spawn_problems"]) + len(result["contract_problems"]) +
+                 len(sight["lanes"]) + len(sight["sight_problems"]))
         failures += count
         print(f"[audit] {map_id}: {result['samples']} floor samples, "
               f"{len(result['holes'])} holes, {len(result['spawn_problems'])} spawn "
-              f"problems, {count} findings -> {os.path.relpath(report, art.REPO_ROOT)}")
+              f"problems, {len(sight['lanes'])} side lanes, {count} findings -> "
+              f"{os.path.relpath(report, art.REPO_ROOT)}")
 
     print(f"[audit] {len(map_ids)} map(s) in {time.time() - started:.1f}s, "
           f"{failures} finding(s)")

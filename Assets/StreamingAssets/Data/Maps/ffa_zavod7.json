@@ -6828,6 +6828,46 @@
       "tag": "signage"
     },
     {
+      "module": "hopper_3",
+      "position": [
+        37.5,
+        -18.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "lane_break"
+    },
+    {
+      "module": "hopper_3",
+      "position": [
+        40.5,
+        -18.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "lane_break"
+    },
+    {
+      "module": "hopper_3",
+      "position": [
+        -40.6,
+        -12.0,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "lane_break"
+    },
+    {
+      "module": "hopper_3",
+      "position": [
+        0.0,
+        29.8,
+        0.0
+      ],
+      "yaw": 0.0,
+      "tag": "lane_break"
+    },
+    {
       "module": "wall_4",
       "position": [
         -39.97,

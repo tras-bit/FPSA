@@ -129,6 +129,128 @@ namespace Kordon.Core.Tests
             Assert.Equal("FreeForAll", map["mode"].AsString());
         }
 
+        /// <summary>
+        /// No two spawn clusters may see each other along the ground.
+        ///
+        /// This is the data half of the sightline audit in Tools/blender/audit_map.py.
+        /// The Blender audit casts real rays and is the authority; this test runs the
+        /// same rule against the shipped JSON in CI, where Blender is not available, so
+        /// that dropping the lane-break placements (or moving a spawn behind one) fails
+        /// the build instead of quietly restoring a 79 m firing lane across the map.
+        ///
+        /// Footprints come from the kit manifest sizes and are conservative: rotations
+        /// are reduced to axis-aligned extents, which can only over-report a blocker,
+        /// never hide one.
+        /// </summary>
+        [Theory]
+        [MemberData(nameof(MapIds))]
+        public void NoTwoSpawnClustersSeeEachOther(string mapId)
+        {
+            Json map = LoadMap(mapId);
+            Json kit = Json.Parse(File.ReadAllText(
+                Path.Combine(TestData.DataRoot, "Art", "kit_manifest.json")));
+
+            List<Json> spawns = map["spawns"].Items().ToList();
+            List<(float X, float Y, float Z)> points = spawns
+                .Select(s => (s["position"][0].AsFloat(), s["position"][1].AsFloat(),
+                              s["position"][2].AsFloat()))
+                .ToList();
+
+            // Single linkage at 8 m: five slots in a shelter, or six in an insertion
+            // zone, are one cluster and are not compared with each other.
+            const float ClusterRadius = 8.0f;
+            int[] parent = Enumerable.Range(0, points.Count).ToArray();
+            int Find(int index)
+            {
+                while (parent[index] != index)
+                {
+                    parent[index] = parent[parent[index]];
+                    index = parent[index];
+                }
+                return index;
+            }
+            for (int first = 0; first < points.Count; first++)
+            {
+                for (int second = first + 1; second < points.Count; second++)
+                {
+                    if (Distance(points[first], points[second]) <= ClusterRadius)
+                    {
+                        int a = Find(first), b = Find(second);
+                        if (a != b) parent[b] = a;
+                    }
+                }
+            }
+
+            List<(float X0, float Y0, float X1, float Y1)> blockers =
+                new List<(float, float, float, float)>();
+            foreach (Json placement in map["placements"].Items())
+            {
+                string module = placement["module"].AsString();
+                Json size = kit["modules"][module]["size"];
+                float width = size[0].AsFloat();
+                float depth = size[1].AsFloat();
+                float yaw = placement["yaw"].AsFloat() * (float)System.Math.PI / 180f;
+                float x = placement["position"][0].AsFloat();
+                float y = placement["position"][1].AsFloat();
+                float extentX = (float)(System.Math.Abs(System.Math.Cos(yaw)) * width / 2 +
+                                        System.Math.Abs(System.Math.Sin(yaw)) * depth / 2);
+                float extentY = (float)(System.Math.Abs(System.Math.Sin(yaw)) * width / 2 +
+                                        System.Math.Abs(System.Math.Cos(yaw)) * depth / 2);
+                // The hall and office are shells rather than placements; their walls are
+                // placed individually, so nothing has to be added here.
+                if (size[2].AsFloat() < 1.2f) continue;   // ground clutter stops no shot
+                blockers.Add((x - extentX, y - extentY, x + extentX, y + extentY));
+            }
+
+            List<string> lanes = new List<string>();
+            for (int first = 0; first < points.Count; first++)
+            {
+                for (int second = first + 1; second < points.Count; second++)
+                {
+                    if (Find(first) == Find(second)) continue;
+                    if (blockers.Any(box => SegmentCrosses(points[first], points[second], box)))
+                        continue;
+                    lanes.Add(spawns[first]["id"].AsString() + " sees " +
+                              spawns[second]["id"].AsString() + " at " +
+                              Distance(points[first], points[second]).ToString("0.1") + " m");
+                }
+            }
+
+            Assert.True(lanes.Count == 0,
+                mapId + " has " + lanes.Count + " spawn-to-spawn firing lane(s): " +
+                string.Join("; ", lanes.Take(6)));
+        }
+
+        private static float Distance((float X, float Y, float Z) a, (float X, float Y, float Z) b)
+        {
+            float dx = a.X - b.X, dy = a.Y - b.Y, dz = a.Z - b.Z;
+            return (float)System.Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        private static bool SegmentCrosses((float X, float Y, float Z) from,
+                                           (float X, float Y, float Z) to,
+                                           (float X0, float Y0, float X1, float Y1) box)
+        {
+            float tMin = 0f, tMax = 1f;
+            float dx = to.X - from.X, dy = to.Y - from.Y;
+            if (!Slab(from.X, dx, box.X0, box.X1, ref tMin, ref tMax)) return false;
+            if (!Slab(from.Y, dy, box.Y0, box.Y1, ref tMin, ref tMax)) return false;
+            return tMin <= tMax;
+        }
+
+        private static bool Slab(float start, float delta, float low, float high,
+                                 ref float tMin, ref float tMax)
+        {
+            if (System.Math.Abs(delta) < 1e-6f)
+                return start >= low && start <= high;
+            float a = (low - start) / delta;
+            float b = (high - start) / delta;
+            if (a > b) { float swap = a; a = b; b = swap; }
+            tMin = System.Math.Max(tMin, a);
+            tMax = System.Math.Min(tMax, b);
+            return tMin <= tMax;
+        }
+
         [Fact]
         public void CoopMapIsItsOwnLayoutAndCarriesAFourSlotTeam()
         {

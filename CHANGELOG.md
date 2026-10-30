@@ -3,6 +3,44 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.21 - 2026-10-30
+
+The map had 27 firing lanes between spawns, and nothing was checking for them.
+
+### Fixed
+
+* **Spawns could be shot from other spawns, up to 79 m away.** The audit checked the
+  floor and the headroom over every spawn but never asked the one question that decides
+  whether a spawn is playable: can someone else see it?  A new check ray casts every
+  spawn pair at 1.62 m eye height - 150 pairs on Zavod-7 - and found 27 clear lines,
+  all of them along three open service strips: the west corridor between the office
+  block and the fence, the east yard between the pipe racks and the fence, and the
+  strip behind the furnace hall.  The props only ever covered the middle of the map.
+* Four solid scrap hoppers now break those strips.  They sit where the kit had nothing,
+  so no spawn shelter and no scatter prop moved; two of them leave a walkable gap
+  beside them, and the northern one stands off the hall wall rather than across the
+  strip.  Result: 0 clear spawn-to-spawn lines, and all 190 nav nodes still reachable.
+  (A conveyor run and a blast wall were tried first and rejected by measurement: the
+  conveyor's lattice lets an eye-height ray through between its legs, and the wall at
+  y 28.8-29.2 missed the eastern slots at y 29.3 by ten centimetres.)
+* **A second new check, in the opposite direction:** each spawn must have at least 6 m
+  of clear sight in one of sixteen sampled directions.  Closing one set of lanes by
+  walling a spawn in would be a worse bug than the one being fixed, so both are audited
+  and both fail the build.
+* Slot clustering is by single linkage, not by a flat distance cut: six insertion slots
+  inside one 8 m co-op landing zone are one cluster, not a firing lane.
+* **`MapContentTests` runs the same lane rule on the shipped JSON** in CI, where Blender
+  is not available, so deleting a lane-break placement fails the build instead of
+  quietly restoring a 79 m lane.
+
+### Verification
+
+`docs/reports/map-audit-ffa_zavod7.md` and `map-audit-coop_silent_kiln.md` are regenerated
+by the tool with the new sections - the full lane list, and a per-spawn table of clear
+directions - so the claim is reproducible rather than asserted.  The audit exits non-zero
+on any finding, so it cannot be ignored.  Both maps: 0 holes, 0 spawn problems, 0 lanes,
+0 findings.
+
 ## 1.0.20 - 2026-10-30
 
 The three thrown items were inverted, split in half, and had never been on a sheet.
