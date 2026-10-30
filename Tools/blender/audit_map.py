@@ -22,6 +22,9 @@ What it checks, in the authored .blend (the same scene the FBX files come from)
   at least 1.85 m of clear headroom above it, and sit inside the map bounds;
 * shells: every shell declared in the JSON must exist in the scene, and a shell
   that the player stands on (``walkable``) must actually cover the play area;
+* objectives: every bomb site is on the floor inside the bounds with a clear plant spot
+  and a real distance from the other site, and every team spawn sits inside one of its
+  own side's buy zones;
 * side lanes: every spawn pair at least 8 m apart is ray cast along the straight line
   between them at eye height.  A clear line is a spawn-to-spawn firing lane and a
   finding; spawns inside one shelter are exempt;
@@ -210,6 +213,89 @@ def audit_sight(data: dict) -> Dict[str, object]:
                 sight_table=sight_table, sight_problems=sight_problems)
 
 
+def audit_objective(data: dict) -> Dict[str, object]:
+    """Bomb sites and buy zones have to be real places on the map.
+
+    A site that is inside a wall, floating, or ten metres from the other site is not a
+    site: the mode would either be unplayable or a coin flip.  The buy zones are checked
+    the same way, and every team spawn must fall inside one of its own side's zones -
+    otherwise a player starts a round unable to buy, which reads as a broken shop rather
+    than a broken map.
+    """
+    bounds = data["bounds"]
+    min_x, min_y = bounds["min"][0], bounds["min"][1]
+    max_x, max_y = bounds["max"][0], bounds["max"][1]
+    spawns = {spawn["id"]: spawn for spawn in data["spawns"]}
+    site_problems: List[str] = []
+    buy_problems: List[str] = []
+
+    demolition = "Demolition" in (data.get("modes") or [])
+    sites = data.get("bombSites") or []
+    if demolition and not sites:
+        site_problems.append("the demolition mode declares no bomb sites")
+    for site in sites:
+        centre_x, centre_y, centre_z = site["center"]
+        if not (min_x <= centre_x <= max_x and min_y <= centre_y <= max_y):
+            site_problems.append(f"site {site['id']} is outside the map bounds")
+        if site.get("radius", 0) < 3.0:
+            site_problems.append(f"site {site['id']} is too small to plant on")
+        name, hit_z = ray_down(centre_x, centre_y, PROBE_TOP_Z)
+        if not name:
+            site_problems.append(f"site {site['id']} has no floor under it")
+        else:
+            if abs(centre_z - hit_z) > SPAWN_GROUND_TOLERANCE:
+                site_problems.append(
+                    f"site {site['id']} is {abs(centre_z - hit_z):.2f} m off the floor")
+            overhead = ray_up(centre_x, centre_y, hit_z + 0.05, 1.9)
+            if overhead:
+                site_problems.append(
+                    f"site {site['id']} has '{base_name(overhead)}' over the plant spot")
+
+    for first in range(len(sites)):
+        for second in range(first + 1, len(sites)):
+            gap = math.dist(sites[first]["center"][:2], sites[second]["center"][:2])
+            if gap < 20.0:
+                site_problems.append(
+                    f"sites {sites[first]['id']} and {sites[second]['id']} are only "
+                    f"{gap:.1f} m apart - one position could hold both")
+
+    zones = data.get("buyZones") or []
+    if demolition and not zones:
+        buy_problems.append("the demolition mode declares no buy zones")
+    for zone in zones:
+        team = str(zone.get("team", ""))
+        if team not in ("Attackers", "Defenders"):
+            buy_problems.append(f"buy zone {zone['id']} belongs to no team")
+        centre = zone["center"]
+        if not (min_x <= centre[0] <= max_x and min_y <= centre[1] <= max_y):
+            buy_problems.append(f"buy zone {zone['id']} is outside the map bounds")
+        name, _hit_z = ray_down(centre[0], centre[1], PROBE_TOP_Z)
+        if not name:
+            buy_problems.append(f"buy zone {zone['id']} has no floor under it")
+
+    teams = data.get("teamSpawns") or {}
+    if not demolition:
+        return dict(site_problems=site_problems, buy_problems=buy_problems,
+                    sites=len(sites), zones=len(zones))
+    for team_name, side in (("attackers", "Attackers"), ("defenders", "Defenders")):
+        ids = teams.get(team_name) or []
+        if not ids:
+            buy_problems.append(f"no {team_name} spawns are assigned")
+            continue
+        side_zones = [zone for zone in zones if zone.get("team") == side]
+        for spawn_id in ids:
+            spawn = spawns.get(spawn_id)
+            if spawn is None:
+                buy_problems.append(f"team spawn {spawn_id} does not exist in the layout")
+                continue
+            if not any(math.dist(spawn["position"][:2], zone["center"][:2]) <= zone["radius"]
+                       for zone in side_zones):
+                buy_problems.append(f"{spawn_id} is not inside any {side} buy zone")
+
+    return dict(site_problems=site_problems, buy_problems=buy_problems,
+                sites=len(sites), zones=len(zones))
+
+
 def audit_geometry(data: dict) -> Dict[str, object]:
     bounds = data["bounds"]
     min_x, min_y = bounds["min"][0], bounds["min"][1]
@@ -292,9 +378,11 @@ def audit_geometry(data: dict) -> Dict[str, object]:
                     f"{max_x - min_x:.0f} x {max_y - min_y:.0f} m bounds")
 
     sight = audit_sight(data)
+    objective = audit_objective(data)
 
     return dict(
         sight=sight,
+        objective=objective,
         samples=samples,
         holes=holes,
         covered_by_other=covered_by_other,
@@ -375,6 +463,9 @@ def render_review(map_id: str, data: dict) -> List[str]:
 
     lanes = overlay_lanes(map_id, data, top)
     written.append(lanes)
+
+    if data.get("bombSites"):
+        written.append(overlay_sites(map_id, data, top))
     return written
 
 
@@ -560,6 +651,73 @@ def overlay_lanes(map_id: str, data: dict, top_image: str) -> str:
     return out
 
 
+def overlay_sites(map_id: str, data: dict, top_image: str) -> str:
+    """Mark the bomb sites, the buy zones and the two teams on the plan view.
+
+    This is the demolition layout as a player reads it: which corner they spawn in, where
+    they can buy, and where the two plant spots are.  Drawn from the same numbers the game
+    loads, so the picture cannot drift from the data.
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    bounds = data["bounds"]
+    min_x, min_y = bounds["min"][0], bounds["min"][1]
+    max_x, max_y = bounds["max"][0], bounds["max"][1]
+    centre_x = (min_x + max_x) * 0.5
+    centre_y = (min_y + max_y) * 0.5
+    span = max(max_x - min_x, max_y - min_y)
+
+    image = Image.open(top_image).convert("RGB")
+    width, height = image.size
+    scale = width / (span * 1.02)
+
+    def to_pixel(x: float, y: float) -> Tuple[float, float]:
+        return (width * 0.5 + (x - centre_x) * scale,
+                height * 0.5 - (y - centre_y) * scale)
+
+    draw = ImageDraw.Draw(image, "RGBA")
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    big = ImageFont.truetype(font_path, 34) if os.path.exists(font_path) else None
+    small = ImageFont.truetype(font_path, 15) if os.path.exists(font_path) else None
+
+    team_colour = {"Attackers": (245, 150, 60, 210), "Defenders": (70, 170, 235, 210)}
+    for zone in data.get("buyZones") or []:
+        colour = team_colour.get(zone.get("team"), (200, 200, 200, 180))
+        cx, cy = to_pixel(zone["center"][0], zone["center"][1])
+        radius = zone["radius"] * scale
+        draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius],
+                     outline=colour, width=3)
+        draw.text((cx - 44, cy + radius + 4), f"{zone['team'][:3]} buy", fill=colour,
+                  font=small)
+
+    for site in data.get("bombSites") or []:
+        cx, cy = to_pixel(site["center"][0], site["center"][1])
+        radius = site["radius"] * scale
+        draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius],
+                     fill=(220, 60, 55, 45), outline=(235, 90, 70, 235), width=4)
+        draw.text((cx - 12, cy - 20), site["id"], fill=(255, 235, 230, 255), font=big)
+
+    teams = data.get("teamSpawns") or {}
+    spawns = {spawn["id"]: spawn for spawn in data["spawns"]}
+    for team_name, team in (("attackers", "Attackers"), ("defenders", "Defenders")):
+        colour = team_colour[team]
+        for spawn_id in teams.get(team_name) or []:
+            spawn = spawns.get(spawn_id)
+            if spawn is None:
+                continue
+            sx, sy = to_pixel(spawn["position"][0], spawn["position"][1])
+            draw.ellipse([sx - 5, sy - 5, sx + 5, sy + 5], fill=colour)
+
+    label = ("DEMOLITION  |  site A furnace hall, site B pipe yard  |  "
+             "orange = attackers south, blue = defenders north  |  circles = buy zones")
+    draw.rectangle([0, height - 30, width, height], fill=(12, 14, 18, 215))
+    draw.text((14, height - 23), label, fill=(240, 240, 240, 255), font=small)
+
+    out = os.path.join(PREVIEW_DIR, f"{map_id}-sites.png")
+    image.save(out)
+    return out
+
+
 def segment_crosses(start: Sequence[float], finish: Sequence[float],
                     box: Tuple[float, float, float, float]) -> bool:
     """Does the 2D segment cross the axis aligned rectangle? (slab test)"""
@@ -667,6 +825,24 @@ def write_report(map_id: str, data: dict, result: Dict[str, object],
         lines.append(f"| `{spawn_id}` | {clear} / {SIGHT_DIRECTIONS} | {furthest} m |")
     lines.append("")
 
+    objective: Dict[str, object] = result["objective"]  # type: ignore[assignment]
+    site_problems: List[str] = objective["site_problems"]  # type: ignore[assignment]
+    buy_problems: List[str] = objective["buy_problems"]  # type: ignore[assignment]
+
+    lines += ["## Bomb sites and buy zones", ""]
+    lines.append(
+        f"{objective['sites']} bomb site(s) and {objective['zones']} buy zone(s) are "
+        f"declared by the layout. A site must be on the floor inside the bounds, with a "
+        f"clear plant spot under 1.9 m of headroom and at least 20 m from the other site; "
+        f"every team spawn must sit inside one of its own side's buy zones.")
+    lines.append("")
+    if site_problems or buy_problems:
+        lines += [f"* {problem}" for problem in site_problems + buy_problems]
+    else:
+        lines.append("Every site stands on the floor with a clear plant spot and a real "
+                     "distance from the other site, and every team spawn can buy.")
+    lines.append("")
+
     lines += ["## Shell contract", ""]
     if missing:
         lines += [f"* shell `{name}` is declared in the layout but missing from the scene"
@@ -712,13 +888,17 @@ def main() -> None:
         images = render_review(map_id, data) if args.render else []
         report = write_report(map_id, data, result, images)
         sight = result["sight"]
+        objective = result["objective"]
         count = (len(result["holes"]) + len(result["missing_shells"]) +
                  len(result["spawn_problems"]) + len(result["contract_problems"]) +
-                 len(sight["lanes"]) + len(sight["sight_problems"]))
+                 len(sight["lanes"]) + len(sight["sight_problems"]) +
+                 len(objective["site_problems"]) + len(objective["buy_problems"]))
         failures += count
         print(f"[audit] {map_id}: {result['samples']} floor samples, "
               f"{len(result['holes'])} holes, {len(result['spawn_problems'])} spawn "
-              f"problems, {len(sight['lanes'])} side lanes, {count} findings -> "
+              f"problems, {len(sight['lanes'])} side lanes, "
+              f"{len(objective['site_problems']) + len(objective['buy_problems'])} "
+              f"objective problems, {count} findings -> "
               f"{os.path.relpath(report, art.REPO_ROOT)}")
 
     print(f"[audit] {len(map_ids)} map(s) in {time.time() - started:.1f}s, "

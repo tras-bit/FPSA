@@ -70,6 +70,26 @@ namespace Kordon.Core.Rules
         public bool IsAccepted => Outcome == BombActionOutcome.Accepted;
     }
 
+    /// <summary>One bomb site, as loaded from the map layout JSON.</summary>
+    public struct BombSiteVolume
+    {
+        public string Id;
+        public string Name;
+        public float CentreX;
+        public float CentreY;
+        public float Radius;
+    }
+
+    /// <summary>One team's buy zone, as loaded from the map layout JSON.</summary>
+    public struct BuyZoneVolume
+    {
+        public string Id;
+        public Team Team;
+        public float CentreX;
+        public float CentreY;
+        public float Radius;
+    }
+
     /// <summary>Read-only view the HUD and the network layer replicate.</summary>
     public struct BombRoundSnapshot
     {
@@ -665,6 +685,49 @@ namespace Kordon.Core.Rules
             player.Economy.Award(_economy.DefuseReward, _rules.MaxMoney);
             EndRound(Team.Defenders, RoundEndReason.BombDefused, now);
             return true;
+        }
+
+        /// <summary>
+        /// Which site, if any, a position is standing on.  Map geometry stays in the map
+        /// data; the controller only sees the result.
+        /// </summary>
+        public static string SiteAt(IReadOnlyList<BombSiteVolume> sites, float x, float y)
+        {
+            for (int i = 0; i < sites.Count; i++)
+            {
+                BombSiteVolume site = sites[i];
+                float dx = x - site.CentreX;
+                float dy = y - site.CentreY;
+                if (dx * dx + dy * dy <= site.Radius * site.Radius)
+                {
+                    return site.Id;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Whether a position is inside one of the buy zones of a team.</summary>
+        public static bool InBuyZone(IReadOnlyList<BuyZoneVolume> zones, Team team,
+                                     float x, float y)
+        {
+            for (int i = 0; i < zones.Count; i++)
+            {
+                BuyZoneVolume zone = zones[i];
+                if (zone.Team != team)
+                {
+                    continue;
+                }
+
+                float dx = x - zone.CentreX;
+                float dy = y - zone.CentreY;
+                if (dx * dx + dy * dy <= zone.Radius * zone.Radius)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // ------------------------------------------------------------------

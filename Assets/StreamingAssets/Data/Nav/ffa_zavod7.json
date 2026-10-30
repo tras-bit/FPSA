@@ -8,9 +8,9 @@
   "id": "ffa_zavod7",
   "map": "FFA_Zavod7",
   "generatedBy": "Tools/blender/build_maps.py",
-  "generatedAtUtc": "2026-10-30T17:05:12Z",
-  "nodeCount": 190,
-  "linkCount": 803,
+  "generatedAtUtc": "2026-10-30T17:44:08Z",
+  "nodeCount": 189,
+  "linkCount": 790,
   "nodes": [
     {
       "id": 1,
@@ -622,17 +622,6 @@
       "position": {
         "x": -3.0,
         "y": 21.0,
-        "z": 0.15
-      },
-      "area": "Indoor",
-      "cover": 0.35,
-      "marker": ""
-    },
-    {
-      "id": 60,
-      "position": {
-        "x": 4.0,
-        "y": 7.0,
         "z": 0.15
       },
       "area": "Indoor",
@@ -3274,10 +3263,6 @@
     },
     {
       "from": 54,
-      "to": 60
-    },
-    {
-      "from": 54,
       "to": 70
     },
     {
@@ -3350,15 +3335,7 @@
     },
     {
       "from": 57,
-      "to": 60
-    },
-    {
-      "from": 57,
       "to": 61
-    },
-    {
-      "from": 57,
-      "to": 63
     },
     {
       "from": 57,
@@ -3375,10 +3352,6 @@
     {
       "from": 57,
       "to": 173
-    },
-    {
-      "from": 58,
-      "to": 60
     },
     {
       "from": 58,
@@ -3411,38 +3384,6 @@
     {
       "from": 59,
       "to": 65
-    },
-    {
-      "from": 60,
-      "to": 61
-    },
-    {
-      "from": 60,
-      "to": 62
-    },
-    {
-      "from": 60,
-      "to": 63
-    },
-    {
-      "from": 60,
-      "to": 64
-    },
-    {
-      "from": 60,
-      "to": 155
-    },
-    {
-      "from": 60,
-      "to": 161
-    },
-    {
-      "from": 60,
-      "to": 177
-    },
-    {
-      "from": 60,
-      "to": 179
     },
     {
       "from": 61,
@@ -3731,10 +3672,6 @@
     {
       "from": 77,
       "to": 80
-    },
-    {
-      "from": 77,
-      "to": 81
     },
     {
       "from": 77,

@@ -2,7 +2,7 @@
 
 Scene: `ArtSource/Blender/ffa_zavod7.blend`  
 Layout: `Assets/StreamingAssets/Data/Maps/ffa_zavod7.json`  
-Spawns: 20  Kit instances: 720  Shells: 2
+Spawns: 20  Kit instances: 738  Shells: 2
 
 **Verdict: PASS** (0 finding(s))
 
@@ -11,7 +11,7 @@ Spawns: 20  Kit instances: 720  Shells: 2
 Ray cast a 2 m grid (1496 samples) downward from z=6; every sample must land on the `ground` shell.
 
 * samples that hit nothing (holes): **0**
-* samples stopped by something other than the ground shell: 321 (catwalk, roof, prop: legitimate cover above the floor)
+* samples stopped by something other than the ground shell: 332 (catwalk, roof, prop: legitimate cover above the floor)
 
 ## Spawns
 
@@ -50,6 +50,12 @@ Every spawn has at least 6 m of clear sight in one of 16 sampled directions. A s
 | `spawn_d4` | 12 / 16 | 111.2 m |
 | `spawn_d5` | 12 / 16 | 111.2 m |
 
+## Bomb sites and buy zones
+
+2 bomb site(s) and 4 buy zone(s) are declared by the layout. A site must be on the floor inside the bounds, with a clear plant spot under 1.9 m of headroom and at least 20 m from the other site; every team spawn must sit inside one of its own side's buy zones.
+
+Every site stands on the floor with a clear plant spot and a real distance from the other site, and every team spawn can buy.
+
 ## Shell contract
 
 One walkable ground shell; every declared shell exists; the ground covers the playable bounds. `MapBuilder` gives it a collider because it is walkable.
@@ -59,4 +65,5 @@ One walkable ground shell; every declared shell exists; the ground covers the pl
 ![ffa_zavod7](../docs/art/ffa_zavod7-iso.png)
 ![ffa_zavod7](../docs/art/ffa_zavod7-top.png)
 ![ffa_zavod7](../docs/art/ffa_zavod7-lanes.png)
+![ffa_zavod7](../docs/art/ffa_zavod7-sites.png)
 

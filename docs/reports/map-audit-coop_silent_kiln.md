@@ -36,13 +36,13 @@ Every spawn has at least 6 m of clear sight in one of 16 sampled directions. A s
 | `insert_5` | 12 / 16 | 92.2 m |
 | `insert_6` | 15 / 16 | 92.2 m |
 
+## Bomb sites and buy zones
+
+0 bomb site(s) and 0 buy zone(s) are declared by the layout. A site must be on the floor inside the bounds, with a clear plant spot under 1.9 m of headroom and at least 20 m from the other site; every team spawn must sit inside one of its own side's buy zones.
+
+Every site stands on the floor with a clear plant spot and a real distance from the other site, and every team spawn can buy.
+
 ## Shell contract
 
 One walkable ground shell; every declared shell exists; the ground covers the playable bounds. `MapBuilder` gives it a collider because it is walkable.
-
-## Review images
-
-![coop_silent_kiln](../docs/art/coop_silent_kiln-iso.png)
-![coop_silent_kiln](../docs/art/coop_silent_kiln-top.png)
-![coop_silent_kiln](../docs/art/coop_silent_kiln-lanes.png)
 
