@@ -15,6 +15,13 @@ Triggers, the trigger pull, and a reload the player can actually read.
   shoe in the front half of the opening, there is a trigger pin flush on both sides, a
   magazine release behind the guard and a selector disc with its lever on the receiver.
   The sidearm's blade is 11 mm across with a blade-safety lever and its own pin.
+* **The sidearm's guard is a loop.** It was one 17 mm-wide bar swept under the frame -
+  a plate, which from the side hid the blade completely. It is now two rails with the
+  blade and its safety lever visible between them.
+* **`Tools/blender/render_triggers.py`** renders `docs/art/weapons-triggers.png`: each
+  weapon's trigger group, framed from its own bounds. The first two attempts framed the
+  grip because the guard's height was guessed; the tool now derives the shot from the
+  geometry, and a part that cannot be seen in a render is a part that cannot be reviewed.
 * **The blade moves.** It is exported as its own node (`Trigger`) and the viewmodel
   swings it 16 degrees back into the guard for 55 ms on every shot, from a new
   `TriggerTravel` in the pose. Firing pulls it through the recoil impulse, so a burst
