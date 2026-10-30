@@ -64,6 +64,7 @@ namespace Kordon.Game.Match
         private readonly List<ScoreRow> _scoreRows = new List<ScoreRow>();
         private float _scoreboardTimer;
         private string _appliedArmorId;
+        private int _localSpawnRound = -1;
 
         /// <summary>Everything the HUD and the buy screen need, refreshed once per tick.</summary>
         public BombRoundSnapshot Round => Match != null ? Match.Snapshot(Now) : default;
@@ -453,9 +454,15 @@ namespace Kordon.Game.Match
                 Hud?.Toast("eliminated - waiting for the next round");
             }
 
-            if (local.Alive && Player.IsDead && Match.Round == RoundPhase.Freeze)
+            // Every round starts from the team's shelter, not from wherever the last one
+            // ended: standing in a bombsite during buy time would be a free forward spawn.
+            if (Match.Round == RoundPhase.Freeze && _localSpawnRound != Round.RoundNumber)
             {
-                PlaceAtTeamSpawn(false);
+                _localSpawnRound = Round.RoundNumber;
+                if (local.Alive)
+                {
+                    PlaceAtTeamSpawn(false);
+                }
             }
         }
 
@@ -464,15 +471,37 @@ namespace Kordon.Game.Match
         // ------------------------------------------------------------------
         private void PlaceAtTeamSpawn(bool initial)
         {
-            IReadOnlyList<string> ids = MapData.SpawnsFor(LocalTeam);
             if (Map.SpawnPoints.Count == 0)
             {
                 Player.Respawn(Vector3.zero, 0f);
                 return;
             }
 
-            _spawnCursor = (_spawnCursor + 1) % Mathf.Max(1, Map.SpawnPoints.Count);
-            Transform spawn = Map.SpawnPoints[_spawnCursor % Map.SpawnPoints.Count];
+            // The map has a spawn point per authored id, and the layout names which of them
+            // belong to which side. Asking the layout first is what keeps an attacker from
+            // being placed in a defender shelter.
+            IReadOnlyList<string> ids = MapData.SpawnsFor(LocalTeam);
+            Transform spawn = null;
+            if (ids.Count > 0)
+            {
+                _spawnCursor = (_spawnCursor + 1) % ids.Count;
+                string wanted = "Spawn_" + ids[_spawnCursor];
+                foreach (Transform point in Map.SpawnPoints)
+                {
+                    if (point != null && point.name == wanted)
+                    {
+                        spawn = point;
+                        break;
+                    }
+                }
+            }
+
+            if (spawn == null)
+            {
+                _spawnCursor = (_spawnCursor + 1) % Map.SpawnPoints.Count;
+                spawn = Map.SpawnPoints[_spawnCursor % Map.SpawnPoints.Count];
+            }
+
             Player.Respawn(spawn.position, -spawn.rotation.eulerAngles.y);
             // Respawn puts an empty vest on the body, so the armour the shop recorded has
             // to be worn again rather than left behind on the previous life.
