@@ -3,6 +3,26 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.18 - 2026-10-30
+
+Hands that hold the weapon, and a review sheet that shows the whole thing.
+
+### Fixed
+
+* **The support hand floated under the handguard.** On the review sheet the support
+  hands hung with their fingers closed on air, a centimetre or two below the fore-end,
+  and the firing hands were further out still: the authored positions were
+  approximations and nothing checked them against the mesh. `seat_on_weapon` casts a ray
+  from the palm and moves the hand until it touches the surface; the build prints the
+  correction for every hand (2 mm to 22 mm) and fails above 75 mm, where the problem
+  would not be seating but a hand built for another weapon.
+* The first version of that seat snapped to the *nearest* surface point, which pulled
+  the VS9's support hand up onto the top of the receiver. The correction is vertical
+  only now, so a hand keeps the side of the weapon it was authored on.
+* **The sidearm and the shotgun were cropped** on the lineup: the shot was framed on the
+  weapon's bounds, and the forearm leaving the frame is wider than the weapon. It is
+  solved from the union of the weapon, the hands, the magazine and the trigger now.
+
 ## 1.0.17 - 2026-10-30
 
 Triggers, the trigger pull, and a reload the player can actually read.
