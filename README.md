@@ -1,9 +1,11 @@
 # KORDON
 
 A tactical first person shooter set in the fictional Veransk corridor, built in
-Unity 6 for Windows. Free-for-All is the release mode: 20 operators, no teams,
-first one to 50 personal kills wins. A two-to-four player co-op operation,
-*Silent Kiln*, ships alongside it.
+Unity 6 for Windows. Two PvP modes share one map: **Free-for-All** - 20 operators,
+no teams, first one to 50 personal kills wins - and **Demolition** - two squads of
+five, two bomb sites, a charge to plant and defuse, round based scoring and a cash
+economy with a shop between rounds. A two-to-four player co-op operation,
+*Silent Kiln*, ships alongside them.
 
 Everything in this repository is original: the setting, the map, the art, the
 audio (synthesised from noise in `Tools/audio`), the UI (built in code) and the

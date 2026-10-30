@@ -101,6 +101,7 @@ namespace Kordon.Core.Settings
             bindings.SetKey(InputAction.Interact, KeyNames.KeyCodeA + ('F' - 'A'));
             bindings.SetKey(InputAction.Revive, KeyNames.KeyCodeA + ('F' - 'A'));
             bindings.SetKey(InputAction.PlantCharge, KeyNames.KeyCodeA + ('F' - 'A'));
+            bindings.SetKey(InputAction.BuyMenu, KeyNames.KeyCodeA + ('B' - 'A'));
 
             bindings.SetKey(InputAction.Scoreboard, KeyNames.KeyCodeTab);
             bindings.SetKey(InputAction.Pause, KeyNames.KeyCodeEscape);

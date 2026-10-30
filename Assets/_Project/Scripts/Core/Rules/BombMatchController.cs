@@ -126,6 +126,13 @@ namespace Kordon.Core.Rules
         private readonly List<BombPlayer> _players = new List<BombPlayer>();
         private readonly Dictionary<ulong, BombPlayer> _byId = new Dictionary<ulong, BombPlayer>();
 
+        /// <summary>
+        /// Progress tolerance.  A plant held for exactly PlantSeconds computes as
+        /// 3.1999998 / 3.2 in single precision, which is just under one; without this the
+        /// charge would refuse to arm at the exact moment it should.
+        /// </summary>
+        private const float ProgressEpsilon = 0.001f;
+
         private readonly int[] _squadScore = new int[2];
         private float _roundStartedAt;
         private float _liveStartedAt;
@@ -589,7 +596,7 @@ namespace Kordon.Core.Rules
             }
 
             float progress = PlantProgressAt(now);
-            if (progress < 1f)
+            if (progress < 1f - ProgressEpsilon)
             {
                 return null;
             }
@@ -675,7 +682,7 @@ namespace Kordon.Core.Rules
                 return false;
             }
 
-            if (DefuseProgressAt(now) < 1f)
+            if (DefuseProgressAt(now) < 1f - ProgressEpsilon)
             {
                 return false;
             }

@@ -38,6 +38,9 @@ namespace Kordon.Core.Settings
         Revive = 41,
         PlantCharge = 42,
 
+        /// <summary>Opens the demolition shop. Only the round rules decide whether it buys.</summary>
+        BuyMenu = 59,
+
         Scoreboard = 60,
         Pause = 61,
         VoiceLocal = 62,

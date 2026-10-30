@@ -3,6 +3,57 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.24 - 2026-10-30
+
+A second PvP mode: demolition, with a charge and a shop.
+
+### Added
+
+* **Demolition.** Two squads of five on Zavod-7, round based scoring, the charge to plant
+  and defuse, side swap at half time, first to 13 rounds. It is a separate rule set
+  (`BombRules`, `EconomyRules`, `BuyCatalog`, `BombMatchController`) and the free-for-all
+  controller is untouched by it - the two modes share the map and the weapons, not the
+  state machine.
+* **The charge behaves like an objective, not a flag.** Planting holds the interact key
+  for 3.2 s inside a site; dying cancels it and the progress is lost; once armed the round
+  runs on the charge's own 40 s clock and killing every attacker wins nothing. A defuse is
+  10 s, or 5 s with a kit, and starting too late simply fails.
+* **A shop with an economy.** 800 to start, 16 000 ceiling. Kills pay 300, a round win
+  3250 (+800 for a detonation), a plant and a defuse 300 each, and the losing side climbs a
+  1400/1900/2400/2900/3400 ladder so a lost round is recoverable. Buying is open during
+  freeze time and 20 s into the round, inside your own buy zone; the catalogue is fixed,
+  validated against the weapons the build actually ships, and slots stop duplicates. The
+  defuse kit is defenders only.
+* **The map carries both modes.** Zavod-7 now has two dressed sites 33 m apart - A beside
+  the kiln in the furnace hall, B in the pipe yard - the four shelters split into the two
+  sides, and a 13 m buy zone on each. `docs/art/ffa_zavod7-sites.png` draws them from the
+  same numbers the game loads.
+* **The audit learned two new questions.** Every site must stand on real floor with a clear
+  plant spot and be far enough from the other site to be worth attacking separately, and
+  every team spawn must be inside its own side's buy zone - otherwise a player starts a
+  round unable to buy, which reads as a broken shop rather than a broken map. Silent Kiln
+  declares itself co-op only and is not asked for any of it.
+* **Game layer:** `DemolitionMatch` runs the loop with labelled bots, buys through the
+  controller, plants and defuses on the interact key, and drives the HUD with the round
+  clock, both scores, the cash and the plant/defuse percentage. `BuyMenuModel` turns the
+  catalogue and a wallet into exactly what the shop screen draws, so "cannot afford" and
+  "your side cannot buy that" are decided once, in Core.
+
+### Verified
+
+`Tests/Kordon.Core.Tests/BombMatchTests.cs` (23 tests) walks the whole life cycle: freeze
+and buy windows, plant timing, arming, detonation, kit and no-kit defuses, a retake after
+the attackers are dead, elimination ends, the clock, team kills, every shop refusal, the
+loss ladder, the money cap, the half-time swap keeping squad scores, and 13 rounds ending
+the match. `DemolitionMapTests` holds the layout to the same contract.
+
+### Known limitations
+
+* The demolition presentation is compile-verified, not play-verified: there is no shop
+  screen wired into the menu yet, bot opponents in the mode are placeholders that do not
+  shoot, and the round loop has not been played with a mouse in hand. The rules, the map
+  data and the audit are what is actually proven here.
+
 ## 1.0.21 - 2026-10-30
 
 The map had 27 firing lanes between spawns, and nothing was checking for them.

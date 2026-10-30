@@ -1,5 +1,44 @@
 # KORDON — rules
 
+## Demolition (second PvP mode)
+
+Two squads of five, one charge, round based scoring - the objective shooter half of the
+game, on the same map as the free-for-all mode. It has its own rules object
+(`BombRules`), its own economy (`EconomyRules`) and its own server controller
+(`BombMatchController`); the free-for-all controller is not touched by any of it.
+
+* **Sides.** Attackers carry the charge and win a round by detonating it or by
+  eliminating the defenders. Defenders win by defusing, by eliminating the attackers
+  before the plant, or by running the round clock out. Sides **swap after 12 rounds**;
+  the score belongs to the squad, not to the side, so a team never loses its rounds by
+  switching ends.
+* **Rounds.** First squad to **13** takes the match (MR12, 24 rounds maximum). Freeze
+  time is **15 s**, the live round is **115 s**, the armed charge runs for **40 s**.
+* **The charge.** Planting holds an interact key for **3.2 s** inside a site. Death
+  cancels it and the progress is lost - progress is computed from held time on the
+  server, never reported by the client. Once armed, the round is not over until the
+  charge is defused or it goes off: killing every attacker after the plant wins nothing.
+* **Defusing.** **10 s** without a kit, **5 s** with one. A defuse can still fail if it
+  starts too late, which is what makes the retake a decision rather than a formality.
+* **Buying.** Money is the mode's progression. Everyone starts a match with **800**,
+  the ceiling is **16000**. Buying is legal during freeze time and for the first **20 s**
+  of the live round, inside the operator's own **buy zone** (13 m around their shelter).
+  Kills pay **300**, a round win pays **3250** (+800 for a detonation), a plant and a
+  defuse pay **300** each. The losing side is paid on a ladder - **1400, 1900, 2400,
+  2900, 3400** for consecutive losses - so a lost round is recoverable instead of
+  terminal.
+* **Shop.** A fixed, validated catalogue (`BuyCatalog`): two sidearms, SMG, shotgun, two
+  rifles, a marksman rifle and a sniper; armour vest or vest and helmet; a defuse kit for
+  defenders only; frag, smoke and flash, at most four grenades. Slots prevent duplicates,
+  prices are data, and the catalogue is validated against the weapons the build actually
+  ships so it can never sell a weapon that does not exist.
+* **Bots.** Practice only, exactly as in the free-for-all rules: `BombRules.AllowBots`
+  is false for networked play and the controller refuses a bot join.
+* **Map.** Zavod-7 carries both layouts. The demolition block is `bombSites`,
+  `teamSpawns` and `buyZones` in `Assets/StreamingAssets/Data/Maps/ffa_zavod7.json`;
+  site A is beside the kiln in the furnace hall, site B is in the pipe yard, 33 m away.
+  `docs/art/ffa_zavod7-sites.png` draws them from the same numbers the game loads.
+
 ## Free-for-All (the release mode)
 
 * 20 player slots, every operator for themselves: there are no teams and no team
