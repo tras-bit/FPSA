@@ -1064,13 +1064,17 @@ def stock_chassis(ctx: dict, spec: dict) -> List[bpy.types.Object]:
                      bevel=0.0034))
     parts.append(torus("chassis_hinge_pin", (0.0, start + 0.006, bore - 0.052),
                        0.010, 0.0034, surface=BARE, segments=20, axis="X"))
-    # cheek riser on two posts, and the recoil pad
-    parts.append(box("cheek_riser", (0.032, 0.132, 0.018),
-                     (0.0, start + length * 0.52, bore + 0.024), surface=RUBBER,
+    # Cheek riser, seated on the spine.  It used to sit 4 mm above it with two posts
+    # buried inside the body, which on the sheet looked like a bar floating over the stock.
+    riser_z = bore + 0.0215
+    parts.append(box("cheek_riser", (0.031, 0.132, 0.019),
+                     (0.0, start + length * 0.52, riser_z), surface=RUBBER,
                      bevel=0.0045))
-    for y in (start + length * 0.28, start + length * 0.76):
-        parts.append(disc("riser_post", (0.0, y, bore + 0.010), 0.0032, 0.0050,
-                          axis="Z"))
+    for side in (-1.0, 1.0):
+        parts.append(loft(oval(0.0028, 0.0028, steps=8), [
+            (bore + 0.008, 1.0, 1.0, side * 0.0225, start + length * 0.52),
+            (riser_z, 1.0, 1.0, side * 0.0225, start + length * 0.52),
+        ], surface=BARE, name="riser_post", axis="Z"))
     parts.append(box("recoil_pad", (0.038, 0.020, 0.110),
                      (0.0, end + 0.004, bore - 0.040), surface=RUBBER,
                      bevel=0.0050))
@@ -1084,53 +1088,105 @@ def stock_chassis(ctx: dict, spec: dict) -> List[bpy.types.Object]:
 
 
 def stock_shotgun(ctx: dict, spec: dict, surface: str = WOOD) -> List[bpy.types.Object]:
-    """Straight walnut butt stock with a wrist and a recoil pad."""
+    """Walnut butt stock swept from a rounded section, with a fitted recoil pad.
+
+    It used to be a straight-sided slab extruded through its width with a 98 mm box on
+    the end.  The box was taller than the wood, so the silhouette read as a plank with a
+    plate bolted on.  A stock is a solid that tapers in both axes and drops slightly at
+    the heel; lofting a rounded section through those sizes gets both, and the pad is
+    now cut from the stock's own end instead of being a separate, larger box.
+    """
     hw = ctx["hw"]
     length = spec.get("stock_len", 0.270)
     axis_z = ctx["bore"] - 0.012
     start = ctx["rear"] - 0.012
     end = start + length
-    outline = [
-        (start, 0.022), (start + 0.060, 0.024), (end - 0.040, 0.030),
-        (end, 0.032), (end, -0.058), (end - 0.030, -0.056),
-        (end - 0.090, -0.044), (start + 0.070, -0.040), (start + 0.016, -0.018),
+
+    profile = round_rect(hw * 0.78, 0.030, 0.013, steps=4)
+    sections = [
+        # (y, width scale, height scale, x offset, drop)
+        (start, 0.92, 0.72, 0.0, 0.000),
+        (start + 0.048, 0.98, 0.80, 0.0, 0.001),
+        (start + 0.110, 1.00, 0.94, 0.0, -0.001),
+        (start + 0.190, 1.03, 1.10, 0.0, -0.005),
+        (end - 0.012, 1.05, 1.19, 0.0, -0.008),
+        (end, 1.02, 1.16, 0.0, -0.009),
     ]
     parts: List[bpy.types.Object] = [
-        prism("stock", [(y, axis_z + dz) for y, dz in outline], hw * 0.88,
-              surface=surface, bevel_width=0.0048, segments=3),
-        box("butt_pad", (hw * 1.84, 0.016, 0.098),
-            (0.0, end + 0.006, axis_z - 0.012), surface=RUBBER, bevel=0.0030),
+        loft(profile, [(y, su, sv, du, axis_z + dv) for y, su, sv, du, dv in sections],
+             surface=surface, name="stock"),
+        # recoil pad: the same section, slightly proud, and only 13 mm thick
+        loft(round_rect(hw * 0.78 * 1.03, 0.030 * 1.19, 0.013, steps=4), [
+            (end - 0.002, 1.0, 1.0, 0.0, axis_z - 0.008),
+            (end + 0.011, 0.98, 0.98, 0.0, axis_z - 0.009),
+        ], surface=RUBBER, name="butt_pad"),
         # wrist: fills the gap between the receiver tang and the comb
-        loft(round_rect(hw * 0.62, 0.020, 0.010, steps=3), [
+        loft(round_rect(hw * 0.62, 0.021, 0.011, steps=3), [
             (ctx["rear"] + 0.002, 0.90, 0.86, 0.0, axis_z - 0.004),
             (ctx["rear"] + 0.022, 1.00, 1.00, 0.0, axis_z - 0.006),
-            (start + 0.055, 1.00, 1.00, 0.0, axis_z - 0.008),
+            (start + 0.040, 1.00, 0.98, 0.0, axis_z - 0.007),
         ], surface=surface, name="wrist"),
+        # comb: the ridge the cheek rests on.  It follows the top of the stock rather
+        # than a fixed height - at a fixed 24 mm it broke the surface near the wrist and
+        # sank into it at the butt, which read as a bar floating over the wood.
+        loft(round_rect(hw * 0.46, 0.0050, 0.0042, steps=3), [
+            (start + 0.050, 0.86, 1.00, 0.0, axis_z + 0.0200),
+            (start + 0.140, 1.00, 1.00, 0.0, axis_z + 0.0262),
+            (end - 0.016, 1.00, 0.94, 0.0, axis_z + 0.0315),
+        ], surface=surface, name="comb"),
+        box("butt_plate_screw", (0.012, 0.004, 0.012),
+            (0.0, end + 0.012, axis_z - 0.009), surface=BARE, bevel=0.0014),
     ]
+    parts.extend(swivel("stock_swivel", end - 0.056, axis_z - 0.040, hw * 0.80))
     return parts
 
 
 def stock_wire(ctx: dict, spec: dict) -> List[bpy.types.Object]:
-    """Retractable wire stock: two rods and a shoulder plate."""
+    """Folding skeleton stock: a closed frame with a comb bar and a rounded shoulder plate.
+
+    Two rods and a box read as loose scrap in silhouette - the frame was open at the back
+    so nothing connected the rods to the plate.  A folding stock is a closed loop: the
+    rods are joined by a vertical strut at the hinge, a cross bar gives the cheek
+    something to rest on, and the plate is a rounded solid rather than a slab.
+    """
     hw = ctx["hw"]
     length = spec.get("stock_len", 0.150)
     axis_z = ctx["top"] - (ctx["top"] - ctx["bottom"]) * 0.42
     start = ctx["rear"] + 0.004
     end = start + length
+    side_x = hw * 0.62
+    upper = axis_z + 0.012
+    lower = axis_z - 0.030
+
     parts: List[bpy.types.Object] = []
     for side in (-1.0, 1.0):
-        parts.append(tube("stock_rod", [(start, 0.0042), (end, 0.0042)],
-                          axis_z + 0.010, surface=BARE, segments=12,
-                          x=side * hw * 0.62))
-        parts.append(tube("stock_rod_low", [(start, 0.0042), (end - 0.030, 0.0042)],
-                          axis_z - 0.026, surface=BARE, segments=12,
-                          x=side * hw * 0.62))
-    parts.append(box("shoulder_plate", (hw * 1.70, 0.014, 0.076),
-                     (0.0, end + 0.004, axis_z - 0.008), surface=METAL,
-                     bevel=0.0030))
-    parts.append(box("stock_hinge", (hw * 1.30, 0.022, 0.020),
-                     (0.0, start + 0.004, axis_z + 0.002), surface=METAL,
-                     bevel=0.0020))
+        parts.append(tube("stock_rod", [(start, 0.0046), (end - 0.006, 0.0044)],
+                          upper, surface=BARE, segments=14, x=side * side_x))
+        parts.append(tube("stock_rod_low", [(start, 0.0042), (end - 0.020, 0.0040)],
+                          lower, surface=BARE, segments=14, x=side * side_x))
+        # the strut that closes the frame at the hinge: a vertical rod, swept along Z
+        parts.append(loft(oval(0.0038, 0.0038, steps=10), [
+            (lower, 1.0, 1.0, side * side_x, end - 0.018),
+            (upper, 1.0, 1.0, side * side_x, end - 0.018),
+        ], surface=BARE, name="stock_strut", axis="Z"))
+    # comb bar across the frame, and the hinge knuckle it folds on
+    parts.append(loft(oval(0.0050, 0.0050, steps=10), [
+        (-side_x, 1.0, 1.0, end - 0.018, upper + 0.006),
+        (side_x, 1.0, 1.0, end - 0.018, upper + 0.006),
+    ], surface=BARE, name="stock_comb", axis="X"))
+    parts.append(box("stock_hinge", (hw * 1.20, 0.024, 0.022),
+                     (0.0, start + 0.002, axis_z - 0.008), surface=METAL,
+                     bevel=0.0026))
+    # shoulder plate: rounded, slightly angled, with a rubber face
+    parts.append(loft(round_rect(hw * 0.72, 0.040, 0.016, steps=4), [
+        (end - 0.014, 0.86, 0.90, 0.0, axis_z - 0.008),
+        (end + 0.002, 1.00, 1.00, 0.0, axis_z - 0.009),
+        (end + 0.012, 0.94, 0.96, 0.0, axis_z - 0.010),
+    ], surface=METAL, name="shoulder_plate"))
+    parts.append(loft(round_rect(hw * 0.62, 0.034, 0.015, steps=4), [
+        (end + 0.012, 1.00, 1.00, 0.0, axis_z - 0.010),
+        (end + 0.020, 0.92, 0.94, 0.0, axis_z - 0.010),
+    ], surface=RUBBER, name="shoulder_pad"))
     return parts
 
 
@@ -1483,24 +1539,41 @@ def iron_sights_ar(ctx: dict, spec: dict) -> Tuple[List[bpy.types.Object], float
 
 
 def bipod(ctx: dict, spec: dict, y: float) -> List[bpy.types.Object]:
-    """Folded Harris style bipod under the fore-end: mount, two legs, feet."""
+    """Folded Harris style bipod under the fore-end: mount, two legs, feet.
+
+    The legs were built as tubes at their absolute position and then rotated about the
+    object origin, which is the weapon's origin, not the mount - so both legs and their
+    feet ended up somewhere else entirely, and what was left on the sheet was a floating
+    stump and two thin tails.  Each leg is now built at the origin, swung there, and
+    translated onto the mount; the feet are placed on the real tip of the leg.
+    """
     bore = ctx["bore"]
+    mount_z = bore - 0.042
     parts: List[bpy.types.Object] = [
         box("bipod_mount", (0.026, 0.034, 0.016), (0.0, y, bore - 0.030),
             surface=METAL, bevel=0.0022),
-        box("bipod_block", (0.020, 0.022, 0.014), (0.0, y - 0.004, bore - 0.042),
+        box("bipod_block", (0.020, 0.022, 0.014), (0.0, y - 0.004, mount_z),
             surface=METAL, bevel=0.0016),
     ]
+    leg_length = 0.086
     for side in (-1.0, 1.0):
-        leg = tube("bipod_leg", [(0.0, 0.0044), (0.086, 0.0034)],
-                   bore - 0.042, surface=METAL, segments=12, x=side * 0.010)
+        # 5.6 mm, not 4.4: at 4.4 the folded legs read as loose wire rather than as the
+        # tubes a Harris bipod is actually made of.
+        leg = tube("bipod_leg", [(0.0, 0.0056), (leg_length, 0.0044)],
+                   0.0, surface=METAL, segments=14)
         leg.data.transform(mathutils.Matrix.Rotation(
             math.radians(-72.0), 4, "X"))
         leg.data.transform(mathutils.Matrix.Rotation(
-            math.radians(side * 7.0), 4, "Y"))
+            math.radians(-side * 7.0), 4, "Y"))
+        leg.data.transform(mathutils.Matrix.Translation(
+            (side * 0.012, y - 0.004, mount_z)))
+        leg.data.update()
         parts.append(leg)
-        parts.append(disc("bipod_foot", (side * 0.016, y + 0.026, bore - 0.124),
-                          0.0052, 0.014, axis="Z", surface=RUBBER))
+        # the foot sits on the leg's actual end, so the two can never drift apart
+        tip = max((leg.matrix_world @ vertex.co for vertex in leg.data.vertices),
+                  key=lambda point: point.z)
+        parts.append(disc("bipod_foot", (tip.x, tip.y, tip.z),
+                          0.0062, 0.016, axis="Z", surface=RUBBER))
     return parts
 
 
@@ -1716,14 +1789,22 @@ def build_pistol(spec: dict):
     muzzle_y = -receiver_len * 0.62
     slide_start = receiver_len * 0.40
 
+    # The slide is the whole silhouette of a sidearm at a glance, and a straight prism
+    # with a 3.5 mm chamfer read as a brick.  A 6 mm round on the top corners, a longer
+    # nose taper and a real crowned bore at the front are what make it read as a slide.
     parts: List[bpy.types.Object] = [
-        loft(chamfer_rect(half_w, height * 0.5, 0.0035), [
-            (muzzle_y - 0.004, 0.86, 0.88, 0.0, 0.0),
-            (muzzle_y + 0.008, 0.98, 1.00, 0.0, 0.0),
+        loft(round_rect(half_w, height * 0.5, 0.0060, steps=3), [
+            (muzzle_y - 0.007, 0.74, 0.78, 0.0, 0.0),
+            (muzzle_y - 0.001, 0.88, 0.92, 0.0, 0.0),
+            (muzzle_y + 0.010, 0.99, 1.00, 0.0, 0.0),
             (slide_start - 0.020, 1.00, 1.00, 0.0, 0.0),
             (slide_start, 0.94, 0.96, 0.0, 0.0),
         ], surface=METAL, name="slide"),
     ]
+    # muzzle: a bored crown inside the slide face, not a painted dot
+    parts.append(tube("pistol_crown", [(muzzle_y - 0.009, 0.0082),
+                                       (muzzle_y + 0.002, 0.0082)],
+                      0.0, surface=BARE, bore=0.0046, segments=20))
     slide = parts[0]
     # ejection port: a real pocket with the barrel hood visible inside
     port = box_cutter("port", (half_w * 2.2, 0.026, 0.010),

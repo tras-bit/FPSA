@@ -381,7 +381,10 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
                       (0.0135 * s, 0.0175 * s, 0.0155 * s), GLOVE))
 
     # ---- four fingers, wrapping the front strap and closing on the far side
-    finger_z = (-0.0295, -0.0477, -0.0659, -0.0841)
+    # 17.6 mm spacing against a 9.2 mm radius: neighbouring fingers touch, so the voxel
+    # union welds them into one fist.  At the old 18.2 mm spacing with 8.6 mm fingers a
+    # sub-millimetre gap survived the remesh and the fist read as four separate sausages.
+    finger_z = (-0.0292, -0.0468, -0.0644, -0.0820)
     for index, z in enumerate(finger_z):
         t = z * s
         lean = -0.004 * s * index if index < 2 else 0.004 * s * (index - 1)
@@ -394,8 +397,8 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
         distal = (-0.0130 * s, -depth - 0.006 * s - reach, t - 0.006 * s)
         tip = (-0.0195 * s, depth * 0.30, t - 0.009 * s - reach * 0.4)
         points = [knuckle, mid_right, mid_front, distal, tip]
-        radii = [0.0086 * s, 0.0081 * s, 0.0073 * s, 0.0064 * s, 0.0050 * s]
-        parts.append(chain("finger", points, radii, GLOVE, flatten=0.80))
+        radii = [0.0092 * s, 0.0087 * s, 0.0079 * s, 0.0069 * s, 0.0054 * s]
+        parts.append(chain("finger", points, radii, GLOVE, segments=14, flatten=0.86))
         # knuckle: a pad on the outside of the first joint, plus a seam behind it
         # The knuckle is the finger's own first section.  A bead on top of it fused
         # into a visible lump, so there is no separate knuckle part any more.
@@ -471,8 +474,11 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
 
     # One watertight glove instead of a dozen interpenetrating lumps: the crevices
     # between them were reading as holes through the hand.
-    glove = fuse(parts, "HandRight_glove", GLOVE, voxel=0.00105 * s,
-                 target_faces=5000, grooves=grooves)
+    # A 1.05 mm voxel decimated to 5000 faces left 4-5 mm triangles on the back of the
+    # hand, and a triangle that wide catches light as a facet: the glove read as a
+    # faceted lump rather than as skin.  Finer voxel, twice the faces, smoother.
+    glove = fuse(parts, "HandRight_glove", GLOVE, voxel=0.00090 * s,
+                 target_faces=11000, grooves=grooves)
     _smooth_shaded(glove)
     for part in arm:
         _smooth(part, 40.0)
@@ -566,8 +572,8 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
                  [0.0188 * s, 0.0212 * s, 0.0242 * s, 0.0274 * s], CUFF,
                  segments=14)]
 
-    glove = fuse(parts, "HandLeft_glove", GLOVE, voxel=0.00105 * s,
-                 target_faces=5000)
+    glove = fuse(parts, "HandLeft_glove", GLOVE, voxel=0.00090 * s,
+                 target_faces=11000)
     _smooth_shaded(glove)
     for part in arm:
         _smooth(part, 40.0)

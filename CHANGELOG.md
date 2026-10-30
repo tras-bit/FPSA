@@ -3,6 +3,58 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.19 - 2026-10-30
+
+The support hand grips, and the five silhouettes that were wrong.
+
+### Fixed
+
+* **The support hand now closes around the fore-end.** 1.0.18 seated the palm on the
+  surface but the fingers still rested on it, so the hand read as a mitten lying on the
+  handguard.  Three faults, all found by measuring rather than looking: the fore-end was
+  measured against a weapon mesh that had already been re-origined into the shooting
+  hand while the hand itself was built in the weapon's own space - about 95 mm apart
+  along the barrel; the measure cast its ray downwards from above and took the top rail
+  for an underside; and the hand-written radius in the spec was up to 12 mm small.  The
+  hands are built before the shift now, the underside is found by casting up from below,
+  the cross-section is read off the mesh, and the curl centre follows the measured
+  bottom edge.  Corrections are 1.9-2.1 mm on every long gun.
+* Finger paths are resampled with a Catmull-Rom through their control points and swept
+  at 14 segments: the wrapped fingers were five straight segments each, so every knuckle
+  was a corner and each phalanx a flat facet.  The glove is voxel-fused at 0.9 mm and
+  decimated to 11 000 faces instead of 1.05 mm and 5 000 - at 5 000 faces the back of
+  the hand was 4-5 mm triangles that caught the key light as visible facets.
+* **The shotgun's butt stock was a plank.** It was a straight-sided prism through its
+  width with a 98 mm box bolted on the end, taller than the wood. It is swept from a
+  rounded section that tapers in both axes and drops at the heel, with a comb that
+  follows the top of the stock and a recoil pad cut from the stock's own end.
+* **The SMG's stock was two bare rods.** The folding frame was open at the back, so
+  nothing connected the rods to the shoulder plate. It is a closed loop now: a vertical
+  strut at the hinge, a comb bar across the frame and a rounded two-piece shoulder plate.
+* **The bipod was in the wrong place.** Its legs were built as tubes at their absolute
+  position and then rotated about the object origin - the weapon's origin, not the
+  mount - so on the sheet the SR338 had a floating stump under the fore-end and two thin
+  tails hanging beside it. Each leg is built at the origin, swung there and translated
+  onto the mount, and each foot is placed on the leg's real tip, so the two cannot part.
+* **The chassis cheek riser floated** 4 mm above the spine with its posts buried inside
+  the body. It is seated on the stock with the posts visible at its sides.
+* **The sidearm read as a box.** The slide was a straight prism with a 3.5 mm chamfer and
+  a flat nose, and it was reviewed from the same above-front angle as a rifle, where the
+  top of the slide is all there is to see. The slide has 6 mm rounds on its top corners,
+  a longer nose taper and a bored crown; the tile is shot at 64 degrees of azimuth and 8
+  of elevation, so it reads in profile. Framing now takes an anchor: the forearms are
+  four times the length of the pistol and previously either cropped it or shrank it into
+  a corner.
+* The detail sheet camera is derived from the support hand - the median of its vertices,
+  not the centre of its bounds, because the forearm is part of the same object - so it
+  cannot drift off the grip again.
+
+### Known limitations
+
+* The glove is still procedural. At close range the fingers are smooth tubes with soft
+  joins rather than a scanned or sculpted hand, and no amount of voxel resolution fixes
+  the anatomy. It reads correctly at viewmodel and lineup distance; it is not AAA.
+
 ## 1.0.18 - 2026-10-30
 
 Hands that hold the weapon, and a review sheet that shows the whole thing.

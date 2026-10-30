@@ -315,12 +315,28 @@ def camera(location, target, lens=55.0):
     return obj
 
 
-def frame_parts(objects, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.06):
+def frame_parts(objects, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.06,
+                anchor=None, anchor_reach=1.30):
     """Frame several objects at once with the same solve frame_weapon uses.
 
     The lineup framed only the weapon, and the hands leaving the frame are wider than
     the weapon: the sidearm and the shotgun were cropped at the edge of their tiles.
+    Including them whole went too far the other way - on a pistol the forearms are four
+    times the length of the gun, so they took over the tile and the weapon shrank into a
+    corner.  When an anchor is given, everything else only counts up to a box a little
+    larger than the anchor, which keeps the gun the subject and still shows the grip.
     """
+    limit = None
+    if anchor is not None:
+        points = [anchor.matrix_world @ Vector(corner) for corner in anchor.bound_box]
+        a_lo = Vector((min(p.x for p in points), min(p.y for p in points),
+                       min(p.z for p in points)))
+        a_hi = Vector((max(p.x for p in points), max(p.y for p in points),
+                       max(p.z for p in points)))
+        span = a_hi - a_lo
+        grow = (span * (anchor_reach - 1.0) * 0.5)
+        limit = (a_lo - grow, a_hi + grow)
+
     lo = Vector((1e9, 1e9, 1e9))
     hi = Vector((-1e9, -1e9, -1e9))
     for obj in objects:
@@ -328,6 +344,9 @@ def frame_parts(objects, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.06):
             continue
         for corner in obj.bound_box:
             world = obj.matrix_world @ Vector(corner)
+            if limit is not None:
+                world = Vector((min(max(world[i], limit[0][i]), limit[1][i])
+                                for i in range(3)))
             for axis in range(3):
                 lo[axis] = min(lo[axis], world[axis])
                 hi[axis] = max(hi[axis], world[axis])
@@ -446,7 +465,15 @@ def render_weapon(weapon_id, path, resolution=(880, 460), closeup=None):
             parts.append(_magazine)
         if meta.get("trigger") is not None:
             parts.append(meta["trigger"])
-        frame_parts(parts)
+        # A sidearm read as a box on the sheet because it was shot from the same
+        # above-front angle as a rifle: at 13 degrees of elevation the top of the slide
+        # is all that is visible.  Pistols get a flatter, more lateral view.
+        if weapon_id == "p9":
+            frame_parts(parts, lens=80, azimuth=64, elevation=8, margin=1.04,
+                        anchor=weapon, anchor_reach=1.45)
+        else:
+            frame_parts(parts)
+    
     else:
         camera(closeup[0], closeup[1], lens=closeup[2])
     shoot(path)
@@ -473,20 +500,17 @@ def main():
     lights()
     # The detail shot used to be a hardcoded camera, and it stayed pointed at the old
     # position of the hands after they were rebuilt - the review sheet kept showing the
-    # previous grip.  It is aimed at the support hand now, which is the part that had to
-    # be proved: fingers wrapped on the fore-end.
+    # previous grip.  It is aimed at the support hand now, and at the *median* of its
+    # vertices rather than the centre of its bounds: the forearm is part of the same
+    # object and it drags a bounding box halfway down the frame.
     support = next((hand for hand in _meta.get("hands", [])
                     if hand.name.startswith("HandLeft")), None)
     if support is not None:
-        points = [support.matrix_world @ Vector(corner) for corner in support.bound_box]
-        low = Vector((min(p.x for p in points), min(p.y for p in points),
-                      min(p.z for p in points)))
-        high = Vector((max(p.x for p in points), max(p.y for p in points),
-                       max(p.z for p in points)))
-        centre = (low + high) * 0.5
-        reach = max((high - low).length * 0.95, 0.10)
-        camera(centre + Vector((reach * 0.55, -reach * 1.25, reach * 0.75)), centre,
-               lens=80)
+        points = [support.matrix_world @ vertex.co for vertex in support.data.vertices]
+        centre = Vector((0.0,
+                         sorted(point.y for point in points)[len(points) // 2],
+                         sorted(point.z for point in points)[len(points) // 2]))
+        camera(centre + Vector((-0.175, -0.165, 0.105)), centre, lens=80)
     else:
         camera((0.52, -0.50, 0.26), (0.00, 0.03, -0.015), lens=85)
     shoot(detail)

@@ -4,8 +4,8 @@
     {
       "id": "dmr14",
       "model": "Kordon/Weapons/dmr14",
-      "triangles": 80710,
-      "bytes": 1927404,
+      "triangles": 104701,
+      "bytes": 2612748,
       "lengthM": 1.032,
       "sightHeightM": 0.1356,
       "sizeM": [
@@ -60,27 +60,27 @@
     {
       "id": "k870",
       "model": "Kordon/Weapons/k870",
-      "triangles": 34300,
-      "bytes": 1030748,
+      "triangles": 60114,
+      "bytes": 1765644,
       "lengthM": 0.934,
       "sightHeightM": 0.09,
       "sizeM": [
         0.15,
         0.934,
-        0.322
+        0.323
       ],
       "hasMagazine": false
     },
     {
       "id": "p9",
       "model": "Kordon/Weapons/p9",
-      "triangles": 32052,
-      "bytes": 964524,
-      "lengthM": 0.307,
+      "triangles": 56524,
+      "bytes": 1674108,
+      "lengthM": 0.312,
       "sightHeightM": 0.0489,
       "sizeM": [
         0.104,
-        0.307,
+        0.312,
         0.276
       ],
       "hasMagazine": true
@@ -88,8 +88,8 @@
     {
       "id": "sr338",
       "model": "Kordon/Weapons/sr338",
-      "triangles": 72797,
-      "bytes": 1768364,
+      "triangles": 96893,
+      "bytes": 2458908,
       "lengthM": 1.104,
       "sightHeightM": 0.144,
       "sizeM": [
@@ -102,8 +102,8 @@
     {
       "id": "tr30",
       "model": "Kordon/Weapons/tr30",
-      "triangles": 78081,
-      "bytes": 1950844,
+      "triangles": 102073,
+      "bytes": 2639260,
       "lengthM": 0.862,
       "sightHeightM": 0.1272,
       "sizeM": [
@@ -116,8 +116,8 @@
     {
       "id": "vk74",
       "model": "Kordon/Weapons/vk74",
-      "triangles": 48403,
-      "bytes": 1331532,
+      "triangles": 72398,
+      "bytes": 2018364,
       "lengthM": 0.844,
       "sightHeightM": 0.099,
       "sizeM": [
@@ -130,13 +130,13 @@
     {
       "id": "vs9",
       "model": "Kordon/Weapons/vs9",
-      "triangles": 57923,
-      "bytes": 1477660,
-      "lengthM": 0.534,
+      "triangles": 83051,
+      "bytes": 2191260,
+      "lengthM": 0.543,
       "sightHeightM": 0.092,
       "sizeM": [
         0.15,
-        0.534,
+        0.543,
         0.339
       ],
       "hasMagazine": true
