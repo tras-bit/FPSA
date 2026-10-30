@@ -466,12 +466,29 @@ def main():
     # sidearm at a size where its slide serrations are readable.
     detail = os.path.join(OUT_DIR, "weapons-detail.png")
     art.reset_scene()
-    bw.build_weapon("tr30")
+    _weapon, _magazine, _meta = bw.build_weapon("tr30")
     setup((1100, 560), samples=64)
     apply_textures()
     studio_floor()
     lights()
-    camera((0.52, -0.50, 0.26), (0.00, 0.03, -0.015), lens=85)
+    # The detail shot used to be a hardcoded camera, and it stayed pointed at the old
+    # position of the hands after they were rebuilt - the review sheet kept showing the
+    # previous grip.  It is aimed at the support hand now, which is the part that had to
+    # be proved: fingers wrapped on the fore-end.
+    support = next((hand for hand in _meta.get("hands", [])
+                    if hand.name.startswith("HandLeft")), None)
+    if support is not None:
+        points = [support.matrix_world @ Vector(corner) for corner in support.bound_box]
+        low = Vector((min(p.x for p in points), min(p.y for p in points),
+                      min(p.z for p in points)))
+        high = Vector((max(p.x for p in points), max(p.y for p in points),
+                       max(p.z for p in points)))
+        centre = (low + high) * 0.5
+        reach = max((high - low).length * 0.95, 0.10)
+        camera(centre + Vector((reach * 0.55, -reach * 1.25, reach * 0.75)), centre,
+               lens=80)
+    else:
+        camera((0.52, -0.50, 0.26), (0.00, 0.03, -0.015), lens=85)
     shoot(detail)
 
     from PIL import Image, ImageDraw, ImageFont

@@ -1827,9 +1827,17 @@ def build_weapon(weapon_id: str):
 
     weapon = finish(parts, weapon_id, bevel_width=spec.get("bevel", 0.0014))
     shift = mathutils.Matrix.Translation((0.0, -grip_y, -grip_top))
+    sight_top -= grip_top
+
+    # The hands are built before the weapon is re-origined: the layout table is authored
+    # in the weapon's own space, so measuring the fore-end against a mesh that has
+    # already been shifted put the support hand ~95 mm off along the barrel.  Both are
+    # moved by the same shift afterwards.
+    import build_hands
+    hands = build_hands.add_hands(spec, layout(spec), weapon=weapon)
+
     weapon.data.transform(shift)
     weapon.data.update()
-    sight_top -= grip_top
 
     magazine_obj = None
     if mag_parts and mag_pivot is not None:
@@ -1842,11 +1850,9 @@ def build_weapon(weapon_id: str):
         magazine_obj.location = pivot
         bpy.context.view_layer.update()
 
-    # The hands the weapon is held by.  They are authored in this weapon's space
-    # (see build_hands.py) and shipped inside the same FBX as separate nodes, so
-    # the viewmodel can find and animate them without an anchor table.
-    import build_hands
-    hands = build_hands.add_hands(spec, layout(spec))
+    # The hands are authored in this weapon's space (see build_hands.py) and shipped
+    # inside the same FBX as separate nodes, so the viewmodel can find and animate them
+    # without an anchor table.
     for hand in hands:
         hand.data.transform(shift)
         hand.data.update()

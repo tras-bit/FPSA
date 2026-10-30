@@ -4,14 +4,14 @@
     {
       "id": "dmr14",
       "model": "Kordon/Weapons/dmr14",
-      "triangles": 80207,
-      "bytes": 1914332,
+      "triangles": 80710,
+      "bytes": 1927404,
       "lengthM": 1.032,
       "sightHeightM": 0.1356,
       "sizeM": [
         0.15,
         1.032,
-        0.391
+        0.389
       ],
       "hasMagazine": true
     },
@@ -60,22 +60,22 @@
     {
       "id": "k870",
       "model": "Kordon/Weapons/k870",
-      "triangles": 33796,
-      "bytes": 1017580,
+      "triangles": 34300,
+      "bytes": 1030748,
       "lengthM": 0.934,
       "sightHeightM": 0.09,
       "sizeM": [
         0.15,
         0.934,
-        0.318
+        0.322
       ],
       "hasMagazine": false
     },
     {
       "id": "p9",
       "model": "Kordon/Weapons/p9",
-      "triangles": 31548,
-      "bytes": 947116,
+      "triangles": 32052,
+      "bytes": 964524,
       "lengthM": 0.307,
       "sightHeightM": 0.0489,
       "sizeM": [
@@ -88,12 +88,12 @@
     {
       "id": "sr338",
       "model": "Kordon/Weapons/sr338",
-      "triangles": 72295,
-      "bytes": 1755788,
+      "triangles": 72797,
+      "bytes": 1768364,
       "lengthM": 1.104,
       "sightHeightM": 0.144,
       "sizeM": [
-        0.182,
+        0.181,
         1.104,
         0.424
       ],
@@ -102,22 +102,22 @@
     {
       "id": "tr30",
       "model": "Kordon/Weapons/tr30",
-      "triangles": 77579,
-      "bytes": 1939852,
+      "triangles": 78081,
+      "bytes": 1950844,
       "lengthM": 0.862,
       "sightHeightM": 0.1272,
       "sizeM": [
         0.15,
         0.862,
-        0.383
+        0.381
       ],
       "hasMagazine": true
     },
     {
       "id": "vk74",
       "model": "Kordon/Weapons/vk74",
-      "triangles": 47902,
-      "bytes": 1317724,
+      "triangles": 48403,
+      "bytes": 1331532,
       "lengthM": 0.844,
       "sightHeightM": 0.099,
       "sizeM": [
@@ -130,14 +130,14 @@
     {
       "id": "vs9",
       "model": "Kordon/Weapons/vs9",
-      "triangles": 57421,
-      "bytes": 1463996,
+      "triangles": 57923,
+      "bytes": 1477660,
       "lengthM": 0.534,
       "sightHeightM": 0.092,
       "sizeM": [
         0.15,
         0.534,
-        0.332
+        0.339
       ],
       "hasMagazine": true
     }

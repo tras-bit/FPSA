@@ -39,6 +39,46 @@ CUFF = "gun_polymer"   # jacket sleeve: dark nylon, not a painted tube
 # --------------------------------------------------------------------------
 # Primitives
 # --------------------------------------------------------------------------
+def _resample(points: Sequence[Sequence[float]], radii: Sequence[float],
+              steps: int = 4) -> Tuple[List[Vector], List[float]]:
+    """Smooth a control polyline into a curve, keeping the radii continuous.
+
+    A finger was five control points joined by straight segments, so every knuckle was a
+    corner and the top of each phalanx was a flat facet - which is why wrapped fingers
+    read as slabs even after the surface was remeshed.  Catmull-Rom through the same
+    control points gives the curl a continuous bend, and the radii are interpolated with
+    it so the taper survives.
+    """
+    control = [Vector(p) for p in points]
+    if len(control) < 3:
+        return control, list(radii)
+
+    def point_at(index: int) -> Vector:
+        return control[min(max(index, 0), len(control) - 1)]
+
+    smooth_points: List[Vector] = []
+    smooth_radii: List[float] = []
+    for index in range(len(control) - 1):
+        p0, p1 = point_at(index - 1), point_at(index)
+        p2, p3 = point_at(index + 1), point_at(index + 2)
+        r1 = radii[min(index, len(radii) - 1)]
+        r2 = radii[min(index + 1, len(radii) - 1)]
+        for step in range(steps):
+            t = step / float(steps)
+            t2 = t * t
+            t3 = t2 * t
+            smooth_points.append(0.5 * (
+                (2.0 * p1) +
+                (-p0 + p2) * t +
+                (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+                (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3))
+            smooth_radii.append(r1 + (r2 - r1) * t)
+
+    smooth_points.append(control[-1])
+    smooth_radii.append(radii[-1])
+    return smooth_points, smooth_radii
+
+
 def chain(name: str, points: Sequence[Sequence[float]], radii: Sequence[float],
           surface: str, segments: int = 14,
           flatten: float = 1.0) -> bpy.types.Object:
@@ -50,7 +90,7 @@ def chain(name: str, points: Sequence[Sequence[float]], radii: Sequence[float],
     the swept binormal, which is what turns a sausage into a finger: a finger is wider
     than it is thick, and its flat side lies against the grip.
     """
-    pts = [Vector(p) for p in points]
+    pts, radii = _resample(points, radii)
     count = len(pts)
     tangents: List[Vector] = []
     for index in range(count):
@@ -479,8 +519,11 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
         top = (-0.0290 * s, t - 0.002 * s, -r + 0.030 * s)
         over = (-0.0150 * s, t - 0.004 * s, -r + 0.040 * s - reach * 0.35)
         tip = (-0.0020 * s - reach * 0.30, t - 0.008 * s, -r + 0.042 * s - reach)
-        radii = [0.0096 * s, 0.0091 * s, 0.0084 * s, 0.0076 * s, 0.0066 * s]
-        parts.append(chain("finger", [knuckle, side, top, over, tip], radii, GLOVE))
+        # More sections along the finger and a rounder cross-section: at 10 segments and
+        # a 0.80 flatten the wrapped fingers read as flat slabs rather than fingers.
+        radii = [0.0094 * s, 0.0090 * s, 0.0083 * s, 0.0074 * s, 0.0062 * s]
+        parts.append(chain("finger", [knuckle, side, top, over, tip], radii, GLOVE,
+                           segments=14, flatten=0.90))
         parts.append(blob("knuckle", (-0.0295 * s, t, -r + 0.007 * s),
                           (0.0052 * s, 0.0074 * s, 0.0074 * s), GLOVE))
 
@@ -540,8 +583,13 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
 # --------------------------------------------------------------------------
 # Where the hands go on a given weapon
 # --------------------------------------------------------------------------
-def hands_for(spec: dict, ctx: dict) -> Tuple[bpy.types.Object, bpy.types.Object]:
-    """Build the pair of hands for one weapon from its layout table."""
+def hands_for(spec: dict, ctx: dict,
+              weapon: bpy.types.Object = None) -> Tuple[bpy.types.Object, bpy.types.Object]:
+    """Build the pair of hands for one weapon from its layout table.
+
+    When the weapon mesh is available its real fore-end is measured and the support hand
+    is built around that, instead of the hand-written guess in the spec.
+    """
     kind = spec["kind"]
     if kind == "pistol":
         # the frame grip is shorter and narrower than a rifle grip
@@ -586,7 +634,47 @@ def hands_for(spec: dict, ctx: dict) -> Tuple[bpy.types.Object, bpy.types.Object
         # like two hands gripping empty air.
         return right, support
 
-    return right, left_hand(fore_y, ctx["bore"], radius=radius)
+    # The support hand wraps measured geometry when the mesh exists.
+    bore = ctx["bore"]
+    if weapon is not None:
+        bottom, half_width = measure_fore_end(weapon, fore_y, bore)
+        radius = half_width + 0.0035          # the glove sits on the surface, not in it
+        bore = bottom + radius                 # the curl centre follows the measured bottom
+    return right, left_hand(fore_y, bore, radius=radius)
+
+
+def measure_fore_end(weapon: bpy.types.Object, y: float, bore_z: float,
+                     reach: float = 0.40) -> Tuple[float, float]:
+    """Measure the fore-end's bottom edge and half-width at one point along the weapon.
+
+    The support hand wraps a fore-end whose size was written into the weapon spec by
+    hand, and the spec was wrong by up to twelve millimetres: the fingers closed short
+    of the surface and the hand read as hovering.  The mesh is the only trustworthy
+    source, so the cross-section is measured from it - the bottom by a ray cast down
+    from above, the width by rays cast in from both sides at the bore line - and the
+    hand is built around those numbers.
+
+    Returns ``(bottom_z, half_width)`` in world space.
+    """
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    scene = bpy.context.scene
+
+    # Cast *up* from below: the first thing that stops the ray is the underside of the
+    # fore-end.  Casting down from above finds the top rail, which is not a bottom.
+    hit_up, location_up, _n, _i, _o, _m = scene.ray_cast(
+        depsgraph, Vector((0.0, y, bore_z - reach)), Vector((0.0, 0.0, 1.0)))
+    bottom = location_up.z if hit_up else bore_z - 0.02
+
+    half_width = 0.0
+    for sign in (-1.0, 1.0):
+        hit, location, _n, _i, _o, _m = scene.ray_cast(
+            depsgraph, Vector((sign * reach, y, bore_z)), Vector((-sign, 0.0, 0.0)))
+        if hit:
+            half_width = max(half_width, abs(location.x))
+
+    if half_width < 0.004:
+        half_width = 0.012
+    return bottom, half_width
 
 
 def seat_on_weapon(hand: bpy.types.Object, weapon: bpy.types.Object,
@@ -639,7 +727,8 @@ def seat_on_weapon(hand: bpy.types.Object, weapon: bpy.types.Object,
     return offset.length
 
 
-def add_hands(spec: dict, ctx: dict) -> List[bpy.types.Object]:
+def add_hands(spec: dict, ctx: dict,
+              weapon: bpy.types.Object = None) -> List[bpy.types.Object]:
     """Build both hands and return them as exportable objects."""
-    right, left = hands_for(spec, ctx)
+    right, left = hands_for(spec, ctx, weapon)
     return [right, left]
