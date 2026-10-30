@@ -39,7 +39,7 @@ namespace Kordon.Game.Ui
                 UiBuilder.Accent, new Vector2(0.5f, 1f), new Vector2(0f, -196f),
                 new Vector2(520f, 30f), TextAnchor.MiddleLeft);
             UiBuilder.LabelAt(left.transform, "Blurb",
-                "Free-for-All, 20 operators, first to 50 kills.\nNo teams. No respawn resupply. Your kit is locked when the round starts.",
+                "Free-for-All: 20 operators, first to 50 kills.\nDemolition: two squads, a charge, a shop between rounds.",
                 17, UiBuilder.Dim, new Vector2(0.5f, 1f), new Vector2(0f, -232f),
                 new Vector2(520f, 70f), TextAnchor.UpperLeft);
 
@@ -47,20 +47,24 @@ namespace Kordon.Game.Ui
             {
                 Flow.CoopRequested = false;
                 Flow.OpenConnect();
-            }, new Vector2(0f, 68f), new Vector2(480f, 58f));
+            }, new Vector2(0f, 68f), new Vector2(480f, 54f));
+            // Offline demolition: the rules, the map data and the shop are the real ones;
+            // the opponents are labelled bots and there is no server in this path.
+            UiBuilder.Button(left.transform, "DEMOLITION (OFFLINE, VS BOTS)", () => Flow.StartDemolition(),
+                new Vector2(0f, 10f), new Vector2(480f, 48f), 17);
             UiBuilder.Button(left.transform, "CO-OP OPERATION (2-4)", () =>
             {
                 Flow.CoopRequested = true;
                 Flow.OpenConnect();
-            }, new Vector2(0f, 6f), new Vector2(480f, 50f), 18);
+            }, new Vector2(0f, -42f), new Vector2(480f, 46f), 17);
             UiBuilder.Button(left.transform, "PRACTICE (OFFLINE, NO BOTS)", () => Flow.OpenPrep(),
-                new Vector2(0f, -52f), new Vector2(480f, 50f), 18);
+                new Vector2(0f, -92f), new Vector2(480f, 44f), 16);
             UiBuilder.Button(left.transform, "BASIC TRAINING", () => Flow.OpenTutorial(),
-                new Vector2(0f, -110f), new Vector2(480f, 46f), 16);
+                new Vector2(0f, -138f), new Vector2(480f, 42f), 15);
             UiBuilder.Button(left.transform, "SETTINGS & CONTROLS", () => Flow.OpenSettings(),
-                new Vector2(0f, -166f), new Vector2(480f, 50f), 18);
+                new Vector2(0f, -184f), new Vector2(480f, 44f), 16);
             UiBuilder.Button(left.transform, "QUIT", () => Flow.Quit(),
-                new Vector2(0f, -224f), new Vector2(480f, 42f), 15);
+                new Vector2(0f, -230f), new Vector2(480f, 40f), 15);
 
             // Right: operator identity and honest build information.
             Image right = UiBuilder.Panel(Root, "RightPanel", new Color(0.05f, 0.06f, 0.07f, 0.55f),

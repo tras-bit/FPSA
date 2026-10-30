@@ -29,6 +29,9 @@ namespace Kordon.Game.Match
         public LoadoutSelection Loadout { get; set; }
         public PracticeMatch Practice { get; private set; }
 
+        /// <summary>The demolition session, when the player started that mode.</summary>
+        public DemolitionMatch Demolition { get; private set; }
+
         /// <summary>Set by the network stage once a client/server can be created.</summary>
         public Func<IMatchConnector> ConnectorFactory;
 
@@ -199,6 +202,32 @@ namespace Kordon.Game.Match
             Practice.Hud.gameObject.SetActive(true);
         }
 
+        /// <summary>
+        /// Demolition against labelled bots on Zavod-7. Offline, so it is the place to
+        /// learn the shop, the sites and the plant/defuse timings; a networked demolition
+        /// match uses the same controller and would only replace the loop's owner.
+        /// </summary>
+        public void StartDemolition()
+        {
+            LeaveWorld();
+            Director.EnterMatch();
+            _worldRoot = new GameObject("DemolitionWorld").transform;
+            Demolition = _worldRoot.gameObject.AddComponent<DemolitionMatch>();
+            Demolition.MatchFinished += OnDemolitionFinished;
+            Demolition.Begin(Database, "ffa_zavod7", Loadout, _worldRoot);
+            Demolition.Hud.gameObject.SetActive(true);
+            BuyScreen = _worldRoot.gameObject.AddComponent<BuyScreen>();
+            BuyScreen.Bind(Demolition);
+        }
+
+        /// <summary>The shop overlay, alive while a demolition session is.</summary>
+        public BuyScreen BuyScreen { get; private set; }
+
+        private void OnDemolitionFinished()
+        {
+            ShowResults(Demolition.BuildResults(), "DEMOLITION");
+        }
+
         private void OnPracticeFinished()
         {
             MatchResults results = Practice.Match.BuildResults();
@@ -274,6 +303,14 @@ namespace Kordon.Game.Match
                 Practice.Stop();
                 Practice = null;
             }
+
+            if (Demolition != null)
+            {
+                Demolition.Stop();
+                Demolition = null;
+            }
+
+            BuyScreen = null;
 
             if (_worldRoot != null)
             {

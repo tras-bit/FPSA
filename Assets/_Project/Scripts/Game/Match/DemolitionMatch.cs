@@ -81,6 +81,26 @@ namespace Kordon.Game.Match
 
         public bool BuyMenuOpen => _buyMenuOpen;
 
+        public GameDatabase Database => _database;
+
+        public void CloseBuyMenu()
+        {
+            _buyMenuOpen = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+
+        /// <summary>End-of-match standings for the results screen.</summary>
+        public MatchResults BuildResults() => Match != null ? Match.BuildResults() : new MatchResults();
+
+        public void Stop()
+        {
+            if (Map != null)
+            {
+                Destroy(Map.gameObject);
+            }
+        }
+
         public void Begin(GameDatabase database, string mapId, LoadoutSelection loadout,
                           Transform parent, int botsPerSide = 4)
         {

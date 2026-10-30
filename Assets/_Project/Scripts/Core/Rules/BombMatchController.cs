@@ -840,6 +840,74 @@ namespace Kordon.Core.Rules
         }
 
         // ------------------------------------------------------------------
+        // Results
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The end-of-match screen for this mode.  A demolition result is a *team* result,
+        /// so the rows are ordered by squad first and by personal score inside it, which is
+        /// how a player reads a 13-7 scoreboard: their side, then their own line.
+        /// </summary>
+        public MatchResults BuildResults()
+        {
+            MatchResults results = new MatchResults
+            {
+                Reason = MatchEndReason.KillTargetReached,
+                WinnerId = 0,
+                DurationSeconds = 0f
+            };
+
+            List<BombPlayer> ordered = new List<BombPlayer>(_players);
+            ordered.Sort((a, b) =>
+            {
+                int squad = Squash(a).CompareTo(Squash(b));
+                if (squad != 0)
+                {
+                    return squad;
+                }
+
+                int byKills = b.Kills.CompareTo(a.Kills);
+                return byKills != 0 ? byKills : a.ClientId.CompareTo(b.ClientId);
+            });
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                BombPlayer player = ordered[i];
+                bool winner = MatchWinner != Team.None && player.Team == MatchWinner;
+                if (winner && results.WinnerId == 0)
+                {
+                    results.WinnerId = player.ClientId;
+                    results.WinnerName = player.DisplayName;
+                    results.WinnerKills = player.Kills;
+                }
+
+                results.Standings.Add(new ScoreboardRow
+                {
+                    ClientId = player.ClientId,
+                    DisplayName = player.DisplayName,
+                    Kills = player.Kills,
+                    Deaths = player.Deaths,
+                    Damage = 0,
+                    PingMs = 0,
+                    IsConnected = true,
+                    IsBot = player.IsBot,
+                    IsAlive = player.Alive,
+                    Rank = i + 1,
+                    IsWinner = winner,
+                    KillsToObjective = 0
+                });
+
+                results.TotalEliminations += player.Kills;
+            }
+
+            return results;
+        }
+
+        /// <summary>Rows are grouped by side, attackers first, so both teams read in blocks.</summary>
+        private static int Squash(BombPlayer player) =>
+            player.Team == Team.Attackers ? 0 : 1;
+
+        // ------------------------------------------------------------------
         // Buying
         // ------------------------------------------------------------------
         /// <summary>
