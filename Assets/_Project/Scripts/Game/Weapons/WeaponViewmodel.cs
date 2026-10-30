@@ -425,7 +425,8 @@ namespace Kordon.Game.Weapons
                 SightHeight = _sightHeight,
                 Length = _modelLength,
                 MagazineDrop = Mathf.Max(0.16f, _modelLength * 0.22f),
-                MagazineDropSeconds = 0.70f,
+                MagazineLeadSeconds = 0.18f,
+                MagazineDropSeconds = 0.34f,
                 MagazineInsertSeconds = 0.30f,
                 InspectHoldHeight = Mathf.Max(0.08f, _modelLength * 0.11f),
             };

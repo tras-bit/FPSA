@@ -107,6 +107,12 @@ namespace Kordon.Core.Weapons
         /// <summary>How far the magazine travels when it leaves the well, metres.</summary>
         public float MagazineDrop;
 
+        /// <summary>
+        /// Seconds the weapon takes to come round into the reload pose before the empty
+        /// magazine starts to move.  The change is not visible otherwise.
+        /// </summary>
+        public float MagazineLeadSeconds;
+
         /// <summary>Seconds the empty magazine takes to clear the well.</summary>
         public float MagazineDropSeconds;
 
@@ -121,9 +127,8 @@ namespace Kordon.Core.Weapons
             SightHeight = 0.068f,
             Length = 0.9f,
             MagazineDrop = 0.20f,
-            // 0.70 s of drop, half of it the lead-in before the magazine clears the
-            // well: a reload is a beat, not a frame.
-            MagazineDropSeconds = 0.70f,
+            MagazineLeadSeconds = 0.18f,
+            MagazineDropSeconds = 0.34f,
             MagazineInsertSeconds = 0.30f,
             InspectHoldHeight = 0.10f,
         };
@@ -488,8 +493,8 @@ namespace Kordon.Core.Weapons
             if (_trigger > 0f)
             {
                 _triggerTime += dt;
-                const float holdSeconds = 0.030f;
-                const float releaseSeconds = 0.070f;
+                const float holdSeconds = 0.070f;
+                const float releaseSeconds = 0.110f;
                 float release = Clamp01((_triggerTime - holdSeconds) / releaseSeconds);
                 _trigger = 1f - release;
             }
@@ -575,11 +580,11 @@ namespace Kordon.Core.Weapons
             {
                 case MagazineState.Dropping:
                 {
-                    // Half of the drop time is spent waiting: the weapon has to come
-                    // round into the reload pose first.  Without that beat the magazine
-                    // clears the well while it is still out of frame, which is exactly
-                    // how a reload looks like nothing happened.
-                    float lead = Math.Max(0.01f, _config.MagazineDropSeconds) * 0.5f;
+                    // The weapon has to come round into the reload pose before the
+                    // magazine leaves the well.  Without that beat the magazine clears
+                    // it while still out of frame, which is how a reload ends up looking
+                    // like nothing happened.
+                    float lead = Math.Max(0f, _config.MagazineLeadSeconds);
                     float t = Clamp01((_magazineTime - lead) /
                                       Math.Max(0.01f, _config.MagazineDropSeconds));
                     float eased = t * t * t;

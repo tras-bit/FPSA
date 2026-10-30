@@ -141,13 +141,12 @@ namespace Kordon.Core.Tests
                 "the magazine left the well before the weapon came round: " +
                 animator.Pose.MagazineY);
 
-            // Then it goes, and goes fast: a quarter of a second later it is clear.
-            Run(animator, Input(), 15);
+            // Then it goes, and goes fast: 0.18 s of lead-in, 0.34 s of drop.
+            Run(animator, Input(), 20);
             Assert.True(animator.Pose.MagazineY < -0.02f,
                 "the magazine did not move: " + animator.Pose.MagazineY);
 
-            // 0.7 s of drop in total, so another second is more than enough.
-            Run(animator, Input(), 90);
+            Run(animator, Input(), 30);
             Assert.False(animator.Pose.MagazineVisible, "the dropped magazine is still drawn");
             Assert.True(animator.MagazineOut);
         }
@@ -157,7 +156,7 @@ namespace Kordon.Core.Tests
         {
             ViewmodelAnimator animator = Animator();
             animator.Notify(ViewmodelEvent.MagazineOut);
-            Run(animator, Input(), 90);
+            Run(animator, Input(), 45);
             Assert.False(animator.Pose.MagazineVisible);
 
             animator.Notify(ViewmodelEvent.MagazineIn);
@@ -329,7 +328,7 @@ namespace Kordon.Core.Tests
 
             // held for a beat - a pull that returns within the frame it was pulled in is
             // a pull nobody can see
-            Run(animator, Input(), 6);
+            Run(animator, Input(), 4);
             Assert.True(animator.Pose.TriggerTravel > 0.9f,
                 "the trigger let go before it could be seen: " +
                 animator.Pose.TriggerTravel);
