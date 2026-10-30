@@ -196,7 +196,7 @@ namespace Kordon.Game.Match
                 }
             }
 
-            if (_buyMenuOpen && Input.GetKeyDown(KeyCode.Escape))
+            if (_buyMenuOpen && UnityEngine.Input.GetKeyDown(KeyCode.Escape))
             {
                 _buyMenuOpen = false;
                 Cursor.lockState = CursorLockMode.Locked;
