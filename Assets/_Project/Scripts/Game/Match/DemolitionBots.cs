@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Kordon.Core.Combat;
 using Kordon.Core.Data;
+using Kordon.Core.Loadout;
 using Kordon.Core.Rules;
 using Kordon.Core.Utility;
 using Kordon.Game.Ai;
