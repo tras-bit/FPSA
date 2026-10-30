@@ -479,15 +479,51 @@ def render_weapon(weapon_id, path, resolution=(880, 460), closeup=None):
     shoot(path)
 
 
+GRENADE_TILE = "grenade_tile"
+
+
+def render_grenades(path):
+    """The three thrown items on one tile.
+
+    They shipped in the game from the first build and never appeared on a review sheet,
+    which is why the last cell of the lineup was an empty black square: there are seven
+    weapons and eight cells.  Arranged in a row, lit the same way as the weapons.
+    """
+    art.reset_scene()
+    bodies = []
+    for index, grenade_id in enumerate(("grenade_frag", "grenade_smoke", "grenade_flash")):
+        body, _meta = bw.build_grenade(grenade_id)
+        body.rotation_euler = (0.0, 0.0, math.radians(-18.0 + index * 18.0))
+        body.location = ((index - 1) * 0.086, 0.0, 0.0)
+        bodies.append(body)
+    bpy.context.view_layer.update()
+    setup((880, 460), samples=SAMPLES)
+    apply_textures(tiling=2.2)
+    floor_z = min((body.matrix_world @ vertex.co).z
+                  for body in bodies for vertex in body.data.vertices)
+    studio_floor(floor_z - 0.010)
+    lights()
+    frame_parts(bodies, lens=72, azimuth=28, elevation=17, margin=1.10)
+    shoot(path)
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="kordon-weapons-")
     tiles = []
+    labels = list(LINEUP)
     for index, weapon_id in enumerate(LINEUP):
         path = os.path.join(tmp, f"{index}_{weapon_id}.png")
         render_weapon(weapon_id, path)
         tiles.append(path)
         print(f"[weapons] rendered {weapon_id}")
+
+    # eighth cell: the thrown equipment, so the sheet has no empty square
+    grenade_path = os.path.join(tmp, f"{len(tiles)}_{GRENADE_TILE}.png")
+    render_grenades(grenade_path)
+    tiles.append(grenade_path)
+    labels.append("FRAG / SMOKE / FLASH")
+    print("[weapons] rendered grenades")
 
     # Detail sheet: the carbine receiver, where all the small parts live, plus the
     # sidearm at a size where its slide serrations are readable.
@@ -525,7 +561,7 @@ def main():
     draw = ImageDraw.Draw(sheet)
     font = ImageFont.truetype(font_path, 22) if os.path.exists(font_path) else None
 
-    for index, (path, weapon_id) in enumerate(zip(tiles, LINEUP)):
+    for index, (path, weapon_id) in enumerate(zip(tiles, labels)):
         image = Image.open(path).convert("RGB")
         column, row = index % columns, index // columns
         x, y = column * tile_w, row * (tile_h + 38)

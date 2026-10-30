@@ -3,6 +3,27 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.20 - 2026-10-30
+
+The three thrown items were inverted, split in half, and had never been on a sheet.
+
+### Fixed
+
+* **Grenades shipped broken.** The body, cap and fuzes were swept along +Y and then
+  rotated by -90 degrees about X, which maps +Y onto -Z: the body hung *below* the
+  origin while every part authored after it - ribs, safety lever, pin ring, vents -
+  was placed at +Z. The exported models were therefore upside down and cut in two,
+  160 mm apart; the manifest recorded a fragmentation grenade 257 mm tall with a 98 mm
+  body. The rotation is +90 degrees, which puts +Y on +Z, the frame the rest of each
+  assembly was written in. Measured heights are now 131 / 168 / 141 mm.
+* **The safety lever lay flat.** It was the last part still written in the swept frame,
+  where the first coordinate runs along the body, so it stuck 92 mm out of the side of a
+  60 mm grenade. It is authored standing up now, and proud of the body so it reads as a
+  spoon rather than a seam.
+* **The lineup had an empty black square.** There are seven weapons and eight cells, and
+  the grenades had never appeared on a review sheet - which is how they stayed broken.
+  The last cell renders the three of them on the same floor with the same lights.
+
 ## 1.0.19 - 2026-10-30
 
 The support hand grips, and the five silhouettes that were wrong.

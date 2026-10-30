@@ -2017,8 +2017,14 @@ def build_grenade(grenade_id: str) -> Tuple[bpy.types.Object, dict]:
         tube("fuze", [(height + 0.008, radius * 0.30), (height + 0.028, radius * 0.34)],
              0.0, surface=POLYMER, segments=14),
     ]
+    # The body, cap and fuze are swept along +Y and stood up along +Z.  The rotation was
+    # -90 degrees, which maps +Y to -Z: the body hung *below* the origin while every part
+    # authored afterwards (ribs, safety lever, pin ring, vents) was placed in +Z.  The
+    # exported grenade was therefore inverted and split in two, 160 mm apart - measured
+    # height 257 mm for a 98 mm body.  +90 degrees puts +Y on +Z, which is the frame the
+    # rest of the assembly was written in.
     for part in parts:
-        part.data.transform(mathutils.Matrix.Rotation(math.radians(-90.0), 4, "X"))
+        part.data.transform(mathutils.Matrix.Rotation(math.radians(90.0), 4, "X"))
         part.data.update()
     if spec["sleeve"]:
         for index in range(spec["ribs"]):
@@ -2028,10 +2034,15 @@ def build_grenade(grenade_id: str) -> Tuple[bpy.types.Object, dict]:
                              (math.cos(angle) * radius * 0.92,
                               math.sin(angle) * radius * 0.92, height * 0.48),
                              surface=METAL, rot=(0.0, 0.0, math.degrees(angle))))
+    # The safety lever is the last part still authored in the swept frame, where the
+    # first coordinate ran along the body and the second radially.  Everything around it
+    # had already been placed standing up, so the lever lay flat and stuck 92 mm out of
+    # the side of a 60 mm grenade.  Written in the standing frame: radial in Y, height
+    # in Z, a tapered strip down the side.
     parts.append(prism("safety_lever", [
-        (height * 0.08, radius * 0.98), (height * 0.94, radius * 0.62),
-        (height * 0.94, radius * 0.56), (height * 0.08, radius * 0.92),
-    ], 0.0030, surface=BARE, bevel_width=0.0010))
+        (radius * 1.02, height * 0.10), (radius * 0.70, height * 0.94),
+        (radius * 0.80, height * 0.97), (radius * 1.13, height * 0.12),
+    ], 0.0036, surface=BARE, bevel_width=0.0010))
     parts.append(torus("pin_ring", (0.0, 0.0, height + 0.030), radius * 0.28, 0.0030,
                        surface=BARE, segments=16, axis="Z"))
     parts.append(tube("pull_pin", [(-radius * 0.34, 0.0020), (radius * 0.34, 0.0020)],
