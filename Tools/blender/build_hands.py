@@ -139,6 +139,51 @@ def blob(name: str, centre: Sequence[float], radii: Sequence[float],
     return obj
 
 
+def fuse(parts: Sequence[bpy.types.Object], name: str, surface: str = GLOVE,
+         voxel: float = 0.0013, target_faces: int = 4200) -> bpy.types.Object:
+    """Union authored lumps into one watertight skin.
+
+    Every finger, knuckle, pad and the thumb were separate closed solids that
+    interpenetrate where they meet.  Interpenetration is fine on a receiver, where the
+    overlap is a seam; on a hand it leaves a crease that is darker than the crevice of
+    a real gloved fist, and from the shooting angle the creases read as holes punched
+    through the glove.  There is no way to build a believable hand out of loose lumps.
+
+    So the authored solids are voxel-remeshed into a single manifold surface: the
+    overlaps become one continuous skin, every crease becomes a real fillet, and the
+    result is decimated back to a sane face count.  The remesh is done on the pieces
+    that share a material, so the leather glove fuses with itself and stays leather.
+    """
+    merged = art.join(list(parts), name + "_raw")
+    remesh = merged.modifiers.new("KordonFuse", "REMESH")
+    remesh.mode = "VOXEL"
+    remesh.voxel_size = voxel
+    remesh.use_smooth_shade = True
+    art.apply_modifiers(merged)
+
+    # A voxel remesh leaves a faint orange-peel facet.  At the distance the hand is
+    # seen from, that facet is the difference between leather and polycarbonate.
+    smooth = merged.modifiers.new("KordonRelax", "SMOOTH")
+    smooth.factor = 0.55
+    smooth.iterations = 6
+    art.apply_modifiers(merged)
+
+    faces = len(merged.data.polygons)
+    if faces > target_faces:
+        decimate = merged.modifiers.new("KordonDecimate", "DECIMATE")
+        decimate.decimate_type = "COLLAPSE"
+        decimate.ratio = target_faces / float(faces)
+        art.apply_modifiers(merged)
+
+    merged.data.materials.clear()
+    merged.data.materials.append(art.surface_material(surface))
+    for polygon in merged.data.polygons:
+        polygon.material_index = 0
+    merged.name = name
+    merged.data.name = name
+    return merged
+
+
 def _stitch(name: str, x: float, y: float, z: float, length: float,
             surface: str = PAD, axis: str = "Y") -> bpy.types.Object:
     """A raised glove seam: a thin rounded ridge that catches a highlight."""
@@ -173,7 +218,7 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     depth = grip_depth
 
     # ---- palm: slab from the wrist crease to the knuckle line
-    palm_profile = bw.round_rect(0.0114 * s, 0.0330 * s, 0.0100 * s, steps=6)
+    palm_profile = bw.round_rect(0.0106 * s, 0.0300 * s, 0.0094 * s, steps=6)
     palm = bw.loft(palm_profile, [
         (0.036 * s, 0.86, 0.80, 0.0, 0.004 * s),
         (0.016 * s, 0.98, 0.96, 0.0, 0.002 * s),
@@ -187,9 +232,9 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     # the heel of the palm, riding the backstrap, and the web at the thumb base
     parts.append(_stitch("wrist_crease", 0.0245 * s, depth * 1.16, -0.056 * s, 0.030 * s))
     parts.append(blob("palm_heel", (0.0205 * s, depth * 0.98, -0.072 * s),
-                      (0.0135 * s, 0.0165 * s, 0.0195 * s), GLOVE))
-    parts.append(blob("palm_web", (0.0190 * s, depth * 0.55, -0.022 * s),
-                      (0.0145 * s, 0.0150 * s, 0.0155 * s), GLOVE))
+                      (0.0104 * s, 0.0132 * s, 0.0158 * s), GLOVE))
+    parts.append(blob("palm_web", (0.0192 * s, depth * 0.55, -0.022 * s),
+                      (0.0112 * s, 0.0122 * s, 0.0128 * s), GLOVE))
     # Hypothenar: the muscle pad along the little finger's side of the palm.  Without
     # it the palm ends in the same thickness edge on both sides and reads as a block.
     parts.append(blob("palm_hypothenar", (0.0225 * s, depth * 0.52, -0.083 * s),
@@ -219,19 +264,25 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     parts.append(chain("thumb",
                        [(0.0150 * s, depth * 0.75, -0.018 * s),
                         (0.0075 * s, depth * 0.20, -0.012 * s),
-                        (-0.0030 * s, -depth * 0.35, -0.010 * s),
-                        (-0.0110 * s, -depth * 0.75, -0.012 * s)],
-                       [0.0120 * s, 0.0110 * s, 0.0098 * s, 0.0084 * s], GLOVE))
-    parts.append(blob("thumb_base", (0.0180 * s, depth * 0.80, -0.021 * s),
-                      (0.0125 * s, 0.0130 * s, 0.0145 * s), GLOVE))
+                        (-0.0030 * s, -depth * 0.42, -0.0105 * s),
+                        (-0.0120 * s, -depth * 0.95, -0.0090 * s)],
+                       [0.0118 * s, 0.0104 * s, 0.0092 * s, 0.0072 * s], GLOVE))
+    parts.append(blob("thumb_base", (0.0190 * s, depth * 0.85, -0.023 * s),
+                      (0.0104 * s, 0.0110 * s, 0.0124 * s), GLOVE))
+    # Web of the hand, between the thumb and the index finger.  Leaving it out left a
+    # real gap there with the trigger guard visible through it, which is what reads as
+    # a hole in the glove.
+    parts.append(blob("thumb_web", (0.0215 * s, depth * 0.20, -0.0235 * s),
+                      (0.0108 * s, 0.0128 * s, 0.0104 * s), GLOVE))
     # the joint at the base of the thumb's distal phalanx: the one that catches light
-    parts.append(blob("thumb_knuckle", (-0.0030 * s, -depth * 0.35, -0.010 * s),
-                      (0.0092 * s, 0.0092 * s, 0.0092 * s), GLOVE))
+    parts.append(blob("thumb_knuckle", (-0.0030 * s, -depth * 0.35, -0.0110 * s),
+                      (0.0080 * s, 0.0080 * s, 0.0080 * s), GLOVE))
 
-    # ---- seams: two stitched lines across the back of the hand
-    for index in range(2):
-        parts.append(_stitch("hand_seam", 0.0330 * s,
-                             (0.014 - index * 0.026) * s, -0.056 * s, 0.052 * s))
+    # The two stitched seams that used to sit on the back of the hand are gone: after
+    # the glove was fused they were 2 mm bars on the outside of the skin, and from the
+    # shooting angle they read as a wire sticking out between the fingers.  A seam is
+    # a groove in the leather, not a rod laid on it, and the fused surface carries the
+    # crease on its own.
 
     # ---- wrist and sleeve: the arm has to leave the frame somewhere
     strap = bw.loft(bw.round_rect(0.0148 * s, 0.0270 * s, 0.0110 * s, steps=6),
@@ -260,17 +311,20 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
                        [0.0234 * s, 0.0234 * s], GLOVE, segments=14))
     # The forearm drops away below the grip and slightly back: that is where a
     # right elbow sits, and it keeps the sleeve out of the sight picture.
-    parts.append(chain("forearm",
-                       [wrist + Vector((0.001, 0.014, -0.006)) * s,
-                        wrist + Vector((0.006, 0.040, -0.075)) * s,
-                        wrist + Vector((0.010, 0.050, -0.140)) * s,
-                        wrist + Vector((0.014, 0.058, -0.235)) * s],
-                       [0.0192 * s, 0.0216 * s, 0.0246 * s, 0.0278 * s], CUFF,
-                       segments=14))
+    arm = [chain("forearm",
+                 [wrist + Vector((0.001, 0.014, -0.006)) * s,
+                  wrist + Vector((0.006, 0.040, -0.075)) * s,
+                  wrist + Vector((0.010, 0.050, -0.140)) * s,
+                  wrist + Vector((0.014, 0.058, -0.235)) * s],
+                 [0.0192 * s, 0.0216 * s, 0.0246 * s, 0.0278 * s], CUFF,
+                 segments=14)]
 
-    hand = art.join(parts, "HandRight")
-    art.bevel(hand, width=0.0011 * s, segments=2, angle_deg=38.0)
-    _smooth(hand)
+    # One watertight glove instead of a dozen interpenetrating lumps: the crevices
+    # between them were reading as holes through the hand.
+    glove = fuse(parts, "HandRight_glove", GLOVE, voxel=0.00115 * s,
+                 target_faces=5200)
+    hand = art.join([glove] + arm, "HandRight")
+    _smooth(hand, 62.0)
     art.unwrap(hand, island_margin=0.004)
     hand.data.transform(Matrix.Rotation(math.radians(rake_deg), 4, "X"))
     hand.data.transform(Matrix.Translation((0.0, grip_y, grip_top)))
@@ -289,7 +343,7 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
     r = radius
     parts: List[bpy.types.Object] = []
 
-    palm = bw.loft(bw.round_rect(0.0135 * s, 0.0300 * s, 0.0105 * s, steps=6),
+    palm = bw.loft(bw.round_rect(0.0126 * s, 0.0280 * s, 0.0098 * s, steps=6),
                    [(0.040 * s, 0.86, 0.82, 0.0, 0.0),
                     (0.018 * s, 0.98, 0.96, 0.0, 0.0),
                     (-0.004 * s, 1.02, 1.00, 0.0, 0.0),
@@ -327,6 +381,8 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
                        [0.0122 * s, 0.0112 * s, 0.0098 * s, 0.0082 * s], GLOVE))
     parts.append(blob("thumb_base", (0.0160 * s, 0.024 * s, -r - 0.006 * s),
                       (0.0118 * s, 0.0140 * s, 0.0132 * s), GLOVE))
+    parts.append(blob("thumb_web", (0.0080 * s, 0.012 * s, -r - 0.010 * s),
+                      (0.0130 * s, 0.0140 * s, 0.0120 * s), GLOVE))
 
     for index in range(2):
         parts.append(_stitch("hand_seam", -0.0170 * s,
@@ -347,17 +403,18 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
     # The support elbow is tucked under the handguard, so the forearm swings out to
     # the shooter's left as it leaves the frame.  Dropping straight down read as a
     # pipe welded to the glove.
-    parts.append(chain("forearm",
-                       [wrist + Vector((-0.001, 0.014, -0.008)) * s,
-                        wrist + Vector((-0.014, 0.040, -0.070)) * s,
-                        wrist + Vector((-0.030, 0.052, -0.130)) * s,
-                        wrist + Vector((-0.052, 0.060, -0.220)) * s],
-                       [0.0188 * s, 0.0212 * s, 0.0242 * s, 0.0274 * s], CUFF,
-                       segments=14))
+    arm = [chain("forearm",
+                 [wrist + Vector((-0.001, 0.014, -0.008)) * s,
+                  wrist + Vector((-0.014, 0.040, -0.070)) * s,
+                  wrist + Vector((-0.030, 0.052, -0.130)) * s,
+                  wrist + Vector((-0.052, 0.060, -0.220)) * s],
+                 [0.0188 * s, 0.0212 * s, 0.0242 * s, 0.0274 * s], CUFF,
+                 segments=14)]
 
-    hand = art.join(parts, "HandLeft")
-    art.bevel(hand, width=0.0011 * s, segments=2, angle_deg=38.0)
-    _smooth(hand)
+    glove = fuse(parts, "HandLeft_glove", GLOVE, voxel=0.00115 * s,
+                 target_faces=5200)
+    hand = art.join([glove] + arm, "HandLeft")
+    _smooth(hand, 62.0)
     art.unwrap(hand, island_margin=0.004)
     if abs(tilt_deg) > 1e-6:
         hand.data.transform(Matrix.Rotation(math.radians(tilt_deg), 4, "Y"))

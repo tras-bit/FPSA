@@ -3,6 +3,30 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.15 - 2026-10-30
+
+The holes in the gloves, and why they were there.
+
+### Fixed
+
+* **The hands were a dozen separate solids that only looked like a hand.** Fingers,
+  knuckles, pads, heel and thumb were each a closed mesh that interpenetrated its
+  neighbours, and every one of those seams is a crevice with the weapon visible
+  through it. From the shooting angle the crevices read as holes punched through the
+  glove, which is exactly what they were: there was no glove, only parts.
+  The pieces are now voxel-remeshed into a single watertight skin, smoothed and
+  decimated to 5 200 faces, so overlaps become one continuous surface and every crease
+  becomes a real fillet. The forearm stays a separate part - it has to cross a
+  material boundary - but it is buried inside the fused glove.
+* A support web between the thumb and the index finger: without that volume the U
+  between them is a genuine opening, and the trigger guard showed through it.
+* Two `hand_seam` bars 2 mm wide sat on the outside of the skin after fusing and read
+  as a wire sticking out between the fingers. Removed: a seam is a groove in leather,
+  not a rod laid on it.
+* The thumb tip and the four pads around its base all converged on one spot, which
+  fused into a single oval bulge - a boxing glove. The pads are trimmed, the palm is
+  narrower across the knuckles, and the thumb ends against the index finger.
+
 ## 1.0.14 - 2026-10-30
 
 The bodies and the hands, rebuilt where they read as mannequins, plus the review
