@@ -133,11 +133,20 @@ namespace Kordon.Core.Tests
             Assert.Equal(0f, animator.Pose.MagazineY);
 
             animator.Notify(ViewmodelEvent.MagazineOut);
-            Run(animator, Input(), 4);
+            // The first beat is the weapon coming round into the reload pose: the
+            // magazine is still seated and still in the well.
+            Run(animator, Input(), 8);
             Assert.True(animator.Pose.MagazineVisible, "the magazine vanished instantly");
-            Assert.True(animator.Pose.MagazineY < -0.005f, "the magazine did not move");
+            Assert.True(animator.Pose.MagazineY > -0.005f,
+                "the magazine left the well before the weapon came round: " +
+                animator.Pose.MagazineY);
 
-            Run(animator, Input(), 30);
+            // Then it goes, and goes fast.
+            Run(animator, Input(), 12);
+            Assert.True(animator.Pose.MagazineY < -0.02f,
+                "the magazine did not move: " + animator.Pose.MagazineY);
+
+            Run(animator, Input(), 60);
             Assert.False(animator.Pose.MagazineVisible, "the dropped magazine is still drawn");
             Assert.True(animator.MagazineOut);
         }
@@ -316,10 +325,15 @@ namespace Kordon.Core.Tests
             Assert.True(animator.Pose.TriggerTravel > 0.8f,
                 "the trigger did not snap back: " + animator.Pose.TriggerTravel);
 
-            // held for a beat, then released on its own
-            Run(animator, Input(), 3);
-            Assert.True(animator.Pose.TriggerTravel > 0.5f);
-            Run(animator, Input(), 30);
+            // held for a beat - a pull that returns within the frame it was pulled in is
+            // a pull nobody can see
+            Run(animator, Input(), 6);
+            Assert.True(animator.Pose.TriggerTravel > 0.9f,
+                "the trigger let go before it could be seen: " +
+                animator.Pose.TriggerTravel);
+
+            // then released on its own
+            Run(animator, Input(), 40);
             Assert.True(animator.Pose.TriggerTravel < 0.05f,
                 "the trigger never reset: " + animator.Pose.TriggerTravel);
         }
@@ -347,18 +361,20 @@ namespace Kordon.Core.Tests
             Run(animator, Input(), 40);
             animator.Notify(ViewmodelEvent.MagazineIn);
 
-            float before = animator.Pose.Z;
-            bool jolted = false;
-            for (int frame = 0; frame < 40; frame++)
+            bool seated = false;
+            for (int frame = 0; frame < 120; frame++)
             {
                 animator.Tick(1f / 120f, Input());
-                if (Math.Abs(animator.Pose.Z - before) > 0.0004f)
+                // the seat is the last beat: the magazine dips as it locks home
+                if (animator.Pose.MagazineY < -0.0008f && animator.Pose.MagazineY > -0.02f)
                 {
-                    jolted = true;
+                    seated = true;
                 }
             }
 
-            Assert.True(jolted, "the weapon did not react to the magazine seating");
+            Assert.True(seated, "the magazine never took the seat");
+            Assert.True(animator.Pose.MagazineY > -0.0001f,
+                "the magazine did not end up seated: " + animator.Pose.MagazineY);
         }
 
         [Fact]
