@@ -4,14 +4,14 @@
     {
       "id": "dmr14",
       "model": "Kordon/Weapons/dmr14",
-      "triangles": 75839,
-      "bytes": 1717356,
+      "triangles": 86195,
+      "bytes": 1934956,
       "lengthM": 1.032,
       "sightHeightM": 0.1356,
       "sizeM": [
-        0.11,
+        0.15,
         1.032,
-        0.4
+        0.398
       ],
       "hasMagazine": true
     },
@@ -60,84 +60,84 @@
     {
       "id": "k870",
       "model": "Kordon/Weapons/k870",
-      "triangles": 29416,
-      "bytes": 801356,
+      "triangles": 39768,
+      "bytes": 1017852,
       "lengthM": 0.934,
       "sightHeightM": 0.09,
       "sizeM": [
-        0.11,
+        0.15,
         0.934,
-        0.339
+        0.32
       ],
       "hasMagazine": false
     },
     {
       "id": "p9",
       "model": "Kordon/Weapons/p9",
-      "triangles": 27144,
-      "bytes": 738476,
+      "triangles": 37488,
+      "bytes": 959228,
       "lengthM": 0.3,
       "sightHeightM": 0.0489,
       "sizeM": [
         0.092,
         0.3,
-        0.347
+        0.338
       ],
       "hasMagazine": true
     },
     {
       "id": "sr338",
       "model": "Kordon/Weapons/sr338",
-      "triangles": 67927,
-      "bytes": 1546252,
+      "triangles": 78283,
+      "bytes": 1763404,
       "lengthM": 1.104,
       "sightHeightM": 0.144,
       "sizeM": [
-        0.143,
+        0.182,
         1.104,
-        0.424
+        0.425
       ],
       "hasMagazine": true
     },
     {
       "id": "tr30",
       "model": "Kordon/Weapons/tr30",
-      "triangles": 73211,
-      "bytes": 1729596,
+      "triangles": 83567,
+      "bytes": 1946972,
       "lengthM": 0.862,
       "sightHeightM": 0.1272,
       "sizeM": [
-        0.11,
+        0.15,
         0.862,
-        0.389
+        0.39
       ],
       "hasMagazine": true
     },
     {
       "id": "vk74",
       "model": "Kordon/Weapons/vk74",
-      "triangles": 43534,
-      "bytes": 1105932,
+      "triangles": 53890,
+      "bytes": 1323436,
       "lengthM": 0.844,
       "sightHeightM": 0.099,
       "sizeM": [
-        0.11,
+        0.15,
         0.844,
-        0.364
+        0.353
       ],
       "hasMagazine": true
     },
     {
       "id": "vs9",
       "model": "Kordon/Weapons/vs9",
-      "triangles": 53053,
-      "bytes": 1253932,
+      "triangles": 63409,
+      "bytes": 1470988,
       "lengthM": 0.534,
       "sightHeightM": 0.092,
       "sizeM": [
-        0.11,
+        0.15,
         0.534,
-        0.334
+        0.332
       ],
       "hasMagazine": true
     }

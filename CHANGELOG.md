@@ -3,6 +3,41 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.14 - 2026-10-30
+
+The bodies and the hands, rebuilt where they read as mannequins, plus the review
+tools that make the next pass checkable instead of a matter of taste.
+
+### Changed
+
+* **Bodies lean.** `BodyGait` now damps the speed the animation is played at, so a
+  body cannot snap from a standstill into a full stride in one frame, and it exposes
+  the torso pitch (aim, sprint, crouch) and the lean into a turn. `OperatorBodyRig`
+  applies both: the chest is no longer dead vertical while the legs move.
+* **The gloved hands are hands.** The four fingers were 10.2 mm tubes on a 17 mm
+  pitch, so they interpenetrated and read as one mitten; they are 8.9 mm on a
+  18.2 mm pitch with a tapered tip and a different reach on each digit, the palm is
+  12% thinner with a hypothenar pad and a stitched wrist crease, and the thumb has a
+  joint at its base. Tubes and lumps went from 10 to 14 sides and from 7 to 11
+  sections, because these are the closest parts to the camera in the whole game.
+* **The operators are people.** Boots: the sole was a 26 mm plate floating 8 mm
+  under an upper whose toe began higher still, which read as a skateboard. The upper
+  is now authored around one constraint - its underside is inside the sole at every
+  section - with an ankle shaft the trouser blouses over. Knee: a joint volume between
+  calf and thigh instead of two tubes butting together. Sleeve: a tapered ring instead
+  of a box on the wrist. Head: a helmet that comes down over the ears in one continuous
+  curve (the old one was a dome on a wider band), a brow ridge, a neck gaiter and a
+  chin strap.
+* `Tools/blender/render_hands.py` renders `docs/art/hands-detail.png`: the firing hand
+  and the support hand, framed from each hand's own bounds at a distance solved from
+  the lens, so two iterations can be compared without the shot moving. The pass is
+  only honest if it is looked at after every change.
+
+### Fixed
+
+* The operator review render showed a bright plate under each boot: the floor was at
+  zero, exactly where the soles are, so the two were coplanar. The floor is 6 mm below.
+
 ## 1.0.13 - 2026-10-30
 
 The map, finished where it was actually broken: the spawns.

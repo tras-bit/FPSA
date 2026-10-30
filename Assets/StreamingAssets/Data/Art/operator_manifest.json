@@ -3,10 +3,10 @@
   "operators": [
     {
       "id": "operator",
-      "heightM": 1.726,
-      "widthM": 0.544,
+      "heightM": 1.744,
+      "widthM": 0.525,
       "depthM": 0.506,
-      "triangles": 28840,
+      "triangles": 72212,
       "parts": [
         "Body",
         "ThighL",
@@ -28,15 +28,15 @@
         "ElbowL",
         "ElbowR"
       ],
-      "bytes": 695788,
+      "bytes": 1688044,
       "model": "Kordon/Operators/operator"
     },
     {
       "id": "militia",
-      "heightM": 1.726,
-      "widthM": 0.544,
+      "heightM": 1.744,
+      "widthM": 0.525,
       "depthM": 0.506,
-      "triangles": 28840,
+      "triangles": 72212,
       "parts": [
         "Body",
         "ThighL",
@@ -58,7 +58,7 @@
         "ElbowL",
         "ElbowR"
       ],
-      "bytes": 696892,
+      "bytes": 1689148,
       "model": "Kordon/Operators/militia"
     }
   ]

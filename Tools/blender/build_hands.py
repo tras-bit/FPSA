@@ -40,7 +40,7 @@ CUFF = "gun_polymer"   # jacket sleeve: dark nylon, not a painted tube
 # Primitives
 # --------------------------------------------------------------------------
 def chain(name: str, points: Sequence[Sequence[float]], radii: Sequence[float],
-          surface: str, segments: int = 10) -> bpy.types.Object:
+          surface: str, segments: int = 14) -> bpy.types.Object:
     """A tapered tube through a polyline, with rounded ends.
 
     Frames are parallel transported (each ring's normal is projected onto the plane
@@ -124,9 +124,9 @@ def blob(name: str, centre: Sequence[float], radii: Sequence[float],
     """A rounded lump (knuckle, heel of the hand, thumb base): a lofted sphere."""
     # profile is in metres, so the loft is already the right size; the sections
     # only taper it into a lump
-    profile = bw.round_rect(radii[0], radii[1], min(radii) * 0.55, steps=8)
+    profile = bw.round_rect(radii[0], radii[1], min(radii) * 0.55, steps=10)
     sections = []
-    steps = 7
+    steps = 11
     for index in range(steps):
         t = index / (steps - 1)
         scale = math.sin(math.pi * t) * 0.45 + 0.58
@@ -173,7 +173,7 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     depth = grip_depth
 
     # ---- palm: slab from the wrist crease to the knuckle line
-    palm_profile = bw.round_rect(0.0128 * s, 0.0330 * s, 0.0100 * s, steps=6)
+    palm_profile = bw.round_rect(0.0114 * s, 0.0330 * s, 0.0100 * s, steps=6)
     palm = bw.loft(palm_profile, [
         (0.036 * s, 0.86, 0.80, 0.0, 0.004 * s),
         (0.016 * s, 0.98, 0.96, 0.0, 0.002 * s),
@@ -186,27 +186,34 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
 
     # the heel of the palm, riding the backstrap, and the web at the thumb base
     parts.append(_stitch("wrist_crease", 0.0245 * s, depth * 1.16, -0.056 * s, 0.030 * s))
-    parts.append(blob("palm_heel", (0.0210 * s, depth * 0.95, -0.070 * s),
-                      (0.0170 * s, 0.0210 * s, 0.0250 * s), GLOVE))
-    parts.append(blob("palm_web", (0.0195 * s, depth * 0.55, -0.022 * s),
-                      (0.0165 * s, 0.0180 * s, 0.0180 * s), GLOVE))
+    parts.append(blob("palm_heel", (0.0205 * s, depth * 0.98, -0.072 * s),
+                      (0.0135 * s, 0.0165 * s, 0.0195 * s), GLOVE))
+    parts.append(blob("palm_web", (0.0190 * s, depth * 0.55, -0.022 * s),
+                      (0.0145 * s, 0.0150 * s, 0.0155 * s), GLOVE))
+    # Hypothenar: the muscle pad along the little finger's side of the palm.  Without
+    # it the palm ends in the same thickness edge on both sides and reads as a block.
+    parts.append(blob("palm_hypothenar", (0.0225 * s, depth * 0.52, -0.083 * s),
+                      (0.0135 * s, 0.0175 * s, 0.0155 * s), GLOVE))
 
     # ---- four fingers, wrapping the front strap and closing on the far side
     finger_z = (-0.0295, -0.0477, -0.0659, -0.0841)
     for index, z in enumerate(finger_z):
         t = z * s
         lean = -0.004 * s * index if index < 2 else 0.004 * s * (index - 1)
+        # The middle finger reaches furthest round the strap and the little finger
+        # least: four fingers of one length is the giveaway of a modelled mitten.
+        reach = (0.0, 0.0035, 0.0018, -0.0040)[index] * s
         knuckle = (0.0250 * s + lean, -0.002 * s, t)
         mid_right = (0.0215 * s + lean, -depth - 0.008 * s, t - 0.002 * s)
-        mid_front = (0.0060 * s, -depth - 0.014 * s, t - 0.003 * s)
-        distal = (-0.0110 * s, -depth - 0.004 * s, t - 0.005 * s)
-        tip = (-0.0165 * s, depth * 0.35, t - 0.007 * s)
+        mid_front = (0.0060 * s, -depth - 0.014 * s - reach, t - 0.003 * s)
+        distal = (-0.0110 * s, -depth - 0.004 * s - reach, t - 0.005 * s)
+        tip = (-0.0165 * s, depth * 0.35, t - 0.007 * s - reach * 0.4)
         points = [knuckle, mid_right, mid_front, distal, tip]
-        radii = [0.0089 * s, 0.0086 * s, 0.0081 * s, 0.0075 * s, 0.0066 * s]
+        radii = [0.0088 * s, 0.0083 * s, 0.0077 * s, 0.0069 * s, 0.0058 * s]
         parts.append(chain("finger", points, radii, GLOVE))
         # knuckle: a pad on the outside of the first joint, plus a seam behind it
-        parts.append(blob("knuckle", (0.0330 * s + lean, 0.012 * s, t + 0.001 * s),
-                          (0.0060 * s, 0.0085 * s, 0.0082 * s), GLOVE))
+        parts.append(blob("knuckle", (0.0322 * s + lean, 0.011 * s, t + 0.001 * s),
+                          (0.0050 * s, 0.0076 * s, 0.0072 * s), GLOVE))
 
     # ---- thumb: crosses the top of the grip toward the far side
     parts.append(chain("thumb",
@@ -214,9 +221,12 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
                         (0.0075 * s, depth * 0.20, -0.012 * s),
                         (-0.0030 * s, -depth * 0.35, -0.010 * s),
                         (-0.0110 * s, -depth * 0.75, -0.012 * s)],
-                       [0.0104 * s, 0.0096 * s, 0.0088 * s, 0.0076 * s], GLOVE))
+                       [0.0120 * s, 0.0110 * s, 0.0098 * s, 0.0084 * s], GLOVE))
     parts.append(blob("thumb_base", (0.0180 * s, depth * 0.80, -0.021 * s),
-                      (0.0110 * s, 0.0120 * s, 0.0135 * s), GLOVE))
+                      (0.0125 * s, 0.0130 * s, 0.0145 * s), GLOVE))
+    # the joint at the base of the thumb's distal phalanx: the one that catches light
+    parts.append(blob("thumb_knuckle", (-0.0030 * s, -depth * 0.35, -0.010 * s),
+                      (0.0092 * s, 0.0092 * s, 0.0092 * s), GLOVE))
 
     # ---- seams: two stitched lines across the back of the hand
     for index in range(2):
@@ -224,11 +234,11 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
                              (0.014 - index * 0.026) * s, -0.056 * s, 0.052 * s))
 
     # ---- wrist and sleeve: the arm has to leave the frame somewhere
-    strap = bw.loft(bw.round_rect(0.0170 * s, 0.0300 * s, 0.0120 * s, steps=6),
+    strap = bw.loft(bw.round_rect(0.0148 * s, 0.0270 * s, 0.0110 * s, steps=6),
                     [(0.030 * s, 1.00, 1.00, 0.0, 0.0),
                      (0.040 * s, 1.02, 1.02, 0.0, 0.0),
                      (0.046 * s, 0.96, 0.98, 0.0, 0.0)],
-                    surface=PAD, name="wrist_strap", axis="Y")
+                    surface=GLOVE, name="wrist_strap", axis="Y")
     strap.data.transform(Matrix.Translation((0.0240 * s, depth * 0.55, -0.058 * s)))
     parts.append(strap)
 
@@ -242,7 +252,12 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
     # fist.  A glove cuff sits at the wrist and the sleeve widens as it leaves.
     parts.append(chain("glove_cuff",
                        [wrist, wrist + Vector((0.002, 0.026, -0.010)) * s],
-                       [0.0200 * s, 0.0192 * s], PAD, segments=12))
+                       [0.0206 * s, 0.0228 * s], GLOVE, segments=14))
+    # the elastic band of the cuff, sitting proud of the sleeve where it meets it
+    parts.append(chain("cuff_band",
+                       [wrist + Vector((0.0022, 0.0235, -0.0092)) * s,
+                        wrist + Vector((0.0028, 0.0315, -0.0120)) * s],
+                       [0.0234 * s, 0.0234 * s], GLOVE, segments=14))
     # The forearm drops away below the grip and slightly back: that is where a
     # right elbow sits, and it keeps the sleeve out of the sight picture.
     parts.append(chain("forearm",
@@ -250,8 +265,8 @@ def right_hand(grip_y: float, grip_top: float, rake_deg: float = 20.0,
                         wrist + Vector((0.006, 0.040, -0.075)) * s,
                         wrist + Vector((0.010, 0.050, -0.140)) * s,
                         wrist + Vector((0.014, 0.058, -0.235)) * s],
-                       [0.0176 * s, 0.0200 * s, 0.0234 * s, 0.0268 * s], CUFF,
-                       segments=12))
+                       [0.0192 * s, 0.0216 * s, 0.0246 * s, 0.0278 * s], CUFF,
+                       segments=14))
 
     hand = art.join(parts, "HandRight")
     art.bevel(hand, width=0.0011 * s, segments=2, angle_deg=38.0)
@@ -287,17 +302,21 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
                       (0.0165 * s, 0.0240 * s, 0.0170 * s), GLOVE))
 
     # four fingers over the far (right) side of the fore-end
-    for index, y in enumerate((0.030, 0.010, -0.010, -0.030)):
+    # 20 mm pitch with 20.8 mm tubes merged all four into one slab, which is what the
+    # first review render showed.  Nine millimetres on a 21 mm pitch leaves a gap that
+    # reads as separate digits, and the index reaches furthest round the handguard.
+    for index, y in enumerate((0.0315, 0.0105, -0.0105, -0.0315)):
         t = y * s
+        reach = (0.0060, 0.0090, 0.0075, 0.0020)[index] * s
         knuckle = (-0.0230 * s, t, -r + 0.002 * s)
         side = (-0.0330 * s, t, -r + 0.012 * s)
         top = (-0.0290 * s, t - 0.002 * s, -r + 0.030 * s)
-        over = (-0.0150 * s, t - 0.004 * s, -r + 0.040 * s)
-        tip = (-0.0020 * s, t - 0.008 * s, -r + 0.042 * s)
-        radii = [0.0104 * s, 0.0100 * s, 0.0092 * s, 0.0085 * s, 0.0074 * s]
+        over = (-0.0150 * s, t - 0.004 * s, -r + 0.040 * s - reach * 0.35)
+        tip = (-0.0020 * s - reach * 0.30, t - 0.008 * s, -r + 0.042 * s - reach)
+        radii = [0.0096 * s, 0.0091 * s, 0.0084 * s, 0.0076 * s, 0.0066 * s]
         parts.append(chain("finger", [knuckle, side, top, over, tip], radii, GLOVE))
         parts.append(blob("knuckle", (-0.0295 * s, t, -r + 0.007 * s),
-                          (0.0060 * s, 0.0085 * s, 0.0085 * s), GLOVE))
+                          (0.0052 * s, 0.0074 * s, 0.0074 * s), GLOVE))
 
     # thumb along the near (left) side, pointing forward
     parts.append(chain("thumb",
@@ -305,33 +324,36 @@ def left_hand(fore_y: float, bore_z: float, radius: float = 0.030,
                         (0.0290 * s, 0.004 * s, -r + 0.006 * s),
                         (0.0300 * s, -0.014 * s, -r + 0.018 * s),
                         (0.0240 * s, -0.030 * s, -r + 0.026 * s)],
-                       [0.0128 * s, 0.0118 * s, 0.0102 * s, 0.0086 * s], GLOVE))
+                       [0.0122 * s, 0.0112 * s, 0.0098 * s, 0.0082 * s], GLOVE))
     parts.append(blob("thumb_base", (0.0160 * s, 0.024 * s, -r - 0.006 * s),
-                      (0.0125 * s, 0.0150 * s, 0.0140 * s), GLOVE))
+                      (0.0118 * s, 0.0140 * s, 0.0132 * s), GLOVE))
 
     for index in range(2):
         parts.append(_stitch("hand_seam", -0.0170 * s,
                              (0.012 - index * 0.024) * s, -r - 0.026 * s, 0.050 * s))
 
     # wrist and forearm: comes in from the shooter's left and below
-    strap = bw.loft(bw.round_rect(0.0160 * s, 0.0290 * s, 0.0120 * s, steps=6),
+    strap = bw.loft(bw.round_rect(0.0140 * s, 0.0265 * s, 0.0110 * s, steps=6),
                     [(0.030 * s, 1.0, 1.0, 0.0, 0.0),
                      (0.040 * s, 1.02, 1.02, 0.0, 0.0),
                      (0.046 * s, 0.96, 0.98, 0.0, 0.0)],
-                    surface=PAD, name="wrist_strap", axis="Y")
+                    surface=GLOVE, name="wrist_strap", axis="Y")
     strap.data.transform(Matrix.Translation((-0.0050 * s, 0.0, -r - 0.016 * s)))
     parts.append(strap)
     wrist = Vector((-0.0050 * s, -0.004 * s, -r - 0.020 * s))
     parts.append(chain("glove_cuff",
                        [wrist, wrist + Vector((-0.002, 0.026, -0.012)) * s],
-                       [0.0196 * s, 0.0188 * s], PAD, segments=12))
+                       [0.0198 * s, 0.0224 * s], GLOVE, segments=14))
+    # The support elbow is tucked under the handguard, so the forearm swings out to
+    # the shooter's left as it leaves the frame.  Dropping straight down read as a
+    # pipe welded to the glove.
     parts.append(chain("forearm",
                        [wrist + Vector((-0.001, 0.014, -0.008)) * s,
-                        wrist + Vector((-0.005, 0.038, -0.080)) * s,
-                        wrist + Vector((-0.009, 0.048, -0.144)) * s,
-                        wrist + Vector((-0.013, 0.056, -0.240)) * s],
-                       [0.0172 * s, 0.0196 * s, 0.0230 * s, 0.0264 * s], CUFF,
-                       segments=12))
+                        wrist + Vector((-0.014, 0.040, -0.070)) * s,
+                        wrist + Vector((-0.030, 0.052, -0.130)) * s,
+                        wrist + Vector((-0.052, 0.060, -0.220)) * s],
+                       [0.0188 * s, 0.0212 * s, 0.0242 * s, 0.0274 * s], CUFF,
+                       segments=14))
 
     hand = art.join(parts, "HandLeft")
     art.bevel(hand, width=0.0011 * s, segments=2, angle_deg=38.0)

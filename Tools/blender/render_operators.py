@@ -23,14 +23,18 @@ import render_weapons as rw  # noqa: E402
 
 OUT = os.path.join(art.REPO_ROOT, "docs", "art", "operators.png")
 VARIANTS = ("operator", "militia")
+SAMPLE_COUNT = int(os.environ.get("KORDON_OPERATOR_SAMPLES", "64"))
 
 
 def render(variant: str, path: str, azimuth_deg: float) -> None:
     art.reset_scene()
     _root, _objects, _meta = bo.build_operator(variant)
-    rw.setup((600, 940), samples=64)
+    rw.setup((600, 940), samples=SAMPLE_COUNT)
     rw.apply_textures()
-    rw.studio_floor(0.0)
+    # The boots are modelled down to z = 0, so a floor at exactly 0 makes the sole and
+    # the floor coplanar: the render then shows a bright plate under each foot, which
+    # is z-fighting, not geometry.  Drop the floor a few millimetres.
+    rw.studio_floor(-0.006)
     rw.lights()
     scene = bpy.context.scene
 
@@ -50,7 +54,8 @@ def main() -> int:
     import tempfile
     tmp = tempfile.mkdtemp(prefix="kordon-operators-")
     tiles = []
-    for variant in VARIANTS:
+    chosen = tuple(sys.argv[1:]) or VARIANTS
+    for variant in chosen:
         for index, azimuth in enumerate((22.0, 138.0)):
             path = os.path.join(tmp, f"{variant}_{index}.png")
             render(variant, path, azimuth)

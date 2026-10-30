@@ -79,6 +79,49 @@ def slab(name: str, size: Sequence[float], centre: Sequence[float],
     return bw.box(name, size, centre, surface=surface, rot=rot, bevel=bevel)
 
 
+def _fist(side: float, wrist: Vector, surface: str = LEATHER) -> bpy.types.Object:
+    """A gloved fist hanging by the thigh, authored around the wrist.
+
+    A hand is the one part of a body the eye checks first, and a lump does not pass:
+    four curled fingers at their own lengths with the knuckle line standing proud,
+    a thumb laid across them, and the heel of the palm behind.  The palm faces the
+    thigh, so the fingers curl towards the body and are spread front to back.
+    """
+    parts: List[bpy.types.Object] = []
+    hx, hy, hz = wrist.x, wrist.y, wrist.z
+    inward = -side
+
+    parts.append(bh.blob("fist_palm", (hx + inward * 0.006, hy - 0.006, hz - 0.030),
+                         (0.036, 0.048, 0.048), surface))
+    parts.append(bh.blob("fist_heel", (hx + inward * 0.002, hy + 0.020, hz - 0.034),
+                         (0.032, 0.030, 0.038), surface))
+
+    # middle finger reaches furthest, little finger least
+    lengths = (0.052, 0.058, 0.054, 0.044)
+    for index in range(4):
+        y = hy - 0.040 + index * 0.021
+        length = lengths[index]
+        knuckle = (hx + side * 0.030, y, hz - 0.008)
+        first = (hx + side * 0.036, y, hz - 0.008 - length * 0.42)
+        second = (hx + side * 0.020, y, hz - 0.010 - length * 0.80)
+        tip = (hx + inward * 0.006, y, hz - 0.012 - length * 0.92)
+        parts.append(bh.chain("finger", [knuckle, first, second, tip],
+                              [0.0122, 0.0114, 0.0102, 0.0088], surface,
+                              segments=10))
+        parts.append(bh.blob("knuckle", (hx + side * 0.032, y, hz - 0.006),
+                             (0.0060, 0.0072, 0.0070), surface))
+
+    # thumb across the front of the fingers
+    parts.append(bh.chain("thumb",
+                          [(hx + side * 0.024, hy - 0.048, hz - 0.020),
+                           (hx + side * 0.006, hy - 0.056, hz - 0.034),
+                           (hx + inward * 0.020, hy - 0.050, hz - 0.042)],
+                          [0.0130, 0.0112, 0.0090], surface, segments=10))
+    parts.append(bh.blob("thumb_base", (hx + side * 0.010, hy - 0.044, hz - 0.014),
+                         (0.0140, 0.0150, 0.0160), surface))
+    return art.join(parts, "fist")
+
+
 # --------------------------------------------------------------------------
 # The body
 # --------------------------------------------------------------------------
@@ -252,26 +295,95 @@ def build_operator(variant: str = "operator"):
     for side in (-1.0, 1.0):
         tag = _side_tag(side)
         x = side * 0.118
-        # boot: a sole slab and an upper that rises over the ankle
-        add("shin_" + tag, slab("boot_sole", (0.112, 0.215, 0.024),
-                                (x, -0.031, 0.012), surface=RUBBER, bevel=0.006))
-        boot = bw.loft(bw.round_rect(0.052, 0.064, 0.028, steps=6), [
-            (-0.120, 0.86, 0.72, 0.0, 0.062),
-            (-0.070, 1.00, 0.96, 0.0, 0.070),
-            (0.010, 1.02, 1.04, 0.0, 0.086),
-            (0.058, 0.96, 0.92, 0.0, 0.100),
-        ], surface=LEATHER, name="boot", axis="Y")
+        # Boot, rewritten around one constraint: the upper's underside has to be
+        # inside the sole at every section along its length.  The first two passes
+        # failed exactly that test - a 26 mm "sandal" plate under a toe that started
+        # 8 mm higher, then a thin sole under a boot that floated 11 mm above it - so
+        # the foot looked like a shoe resting on a skateboard.
+        #
+        # The loft sections below are (y, scale_u, scale_v, du, dv).  For every
+        # section dv is chosen so that dv - half_height * scale_v == 0.022: the
+        # underside is flat, and the sole (0.000 .. 0.030) swallows it by 8 mm.
+        half_height = 0.030
+        under = 0.022
+        profile = bw.round_rect(0.047, half_height, 0.020, steps=10)
+        boot_sections = [
+            (-0.140, 0.54, 0.46, 0.0, 0.0),   # toe cap
+            (-0.118, 0.78, 0.62, 0.0, 0.0),
+            (-0.072, 0.96, 0.84, 0.0, 0.0),
+            (-0.014, 1.00, 1.00, 0.0, 0.0),   # instep
+            (0.030, 0.98, 1.06, 0.0, 0.0),
+            (0.062, 0.86, 1.00, 0.0, 0.0),    # heel counter
+            (0.076, 0.66, 0.80, 0.0, 0.0),
+        ]
+        boot = bw.loft(profile, [(y, su, sv, du, under + half_height * sv)
+                                 for (y, su, sv, du, _dv) in boot_sections],
+                       surface=LEATHER, name="boot", axis="Y")
         boot.data.transform(Matrix.Translation((x, 0.0, 0.0)))
         add("shin_" + tag, boot)
-        # shin, knee, thigh: three volumes with the knee between them
+
+        sole = bw.loft(bw.round_rect(0.048, 0.015, 0.010, steps=10), [
+            (-0.146, 0.58, 1.00, 0.0, 0.015),
+            (-0.130, 0.86, 1.00, 0.0, 0.015),
+            (-0.070, 0.99, 1.00, 0.0, 0.015),
+            (0.020, 1.00, 1.00, 0.0, 0.015),
+            (0.066, 0.96, 1.00, 0.0, 0.015),
+            (0.082, 0.78, 1.00, 0.0, 0.015),
+        ], surface=RUBBER, name="boot_sole", axis="Y")
+        sole.data.transform(Matrix.Translation((x, 0.0, 0.0)))
+        add("shin_" + tag, sole)
+
+        # laces: three leather bars across the instep, lying on the boot, not on a
+        # bright grey slab hovering over it
+        for index in range(3):
+            add("shin_" + tag, slab("boot_lace", (0.056, 0.008, 0.005),
+                                    (x, -0.040 + index * 0.021,
+                                     0.078 + index * 0.006),
+                                    surface=LEATHER, rot=(24.0, 0.0, 0.0),
+                                    bevel=0.002))
+        # ankle shaft rising out of the boot
+        shaft = bw.loft(bw.round_rect(0.045, 0.048, 0.022, steps=10), [
+            (0.062, 0.98, 0.98, 0.0, 0.0),
+            (0.100, 1.00, 1.00, 0.0, 0.0),
+            (0.132, 0.94, 0.94, 0.0, 0.0),
+        ], surface=LEATHER, name="boot_shaft", axis="Z")
+        shaft.data.transform(Matrix.Translation((x, 0.004, 0.0)))
+        add("shin_" + tag, shaft)
+
+        # calf: widest just under the knee, tapering into the ankle
         add("shin_" + tag,
-            limb("shin", [(x, 0.010, 0.112), (x, 0.012, 0.300), (x, 0.006, 0.470)],
-                 [0.054, 0.050, 0.060], uniform))
+            limb("shin", [(x, 0.006, 0.116), (x, 0.014, 0.210), (x, 0.020, 0.320),
+                          (x, 0.008, 0.420), (x, 0.004, 0.478)],
+                 [0.048, 0.056, 0.060, 0.056, 0.052], uniform))
+        # blousing: the trouser falls over the boot top, so the cuff is widest at the
+        # bottom and narrows as it climbs.  The first attempt was widest in the
+        # middle, which read as a doughnut with the leg pushing through it.
+        # A 62 mm cuff over a 48 mm ankle is a 14 mm step, and a step reads as a
+        # lampshade.  It now follows the ankle closely and narrows as it climbs.
+        # ...and it has to stay outside the calf it covers.  Ending it at 0.20 put its
+        # narrowest ring inside the widest part of the calf, so the leg pushed through
+        # the front of the trouser and left a notch.  It now blouses over the boot top
+        # and ends at 0.172, where the calf is still thinner than the cuff.
+        cuff_mesh = bw.loft(bw.round_rect(0.058, 0.060, 0.020, steps=10), [
+            (0.104, 1.00, 1.00, 0.0, 0.0),
+            (0.128, 0.99, 0.99, 0.0, 0.0),
+            (0.152, 0.95, 0.95, 0.0, 0.0),
+            (0.172, 0.90, 0.90, 0.0, 0.0),
+        ], surface=uniform, name="trouser_cuff", axis="Z")
+        cuff_mesh.data.transform(Matrix.Translation((x, 0.004, 0.0)))
+        add("shin_" + tag, cuff_mesh)
         add("shin_" + tag,
-            pad("knee_pad", (x, -0.026, 0.490), (0.050, 0.046, 0.058), armor))
+            pad("knee", (x, 0.002, 0.492), (0.058, 0.062, 0.048), uniform))
+        add("shin_" + tag,
+            pad("knee_pad", (x, -0.030, 0.484), (0.048, 0.044, 0.054), armor))
         add("thigh_" + tag,
-            limb("thigh", [(x, 0.004, 0.500), (x, 0.000, 0.690), (x, -0.002, 0.880)],
-                 [0.066, 0.078, 0.086], uniform))
+            limb("thigh", [(x, 0.004, 0.495), (x, 0.000, 0.620), (x, -0.002, 0.760),
+                           (x, -0.002, 0.880)],
+                 [0.068, 0.080, 0.088, 0.092], uniform))
+        # cargo pocket on the outside of the thigh, both legs
+        add("thigh_" + tag, slab("cargo_pocket", (0.020, 0.086, 0.130),
+                                 (x + side * 0.086, -0.004, 0.700),
+                                 surface=uniform, bevel=0.010))
         # drop-leg holster on the right thigh
         if side > 0:
             add("thigh_" + tag, slab("holster", (0.070, 0.100, 0.190),
@@ -314,7 +426,14 @@ def build_operator(variant: str = "operator"):
         (1.410, 0.90, 0.84, 0.0, 0.012),
     ], surface=uniform, name="torso", axis="Z"))
     add("body", limb("neck", [(0.0, 0.012, 1.400), (0.0, 0.012, 1.480)],
-                     [0.055, 0.050], uniform))
+                     [0.058, 0.052], uniform))
+    # neck gaiter: a collar between the shoulders and the helmet.  Without it the
+    # head sits on a bare stick of a neck and the whole figure reads as a toy.
+    add("body", bw.loft(bw.round_rect(0.062, 0.060, 0.020, steps=10), [
+        (1.398, 1.06, 1.04, 0.0, 0.0),
+        (1.428, 1.00, 0.98, 0.0, 0.0),
+        (1.462, 0.92, 0.90, 0.0, 0.0),
+    ], surface=uniform, name="gaiter", axis="Z"))
 
     # ---- plate carrier ---------------------------------------------------
     add("body", bw.loft(bw.round_rect(0.158, 0.114, 0.058, steps=8), [
@@ -359,30 +478,36 @@ def build_operator(variant: str = "operator"):
     for side in (-1.0, 1.0):
         tag = _side_tag(side)
         sx = side * 0.222
-        shoulder = Vector((sx * 0.92, 0.005, 1.336))
+        shoulder = Vector((sx * 0.90, 0.005, 1.330))
+        # Deltoid: flattened across the top and deeper front to back than a sphere,
+        # otherwise the arm grows out of the torso as a pipe with a ball on it.
         add("upperarm_" + tag, pad("shoulder", (shoulder.x, shoulder.y, shoulder.z),
-                                   (0.066, 0.076, 0.064), uniform))
+                                   (0.058, 0.078, 0.066), uniform))
+        add("upperarm_" + tag, pad("deltoid_cap", (shoulder.x - side * 0.006,
+                                                   shoulder.y + 0.004,
+                                                   shoulder.z + 0.020),
+                                   (0.050, 0.064, 0.036), armor))
         # elbow back and out, forearm angled forward: a relaxed ready carry
         elbow = Vector((sx * 0.96, 0.030, 1.075))
         add("upperarm_" + tag,
-            limb("upper_arm", [shoulder, (shoulder + elbow) * 0.5, elbow],
-                 [0.062, 0.056, 0.048], uniform))
-        add("forearm_" + tag, pad("elbow_pad", (elbow.x, elbow.y - 0.010, elbow.z),
-                                  (0.046, 0.048, 0.046), armor))
-        wrist = Vector((sx * 0.88, -0.040, 0.858))
+            limb("upper_arm", [shoulder, shoulder.lerp(elbow, 0.42), elbow],
+                 [0.060, 0.055, 0.045], uniform))
+        add("forearm_" + tag, pad("elbow_pad", (elbow.x, elbow.y - 0.012, elbow.z),
+                                  (0.048, 0.050, 0.050), armor))
+        wrist = Vector((sx * 0.88, -0.040, 0.862))
         mid = (elbow + wrist) * 0.5 + Vector((0.008 * side, -0.010, -0.006))
         add("forearm_" + tag, limb("forearm", [elbow, mid, wrist],
-                                   [0.050, 0.046, 0.040], uniform))
-        # fist, in a glove, turned to face the body
-        add("forearm_" + tag,
-            bh.blob("fist", (wrist.x, wrist.y - 0.030, wrist.z - 0.004),
-                    (0.040, 0.052, 0.046), LEATHER))
-        cuff = bw.band("glove_cuff", 0.0, 0.046, 0.016, 0.0,
-                       surface=LEATHER, segments=18)
-        cuff.data.transform(Matrix.Rotation(math.radians(90.0), 4, "X"))
-        cuff.data.transform(Matrix.Translation(
-            (wrist.x, wrist.y + 0.012, wrist.z + 0.006)))
-        add("forearm_" + tag, cuff)
+                                   [0.048, 0.044, 0.036], uniform))
+        # sleeve, bloused over the glove cuff
+        sleeve = bw.loft(bw.round_rect(0.050, 0.050, 0.018, steps=10), [
+            (-0.030, 0.86, 0.86, 0.0, 0.0),
+            (-0.006, 1.00, 1.00, 0.0, 0.0),
+            (0.020, 1.04, 1.02, 0.0, 0.0),
+        ], surface=uniform, name="sleeve_cuff", axis="Z")
+        sleeve.data.transform(Matrix.Translation((wrist.x, wrist.y + 0.008,
+                                                  wrist.z + 0.018)))
+        add("forearm_" + tag, sleeve)
+        add("forearm_" + tag, _fist(side, wrist, surface=LEATHER))
 
     # ---- head and helmet -------------------------------------------------
     add("body", bh.blob("head", (0.0, -0.005, 1.575), (0.079, 0.092, 0.102), uniform))
@@ -390,19 +515,33 @@ def build_operator(variant: str = "operator"):
     add("body", bh.blob("goggles", (0.0, -0.070, 1.596), (0.076, 0.036, 0.034), armor))
     add("body", bh.blob("goggle_lens", (0.0, -0.094, 1.598), (0.066, 0.016, 0.026),
                         GLASS))
-    add("body", bw.loft(bw.round_rect(0.098, 0.106, 0.052, steps=8), [
-        (1.560, 1.02, 1.02, 0.0, 0.0),
-        (1.610, 1.04, 1.04, 0.0, -0.004),
-        (1.660, 0.96, 0.98, 0.0, -0.008),
-        (1.700, 0.80, 0.84, 0.0, -0.012),
-        (1.726, 0.46, 0.50, 0.0, -0.014),
+    # Helmet.  The first pass was a dome with a wider, 3 cm band under it, which is a
+    # frisbee on a ball: the skull is not covered, so no amount of detailing helps.
+    # This one comes down over the ears, flares once at the skirt, and rises in a
+    # single continuous curve to the crown.
+    add("body", bw.loft(bw.round_rect(0.094, 0.102, 0.050, steps=10), [
+        (1.512, 0.86, 0.88, 0.0, 0.004),
+        (1.532, 1.00, 1.00, 0.0, 0.002),
+        (1.556, 1.05, 1.05, 0.0, 0.0),
+        (1.596, 1.06, 1.06, 0.0, -0.002),
+        (1.630, 1.02, 1.02, 0.0, -0.005),
+        (1.668, 0.94, 0.94, 0.0, -0.009),
+        (1.704, 0.80, 0.82, 0.0, -0.013),
+        (1.734, 0.54, 0.56, 0.0, -0.016),
+        (1.744, 0.26, 0.28, 0.0, -0.017),
     ], surface=armor, name="helmet", axis="Z"))
-    add("body", bw.loft(bw.round_rect(0.100, 0.108, 0.050, steps=8), [
-        (1.548, 1.02, 1.02, 0.0, 0.0),
-        (1.556, 1.06, 1.06, 0.0, 0.0),
-        (1.572, 1.06, 1.06, 0.0, 0.0),
-        (1.580, 1.01, 1.01, 0.0, 0.0),
-    ], surface=armor, name="helmet_rim", axis="Z"))
+    # brow ridge: the front lip a helmet shades the eyes with
+    add("body", bh.blob("helmet_brow", (0.0, -0.092, 1.590), (0.086, 0.028, 0.024),
+                        armor))
+    # chin strap: ear to chin to ear, with the buckle at the jaw
+    for side in (-1.0, 1.0):
+        add("body", bh.chain("chin_strap",
+                             [(side * 0.086, 0.004, 1.524),
+                              (side * 0.070, -0.038, 1.486),
+                              (side * 0.026, -0.062, 1.470)],
+                             [0.0080, 0.0072, 0.0064], RUBBER, segments=8))
+    add("body", slab("chin_buckle", (0.038, 0.016, 0.014),
+                     (0.0, -0.066, 1.468), surface=METAL, bevel=0.004))
     for side in (-1.0, 1.0):
         add("body", slab("helmet_rail", (0.014, 0.110, 0.018),
                          (side * 0.100, -0.010, 1.612), surface=METAL, bevel=0.004))
