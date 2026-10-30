@@ -1851,6 +1851,13 @@ def build_weapon(weapon_id: str):
         hand.data.transform(shift)
         hand.data.update()
 
+    # Authored positions are approximations; the surface is the truth.  Each hand is
+    # snapped until its palm touches the weapon, and a hand that is out by more than a
+    # couple of centimetres fails the build.
+    for hand in hands:
+        gap = build_hands.seat_on_weapon(hand, weapon)
+        print(f"[weapons] {weapon_id}: {hand.name} seated, was {gap * 1000:.1f} mm off")
+
     trigger_obj = None
     if trigger_parts:
         raw = trigger_parts[0]

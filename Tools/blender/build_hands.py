@@ -589,6 +589,56 @@ def hands_for(spec: dict, ctx: dict) -> Tuple[bpy.types.Object, bpy.types.Object
     return right, left_hand(fore_y, ctx["bore"], radius=radius)
 
 
+def seat_on_weapon(hand: bpy.types.Object, weapon: bpy.types.Object,
+                   palm_z_from_top: float = 0.070, max_shift: float = 0.075) -> float:
+    """Move a hand vertically until it touches the weapon; return the gap it closed.
+
+    Every hand is authored against an assumed position, and the assumptions were wrong
+    by up to two centimetres: on the review sheet the support hands hung under the
+    handguards with their fingers closed on air.  The surface is the truth, so the hand
+    is snapped to it.
+
+    The correction is **vertical only**.  Snapping to the nearest skin - the first
+    version - pulled the VS9's support hand up onto the top of the receiver, because
+    from a palm below the fore-end the nearest surface is the top of the gun.  A hand
+    belongs on the side of the weapon it was authored on.
+    """
+    weapon_points = [weapon.matrix_world @ vertex.co for vertex in weapon.data.vertices]
+    hand_points = [hand.matrix_world @ vertex.co for vertex in hand.data.vertices]
+    low = Vector((min(p.x for p in hand_points), min(p.y for p in hand_points),
+                  min(p.z for p in hand_points)))
+    high = Vector((max(p.x for p in hand_points), max(p.y for p in hand_points),
+                   max(p.z for p in hand_points)))
+    palm = Vector(((low.x + high.x) * 0.5, (low.y + high.y) * 0.5,
+                   high.z - palm_z_from_top))
+
+    weapon_high = max(p.z for p in weapon_points)
+    weapon_low = min(p.z for p in weapon_points)
+    underneath = palm.z < (weapon_high + weapon_low) * 0.5
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    direction = Vector((0.0, 0.0, 1.0 if underneath else -1.0))
+    hit, location, _normal, _index, _object, _matrix = bpy.context.scene.ray_cast(
+        depsgraph, Vector((palm.x, palm.y, palm.z)), direction)
+
+    if hit:
+        offset = Vector((0.0, 0.0, location.z - palm.z))
+    else:
+        step = max(1, len(weapon_points) // 6000)
+        nearest = min(weapon_points[::step], key=lambda point: (point - palm).length)
+        offset = Vector((0.0, 0.0, nearest.z - palm.z))
+
+    if offset.length > max_shift:
+        raise RuntimeError(
+            f"{hand.name} is {offset.length * 1000:.0f} mm out of place on "
+            f"{weapon.name}: that is not a seating error, that is a hand built for "
+            "another weapon")
+
+    hand.data.transform(Matrix.Translation(offset))
+    hand.data.update()
+    return offset.length
+
+
 def add_hands(spec: dict, ctx: dict) -> List[bpy.types.Object]:
     """Build both hands and return them as exportable objects."""
     right, left = hands_for(spec, ctx)

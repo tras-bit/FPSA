@@ -315,6 +315,57 @@ def camera(location, target, lens=55.0):
     return obj
 
 
+def frame_parts(objects, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.06):
+    """Frame several objects at once with the same solve frame_weapon uses.
+
+    The lineup framed only the weapon, and the hands leaving the frame are wider than
+    the weapon: the sidearm and the shotgun were cropped at the edge of their tiles.
+    """
+    lo = Vector((1e9, 1e9, 1e9))
+    hi = Vector((-1e9, -1e9, -1e9))
+    for obj in objects:
+        if obj is None:
+            continue
+        for corner in obj.bound_box:
+            world = obj.matrix_world @ Vector(corner)
+            for axis in range(3):
+                lo[axis] = min(lo[axis], world[axis])
+                hi[axis] = max(hi[axis], world[axis])
+    centre = (lo + hi) * 0.5
+
+    azimuth_rad = math.radians(azimuth)
+    elevation_rad = math.radians(elevation)
+    direction = Vector((
+        math.sin(azimuth_rad) * math.cos(elevation_rad),
+        math.cos(azimuth_rad) * math.cos(elevation_rad),
+        math.sin(elevation_rad),
+    )).normalized()
+
+    right = Vector((0.0, 0.0, 1.0)).cross(direction).normalized()
+    up = direction.cross(right).normalized()
+
+    half_w = half_h = depth = 0.0
+    for dx in (lo.x, hi.x):
+        for dy in (lo.y, hi.y):
+            for dz in (lo.z, hi.z):
+                offset = Vector((dx, dy, dz)) - centre
+                half_w = max(half_w, abs(offset.dot(right)))
+                half_h = max(half_h, abs(offset.dot(up)))
+                depth = max(depth, abs(offset.dot(direction)))
+
+    scene = bpy.context.scene
+    aspect = scene.render.resolution_y / max(1, scene.render.resolution_x)
+    vertical_half = 18.0 * min(1.0, aspect)
+    horizontal = 2.0 * math.atan(18.0 / lens)
+    vertical = 2.0 * math.atan(vertical_half / lens)
+    distance = max(half_w / math.tan(horizontal * 0.5),
+                   half_h / math.tan(vertical * 0.5)) * margin + depth * 0.6
+    distance = max(distance, 0.30)
+
+    camera(centre + direction * distance, centre, lens=lens)
+    return centre
+
+
 def frame_weapon(weapon, lens=68.0, azimuth=34.0, elevation=13.0, margin=1.05):
     """Place the camera so the whole weapon fits, from a three quarter angle.
 
@@ -376,16 +427,26 @@ def shoot(path):
     bpy.ops.render.render(write_still=True)
 
 
+SAMPLES = int(os.environ.get("KORDON_WEAPON_SAMPLES", "48"))
+
+
 def render_weapon(weapon_id, path, resolution=(880, 460), closeup=None):
     art.reset_scene()
-    weapon, _magazine, _meta = bw.build_weapon(weapon_id)
-    setup(resolution)
+    weapon, _magazine, meta = bw.build_weapon(weapon_id)
+    setup(resolution, samples=SAMPLES)
     apply_textures()
     floor_z = min((weapon.matrix_world @ vertex.co).z for vertex in weapon.data.vertices)
     studio_floor(floor_z - 0.012)
     lights()
     if closeup is None:
-        frame_weapon(weapon)
+        # Frame the weapon *and the hands*: the forearm leaving the frame is the widest
+        # thing in the shot, and framing the weapon alone cropped the pistol and shotgun.
+        parts = [weapon] + list(meta.get("hands", []))
+        if _magazine is not None:
+            parts.append(_magazine)
+        if meta.get("trigger") is not None:
+            parts.append(meta["trigger"])
+        frame_parts(parts)
     else:
         camera(closeup[0], closeup[1], lens=closeup[2])
     shoot(path)
