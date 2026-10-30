@@ -61,6 +61,9 @@ namespace Kordon.Game.Match
         private readonly List<ulong> _bots = new List<ulong>();
         private readonly Dictionary<ulong, GameObject> _botBodies =
             new Dictionary<ulong, GameObject>();
+        private readonly List<ScoreRow> _scoreRows = new List<ScoreRow>();
+        private float _scoreboardTimer;
+        private string _appliedArmorId;
 
         /// <summary>Everything the HUD and the buy screen need, refreshed once per tick.</summary>
         public BombRoundSnapshot Round => Match != null ? Match.Snapshot(Now) : default;
@@ -274,6 +277,7 @@ namespace Kordon.Game.Match
             {
                 Hud?.Toast("bought " + itemId);
                 ApplyLoadout(result.OwnedPrimary);
+                ApplyArmor();
             }
             else
             {
@@ -298,6 +302,31 @@ namespace Kordon.Game.Match
             selection = PracticeMatch.ClampToLibrary(selection, _database.Definitions);
             LocalLoadout = selection;
             Weapons.Equip(selection, _database.Definitions, 0xB0BUL);
+        }
+
+        /// <summary>
+        /// Armour is not a HUD flag either: the plate carrier the player paid for is the one
+        /// the bot rounds are resolved against, so buying it changes the damage they take.
+        /// </summary>
+        private void ApplyArmor()
+        {
+            BuyState buy = LocalBuy;
+            if (buy == null || Player == null || string.IsNullOrEmpty(buy.ArmorId))
+            {
+                return;
+            }
+
+            // The shop's two tiers map onto the authored kits: the light rig is the cheap
+            // vest, the plate carrier with the helmet is the standard kit.
+            string kitId = buy.ArmorId == "vest_helmet" ? "standard" : "light";
+            var kit = _database.Definitions.GetArmorKit(kitId);
+            if (kit == null)
+            {
+                return;
+            }
+
+            Player.Armor = new ArmorState(kit);
+            _appliedArmorId = buy.ArmorId;
         }
 
         private static string Describe(BuyOutcome outcome)
@@ -445,6 +474,10 @@ namespace Kordon.Game.Match
             _spawnCursor = (_spawnCursor + 1) % Mathf.Max(1, Map.SpawnPoints.Count);
             Transform spawn = Map.SpawnPoints[_spawnCursor % Map.SpawnPoints.Count];
             Player.Respawn(spawn.position, -spawn.rotation.eulerAngles.y);
+            // Respawn puts an empty vest on the body, so the armour the shop recorded has
+            // to be worn again rather than left behind on the previous life.
+            _appliedArmorId = null;
+            ApplyArmor();
             if (!initial)
             {
                 Weapons.Loadout?.OnRespawnResupply();
@@ -480,6 +513,20 @@ namespace Kordon.Game.Match
 
             Hud.SetHealth(Player.Vitals.Health / PlayerVitals.MaxHealth);
 
+            // A new round starts with the kit the shop recorded; the plates have to be put
+            // back on the body, not just remembered by the controller.
+            if (local != null && local.Buy != null && local.Buy.ArmorId != _appliedArmorId)
+            {
+                ApplyArmor();
+            }
+
+            _scoreboardTimer -= Time.deltaTime;
+            if (_scoreboardTimer <= 0f)
+            {
+                _scoreboardTimer = 1f;
+                RefreshScoreboard(snapshot);
+            }
+
             if (_plantHeld > 0f)
             {
                 Hud.SetObjective("PLANTING " + Mathf.RoundToInt(_plantHeld * 100f) + "%");
@@ -492,6 +539,45 @@ namespace Kordon.Game.Match
             {
                 Hud.SetObjective(DescribeEnd(Match.LastEndReason));
             }
+        }
+
+        /// <summary>
+        /// The hold-Tab board for this mode: two blocks, attackers then defenders, with the
+        /// round score in the caption so a player can read the match at a glance.
+        /// </summary>
+        private void RefreshScoreboard(BombRoundSnapshot snapshot)
+        {
+            if (Hud == null)
+            {
+                return;
+            }
+
+            _scoreRows.Clear();
+            for (int side = 0; side < 2; side++)
+            {
+                Team team = side == 0 ? Team.Attackers : Team.Defenders;
+                foreach (BombPlayer player in Match.Players)
+                {
+                    if (player.Team != team)
+                    {
+                        continue;
+                    }
+
+                    _scoreRows.Add(new ScoreRow
+                    {
+                        Name = (team == Team.Attackers ? "[A] " : "[D] ") + player.DisplayName,
+                        Kills = player.Kills,
+                        Deaths = player.Deaths,
+                        Ping = 0,
+                        IsLocal = player.ClientId == LocalClientId,
+                        IsBot = player.IsBot
+                    });
+                }
+            }
+
+            Hud.SetScoreboardTitle(string.Format("DEMOLITION  {0}:{1}  ROUND {2}",
+                snapshot.AttackerScore, snapshot.DefenderScore, snapshot.RoundNumber));
+            Hud.SetScoreboard(_scoreRows);
         }
 
         private static string DescribeEnd(RoundEndReason reason)

@@ -449,5 +449,76 @@ namespace Kordon.Core.Tests
             Assert.Equal(RoundPhase.MatchOver, match.Round);
             Assert.Equal(MatchPhase.Finished, match.Phase);
         }
+
+        // ------------------------------------------------------------------
+        // The end-of-match screen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// A demolition result is a team result. The screen must lead with the side that
+        /// won and mark its players, otherwise a 13:7 match reads like a deathmatch.
+        /// </summary>
+        [Fact]
+        public void BuildResultsMarksTheWinningSideAndLeadsWithIt()
+        {
+            BombMatchController match = Create(out BombRules rules);
+            rules.RoundsToWin = 1;
+            rules.RoundsPerHalf = 24;
+            StartLive(match);
+
+            float now = 120f;
+            match.BeginPlant(A1, "A", true, now);
+            float armed = now + rules.PlantSeconds;
+            match.CompletePlant(A1, "A", armed);
+            match.Tick(armed + rules.BombSeconds + 0.1f);
+            now = armed + rules.BombSeconds + rules.RoundOverSeconds + 0.2f;
+            match.Tick(now);
+            match.Tick(now + rules.RoundOverSeconds + 1f);
+
+            Assert.Equal(RoundPhase.MatchOver, match.Round);
+            Assert.Equal(Team.Attackers, match.MatchWinner);
+
+            MatchResults results = match.BuildResults();
+            Assert.Equal(4, results.Standings.Count);
+
+            // Attackers first, both of them, then the defenders.
+            Assert.Equal(A1, results.Standings[0].ClientId);
+            Assert.Equal(A2, results.Standings[1].ClientId);
+            Assert.Equal(D1, results.Standings[2].ClientId);
+            Assert.Equal(D2, results.Standings[3].ClientId);
+
+            Assert.True(results.Standings[0].IsWinner);
+            Assert.True(results.Standings[1].IsWinner);
+            Assert.False(results.Standings[2].IsWinner);
+            Assert.Equal("ATK0", results.WinnerName);
+            Assert.Equal(1, results.Standings[0].Rank);
+            Assert.Equal(4, results.Standings[3].Rank);
+        }
+
+        /// <summary>Inside a squad the board is ordered by personal score, not by join order.</summary>
+        [Fact]
+        public void BuildResultsOrdersSquadRowsByKills()
+        {
+            BombMatchController match = Create(out BombRules rules, 3);
+            StartLive(match);
+
+            // The third attacker gets two kills, so he must be above his teammates.
+            match.RegisterKill(A1 + 2, D1, 120f);
+            match.RegisterKill(A1 + 2, D2, 121f);
+
+            MatchResults results = match.BuildResults();
+            int firstAttacker = 0;
+            for (int i = 0; i < results.Standings.Count; i++)
+            {
+                if (results.Standings[i].DisplayName.StartsWith("ATK"))
+                {
+                    firstAttacker = i;
+                    break;
+                }
+            }
+
+            Assert.Equal(A1 + 2, results.Standings[firstAttacker].ClientId);
+            Assert.Equal(2, results.Standings[firstAttacker].Kills);
+        }
     }
 }

@@ -339,7 +339,22 @@ namespace Kordon.Game.Match
 
             if (_session.Player != null && target == _session.Player.transform)
             {
-                return _session.ReceiveBotHit(shooter.Id, shooter.Name, result);
+                // The agent resolved its round against no armour; the player may have
+                // bought plates since, so the hit is resolved again against what they are
+                // actually wearing. That is what makes a vest worth its price.
+                BulletDefinition bullet = new BulletDefinition
+                {
+                    Id = shooter.Agent != null ? shooter.Agent.BulletId : "762x39_ps",
+                    BaseDamage = shooter.Agent != null ? shooter.Agent.Damage : 16f
+                };
+                float distance = Vector3.Distance(
+                    shooter.Agent != null ? shooter.Agent.Position : target.position,
+                    target.position);
+                DamageRequest request = DamageRequest.Direct(bullet, result.Zone,
+                    _session.Player.Armor, distance, _random);
+                DamageResult armoured = new DamageModel().Resolve(request);
+                return armoured.Accepted &&
+                       _session.ReceiveBotHit(shooter.Id, shooter.Name, armoured);
             }
 
             if (target == null || !_byBody.TryGetValue(target, out Unit victim) || victim.Dead)

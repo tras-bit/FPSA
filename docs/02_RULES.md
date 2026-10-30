@@ -33,7 +33,14 @@ game, on the same map as the free-for-all mode. It has its own rules object
   prices are data, and the catalogue is validated against the weapons the build actually
   ships so it can never sell a weapon that does not exist.
 * **Bots.** Practice only, exactly as in the free-for-all rules: `BombRules.AllowBots`
-  is false for networked play and the controller refuses a bot join.
+  is false for networked play and the controller refuses a bot join. The offline mode in
+  the main menu fills both sides with labelled bots that shoot, plant and defuse through
+  the same controller, so the rules themselves are exercised, but they are practice
+  opponents and the scoreboard marks every one of them `[bot]`.
+* **Playing it here.** Main menu -> `DEMOLITION (OFFLINE, VS BOTS)`. `B` opens the shop
+  during buy time, `E` plants/defuses on a site, hold Tab for the two-sided board. The
+  shop screen and the bots are single-player only: there is no demolition network session
+  in this build.
 * **Map.** Zavod-7 carries both layouts. The demolition block is `bombSites`,
   `teamSpawns` and `buyZones` in `Assets/StreamingAssets/Data/Maps/ffa_zavod7.json`;
   site A is beside the kiln in the furnace hall, site B is in the pipe yard, 33 m away.

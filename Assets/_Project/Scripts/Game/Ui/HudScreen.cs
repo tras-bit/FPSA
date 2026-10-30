@@ -71,6 +71,7 @@ namespace Kordon.Game.Ui
         private Text _voiceLine;
 
         private RectTransform _scoreboard;
+        private Text _scoreboardTitle;
         private RectTransform _scoreRows;
         private Image _hitMarker;
         private Image _damageFlash;
@@ -318,10 +319,11 @@ namespace Kordon.Game.Ui
             Image board = UiBuilder.Panel(root, "Scoreboard", UiBuilder.Ink,
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 660f));
             _scoreboard = (RectTransform)board.transform;
-            Text title = UiBuilder.LabelAt(_scoreboard, "Title", "FREE FOR ALL - FIRST TO 50",
+            _scoreboardTitle = UiBuilder.LabelAt(_scoreboard, "Title",
+                "FREE FOR ALL - FIRST TO 50",
                 24, UiBuilder.Accent, new Vector2(0.5f, 1f), new Vector2(0f, -18f),
                 new Vector2(860f, 32f), TextAnchor.MiddleCenter);
-            title.fontStyle = FontStyle.Bold;
+            _scoreboardTitle.fontStyle = FontStyle.Bold;
             UiBuilder.Column(_scoreboard, "Rows", 3f, new Vector2(0.5f, 0.5f),
                 new Vector2(0f, -14f), new Vector2(860f, 570f));
             _scoreRows = (RectTransform)_scoreboard.Find("Rows");
@@ -373,6 +375,15 @@ namespace Kordon.Game.Ui
             float duration = Mathf.Clamp(seconds, 0.2f, 6f);
             _blindStartedAt = Time.time;
             _blindUntil = Time.time + duration;
+        }
+
+        /// <summary>The board's caption: the mode and the score a player is reading.</summary>
+        public void SetScoreboardTitle(string title)
+        {
+            if (_scoreboardTitle != null && !string.IsNullOrEmpty(title))
+            {
+                _scoreboardTitle.text = title;
+            }
         }
 
         public void SetScoreboard(List<ScoreRow> rows)
@@ -626,7 +637,7 @@ namespace Kordon.Game.Ui
                     color = UiBuilder.Warning;
                 }
 
-                string name = row.IsBot ? row.Name + "  [practice bot]" : row.Name;
+                string name = row.IsBot ? row.Name + "  [bot]" : row.Name;
                 UiBuilder.Cell(line.transform, "Name", name, 420f, 20, color);
                 UiBuilder.Cell(line.transform, "Kills", row.Kills.ToString(), 120f, 20, color,
                     TextAnchor.MiddleRight);

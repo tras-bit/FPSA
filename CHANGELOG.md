@@ -3,6 +3,55 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.25 - 2026-10-30
+
+Demolition stopped being a rule set with a screen in front of it and became a mode you
+can pick from the menu and play.
+
+### Added
+
+* **THE SECOND MODE IS REACHABLE.** `DEMOLITION (OFFLINE, VS BOTS)` sits under
+  free-for-all in the main menu and starts the real thing on Zavod-7: freeze time, the
+  shop, a live round, plant, defuse, detonation, round score, half-time swap, match end.
+  The opponents are five labelled bots a side, so the loop can be learned and watched.
+* **Bots that fight.** Each bot is the authored operator body - the militia kit on one
+  side, the operator kit on the other - driven by the co-op `HostileAgent`: nav-graph
+  movement, line of sight, cone-accurate fire, a ragdoll death. Their rounds are resolved
+  by the Core damage model against the player's actual plate carrier, so a vest bought in
+  the shop changes the damage taken. Every fatality goes through
+  `BombMatchController.RegisterKill`, which means score, cash and round end stay rules,
+  not bot bookkeeping. Bots also take the objective: an attacker standing on a site arms
+  the charge, a defender on an armed charge cuts it - without that a round could only end
+  on a wipe or the clock.
+* **A shop screen.** `BuyScreen` draws eight shelves from `BuyMenuModel`, so the row that
+  cannot be clicked is the row the server would refuse: unaffordable prices in red,
+  carried items marked, the defuse kit saying it is the other side's. Opening it frees the
+  cursor and locks the gun - the body does not fire or reload because a price row was
+  clicked, and the head stops following the pointer while the cursor is out.
+  `B` opens it during buy time, `ESC` or `B` closes it.
+* **A scoreboard for the mode.** Hold Tab: two blocks, attackers then defenders, marked
+  `[A]`/`[D]`, with the round score in the caption instead of the free-for-all "first to
+  50" heading. The results screen now gets real standings from
+  `BombMatchController.BuildResults`, ordered by side and by personal score inside it,
+  with the winning squad marked.
+
+### Verified
+
+`BombMatchTests` grows to 25 tests with the end-of-match contract: the winning side leads
+the board and its players are marked, and squad rows order by kills rather than by join
+order. The rest is compile-verified (`docs/reports/game-compile.md`) and rule-verified;
+the feel of the mode still needs a mouse in hand.
+
+### Known limitations
+
+* The bots buy nothing and aim with the agent's cone model; they are practice opponents,
+  not human ones, and the scoreboard says `[bot]` on every one of them.
+* Offline demolition is single-player against those bots. A networked demolition match
+  would reuse the same controller and map data, but there is no demolition network session
+  in this build - free-for-all and co-op are the networked modes.
+* Bot bodies are the authored operator rigs and their shooting is a fixed per-side cone
+  cadence, not the full per-weapon recoil/penetration model the player uses.
+
 ## 1.0.24 - 2026-10-30
 
 A second PvP mode: demolition, with a charge and a shop.
@@ -49,10 +98,9 @@ the match. `DemolitionMapTests` holds the layout to the same contract.
 
 ### Known limitations
 
-* The demolition presentation is compile-verified, not play-verified: there is no shop
-  screen wired into the menu yet, bot opponents in the mode are placeholders that do not
-  shoot, and the round loop has not been played with a mouse in hand. The rules, the map
-  data and the audit are what is actually proven here.
+* As shipped at this commit the mode had no shop screen wired into the menu and its bot
+  opponents were placeholders that did not shoot; both are done in 1.0.25. The rules, the
+  map data and the audit are what this commit proves.
 
 ## 1.0.21 - 2026-10-30
 
