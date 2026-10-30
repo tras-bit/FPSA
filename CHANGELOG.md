@@ -3,6 +3,29 @@
 All notable changes to KORDON. The project is versioned as one product: game
 rules, content, networking and art ship together.
 
+## 1.0.17 - 2026-10-30
+
+Triggers, the trigger pull, and a reload the player can actually read.
+
+### Added
+
+* **The trigger is a part you can point at.** The long guns' trigger group was a flat
+  stirrup with a 4.4 mm blade tucked so far back that the housing hid it - from the
+  side the guard looked empty. The guard is a deeper loop, the blade is a rounded 9 mm
+  shoe in the front half of the opening, there is a trigger pin flush on both sides, a
+  magazine release behind the guard and a selector disc with its lever on the receiver.
+  The sidearm's blade is 11 mm across with a blade-safety lever and its own pin.
+* **The blade moves.** It is exported as its own node (`Trigger`) and the viewmodel
+  swings it 16 degrees back into the guard for 55 ms on every shot, from a new
+  `TriggerTravel` in the pose. Firing pulls it through the recoil impulse, so a burst
+  shows one pull per round.
+* **The reload reads.** The weapon now rolls 46 degrees towards the player and comes in
+  close, so the magazine well faces the camera; the empty magazine falls out with a
+  tumble (cubic ease, 46 degrees of pitch), and the fresh one rises fast, then seats in
+  a distinct last beat that jolts the weapon. 10 new tests worth of behaviour, 4 of them
+  new here: the trigger snap and release, the pull on a shot, and the seat being felt
+  by the weapon.
+
 ## 1.0.16 - 2026-10-30
 
 The hands again: a proper fuse, no holes, and the pistol pair rebuilt.

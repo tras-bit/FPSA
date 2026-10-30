@@ -305,6 +305,63 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
+        public void TriggerSnapsBackAndReleases()
+        {
+            ViewmodelAnimator animator = Animator();
+            Run(animator, Input(), 10);
+            Assert.True(animator.Pose.TriggerTravel < 0.001f, "the trigger was pulled idle");
+
+            animator.PullTrigger();
+            animator.Tick(1f / 240f, Input());
+            Assert.True(animator.Pose.TriggerTravel > 0.8f,
+                "the trigger did not snap back: " + animator.Pose.TriggerTravel);
+
+            // held for a beat, then released on its own
+            Run(animator, Input(), 3);
+            Assert.True(animator.Pose.TriggerTravel > 0.5f);
+            Run(animator, Input(), 30);
+            Assert.True(animator.Pose.TriggerTravel < 0.05f,
+                "the trigger never reset: " + animator.Pose.TriggerTravel);
+        }
+
+        [Fact]
+        public void FiringPullsTheTriggerThroughTheRecoilImpulse()
+        {
+            ViewmodelAnimator animator = Animator();
+            Run(animator, Input(), 10);
+
+            ViewmodelInput shot = Input();
+            shot.RecoilImpulse = 0.4f;
+            animator.Tick(1f / 120f, shot);
+            Assert.True(animator.Pose.TriggerTravel > 0.8f,
+                "a shot did not move the trigger: " + animator.Pose.TriggerTravel);
+        }
+
+        [Fact]
+        public void MagazineSeatIsFeltByTheWeapon()
+        {
+            // The last fifth of the insert is the seat: the weapon takes a small jolt at
+            // the moment the magazine locks, which is what makes the change read.
+            ViewmodelAnimator animator = Animator();
+            animator.Notify(ViewmodelEvent.MagazineOut);
+            Run(animator, Input(), 40);
+            animator.Notify(ViewmodelEvent.MagazineIn);
+
+            float before = animator.Pose.Z;
+            bool jolted = false;
+            for (int frame = 0; frame < 40; frame++)
+            {
+                animator.Tick(1f / 120f, Input());
+                if (Math.Abs(animator.Pose.Z - before) > 0.0004f)
+                {
+                    jolted = true;
+                }
+            }
+
+            Assert.True(jolted, "the weapon did not react to the magazine seating");
+        }
+
+        [Fact]
         public void ZeroAndLongFramesAreSafe()
         {
             ViewmodelAnimator animator = Animator();

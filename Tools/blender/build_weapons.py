@@ -1190,35 +1190,71 @@ def grip(ctx: dict, spec: dict, surface: str = POLYMER, length: float = 0.104,
     return parts
 
 
-def trigger_group(ctx: dict, spec: dict, guard_len: float = 0.062) -> List[bpy.types.Object]:
-    """Stamped trigger guard swept as a flat bar, with the trigger blade inside."""
+def trigger_group(ctx: dict, spec: dict, guard_len: float = 0.070) -> List[bpy.types.Object]:
+    """Trigger guard, trigger blade, bow release and selector.
+
+    The first version was a flat stirrup with a 4.4 mm blade tucked so far back that
+    the receiver's trigger housing hid it: from the side the guard looked empty, which
+    is what "where is the trigger" means.  A trigger has to be the most readable thing
+    under the receiver - it is where the eye goes.  So the guard is a deeper loop, the
+    blade is a curved 7 mm-wide shoe hanging in the middle of the opening, and there is
+    a trigger pin through the housing, a magazine release behind the guard and a
+    selector above the grip.
+    """
     z_top = ctx["bottom"] + 0.014
     if spec.get("stock") == "shotgun":
         y_rear = ctx["rear"] - 0.014
     else:
         y_rear = ctx["grip_y"] - 0.012
     y_front = y_rear - guard_len
-    drop = spec.get("guard_drop", 0.021)
-    points = [(y_front, z_top),
-              (y_front + 0.001, z_top - drop * 0.55),
-              (y_front + 0.009, z_top - drop),
-              (y_rear - 0.010, z_top - drop),
-              (y_rear - 0.002, z_top - drop * 0.55),
-              (y_rear, z_top)]
+    drop = spec.get("guard_drop", 0.030)
+
+    # The guard: a flat bar swept round a proper loop, deeper than it is wide, so the
+    # opening reads as an opening from the side.
+    points = [(y_front, z_top + 0.004),
+              (y_front - 0.002, z_top - drop * 0.30),
+              (y_front + 0.006, z_top - drop * 0.72),
+              (y_front + 0.022, z_top - drop),
+              (y_rear - 0.026, z_top - drop),
+              (y_rear - 0.008, z_top - drop * 0.72),
+              (y_rear - 0.002, z_top - drop * 0.30),
+              (y_rear, z_top + 0.004)]
     parts: List[bpy.types.Object] = [
-        sweep_bar("trigger_guard", points, 0.0070, 0.0055, surface=METAL),
+        sweep_bar("trigger_guard", points, 0.0068, 0.0044, surface=METAL),
     ]
-    blade = loft(chamfer_rect(0.0044, 0.0080, 0.0022), [
-        (z_top - 0.003, 1.0, 1.0, 0.0, y_rear - 0.024),
-        (z_top - 0.014, 0.92, 0.92, 0.0, y_rear - 0.021),
-        (z_top - 0.024, 0.72, 0.74, 0.0, y_rear - 0.016),
+
+    # The blade: an S-curved shoe, wide enough to see, its face turned forward, sitting
+    # in the middle of the guard opening where a finger would actually be.
+    blade_y = y_front + guard_len * 0.34
+    # 9 mm across, 8 mm front to back, with a face that curves forward under the finger
+    # and a rounded toe - a trigger is a shoe.  It sits in the front half of the
+    # opening: tucked against the rear of the guard it was hidden by the housing.
+    blade = loft(round_rect(0.0060, 0.0034, 0.0026, steps=3), [
+        (z_top - 0.003, 1.00, 1.00, 0.0, blade_y + 0.0035),
+        (z_top - 0.010, 0.98, 1.00, 0.0, blade_y + 0.0015),
+        (z_top - 0.017, 0.92, 0.98, 0.0, blade_y - 0.0015),
+        (z_top - 0.023, 0.78, 0.92, 0.0, blade_y - 0.0045),
+        (z_top - 0.027, 0.56, 0.80, 0.0, blade_y - 0.0065),
     ], surface=BARE, name="trigger", axis="Z")
     parts.append(blade)
-    parts.append(disc("trigger_pin", (0.0, y_rear - 0.022, z_top - 0.002),
-                      0.0030, 0.027, axis="X"))
-    parts.append(box("safety", (0.0030, 0.024, 0.0075),
-                     (ctx["hw"] * 0.55, y_rear + 0.014, z_top + 0.002),
-                     surface=METAL, bevel=0.0010))
+
+    # trigger pin: one flush pin head on each side of the housing, level with the
+    # blade's pivot, so the pivot is visible from the outside instead of floating
+    for side in (-1.0, 1.0):
+        parts.append(disc("trigger_pin", (side * ctx["hw"] * 1.005, blade_y + 0.010,
+                                          z_top - 0.0025),
+                          0.0028, 0.0016, surface=BARE))
+
+    # magazine release paddle behind the guard, and the selector above the grip
+    parts.append(box("mag_release", (0.0080, 0.016, 0.0070),
+                     (0.0, y_rear + 0.020, z_top - drop * 0.30),
+                     surface=BARE, bevel=0.0012))
+    # selector: a disc through the receiver with a short lever pointing forward
+    parts.append(disc("selector", (ctx["hw"] * 0.53, y_rear + 0.030, z_top + 0.006),
+                      0.0055, 0.0018, surface=BARE))
+    parts.append(sweep_bar("selector_lever", [
+        (y_rear + 0.030, z_top + 0.006), (y_rear + 0.012, z_top + 0.008),
+    ], 0.0018, 0.0034, surface=BARE, x_centre=ctx["hw"] * 0.56))
     return parts
 
 
@@ -1723,12 +1759,24 @@ def build_pistol(spec: dict):
         (-0.028, -height * 0.62), (-0.028, -height * 1.05),
         (0.016, -height * 1.05), (0.020, -height * 0.66),
     ], half_w * 0.62, 0.0028, surface=POLYMER))
-    blade = loft(chamfer_rect(0.0032, 0.0058, 0.0016), [
-        (-height * 0.66, 1.0, 1.0, 0.0, -0.006),
-        (-height * 0.92, 0.9, 0.9, 0.0, -0.004),
-        (-height * 1.08, 0.7, 0.7, 0.0, 0.0),
+    # The blade used to be a 3 mm sliver tucked under the frame; a sidearm's trigger is
+    # the thing the eye checks first, so it is 11 mm across now, with the blade safety
+    # lever in the middle of it - the detail that makes a striker-fired pistol read.
+    blade = loft(round_rect(0.0055, 0.0032, 0.0024, steps=3), [
+        (-height * 0.66, 1.00, 1.00, 0.0, -0.004),
+        (-height * 0.82, 0.96, 1.00, 0.0, -0.005),
+        (-height * 0.98, 0.88, 0.94, 0.0, -0.008),
+        (-height * 1.08, 0.66, 0.80, 0.0, -0.011),
     ], surface=BARE, name="trigger", axis="Z")
     parts.append(blade)
+    parts.append(loft(round_rect(0.0018, 0.0016, 0.0008, steps=3), [
+        (-height * 0.70, 1.0, 1.0, 0.0, -0.0085),
+        (-height * 0.96, 0.9, 0.9, 0.0, -0.0125),
+    ], surface=METAL, name="trigger_safety", axis="Z"))
+    for side in (-1.0, 1.0):
+        parts.append(disc("trigger_pin", (side * half_w * 0.97, -0.004,
+                                          -height * 0.60),
+                          0.0024, 0.0014, surface=BARE))
     # grip: raked, stippled, with a backstrap
     grip_parts = [loft(round_rect(half_w * 0.94, 0.0175, 0.008, steps=3), [
         (-0.028, 0.96, 0.92, 0.0, grip_y),
@@ -1772,6 +1820,11 @@ def build_weapon(weapon_id: str):
     else:
         parts, mag_parts, sight_top, grip_y, grip_top, mag_pivot = build_long_gun(spec)
 
+    # The blade is pulled out of the joined body so it can be its own node: a trigger
+    # that never moves is the detail that makes a first person weapon feel like a prop.
+    trigger_parts = [part for part in parts if part.name == "trigger"]
+    parts = [part for part in parts if part.name != "trigger"]
+
     weapon = finish(parts, weapon_id, bevel_width=spec.get("bevel", 0.0014))
     shift = mathutils.Matrix.Translation((0.0, -grip_y, -grip_top))
     weapon.data.transform(shift)
@@ -1798,11 +1851,27 @@ def build_weapon(weapon_id: str):
         hand.data.transform(shift)
         hand.data.update()
 
+    trigger_obj = None
+    if trigger_parts:
+        raw = trigger_parts[0]
+        trigger_obj = finish([raw], "Trigger", bevel_width=0.0006,
+                             unwrap_margin=0.004)
+        trigger_obj.data.transform(shift)
+        # pivot on the blade's top edge, where the trigger pin is
+        pivot = mathutils.Vector((0.0, 0.0, 0.0))
+        for vertex in trigger_obj.data.vertices:
+            pivot.z = max(pivot.z, vertex.co.z)
+        pivot.y = 0.0
+        trigger_obj.data.transform(mathutils.Matrix.Translation(-pivot))
+        trigger_obj.data.update()
+        trigger_obj.location = pivot
+        bpy.context.view_layer.update()
+
     bounds = world_bounds([weapon] + ([magazine_obj] if magazine_obj is not None else [])
-                          + hands)
+                          + ([trigger_obj] if trigger_obj is not None else []) + hands)
     return weapon, magazine_obj, dict(sightHeightM=round(sight_top, 4),
                                       lengthM=round(bounds[1][1] - bounds[0][1], 3),
-                                      hands=hands)
+                                      hands=hands, trigger=trigger_obj)
 
 
 # --------------------------------------------------------------------------
@@ -1938,6 +2007,7 @@ def main() -> None:
         art.reset_scene()
         weapon, magazine_obj, meta = build_weapon(weapon_id)
         objects = ([weapon] + ([magazine_obj] if magazine_obj is not None else [])
+                   + ([meta["trigger"]] if meta.get("trigger") is not None else [])
                    + meta.get("hands", []))
         bounds = world_bounds(objects)
         path = os.path.join(WEAPON_DIR, f"{weapon_id}.fbx")

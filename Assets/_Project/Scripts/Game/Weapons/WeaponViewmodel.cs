@@ -65,6 +65,8 @@ namespace Kordon.Game.Weapons
         private Vector3 _magSeat;
         private Vector3 _boltSeat;
         private Vector3 _handSeat;
+        private Transform _triggerProp;
+        private Quaternion _triggerSeat = Quaternion.identity;
 
         private GameObject _modelInstance;
         private string _modelWeaponId;
@@ -306,6 +308,14 @@ namespace Kordon.Game.Weapons
                 BoltProp.localPosition = _boltSeat + new Vector3(0f, 0f, -pose.BoltTravel * 0.05f);
             }
 
+            if (_triggerProp != null)
+            {
+                // the blade pivots on its pin: it swings backwards into the guard, it
+                // does not slide
+                _triggerProp.localRotation = _triggerSeat *
+                    Quaternion.Euler(-16f * Mathf.Clamp01(pose.TriggerTravel), 0f, 0f);
+            }
+
             ApplySupportHand(pose);
         }
 
@@ -363,6 +373,7 @@ namespace Kordon.Game.Weapons
             }
 
             MagazineProp = null;
+            _triggerProp = null;
             BoltProp = null;
             SupportHandProp = null;
             ShootingHandProp = null;
@@ -389,6 +400,12 @@ namespace Kordon.Game.Weapons
             {
                 MagazineProp = magazine;
                 _magSeat = magazine.localPosition;
+            }
+
+            _triggerProp = _modelInstance.transform.Find("Trigger");
+            if (_triggerProp != null)
+            {
+                _triggerSeat = _triggerProp.localRotation;
             }
 
             SupportHandProp = _modelInstance.transform.Find("HandLeft");

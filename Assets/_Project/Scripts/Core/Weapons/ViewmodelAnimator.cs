@@ -86,6 +86,9 @@ namespace Kordon.Core.Weapons
         /// <summary>0 seated, 1 fully racked back.</summary>
         public float BoltTravel;
 
+        /// <summary>How far the trigger is pulled, 0 to 1: snaps back on each shot.</summary>
+        public float TriggerTravel;
+
         /// <summary>0 at the hip, 1 with the sights up: the camera uses this too.</summary>
         public float AimBlend;
 
@@ -180,6 +183,8 @@ namespace Kordon.Core.Weapons
         private float _recoilPitch;
         private float _recoilPitchVelocity;
         private float _landing;
+        private float _trigger;
+        private float _triggerTime;
         private float _landingVelocity;
 
         // bob and breathing phases, advanced by the animator so they are reproducible
@@ -279,6 +284,13 @@ namespace Kordon.Core.Weapons
             }
         }
 
+        /// <summary>Snaps the trigger back; it releases over the next few hundredths.</summary>
+        public void PullTrigger()
+        {
+            _trigger = 1f;
+            _triggerTime = 0f;
+        }
+
         /// <summary>Adds a recoil impulse, clamped so a burst cannot stack to absurdity.</summary>
         public void AddRecoil(float impulse)
         {
@@ -303,6 +315,7 @@ namespace Kordon.Core.Weapons
             if (input.RecoilImpulse > 0f)
             {
                 AddRecoil(input.RecoilImpulse);
+                PullTrigger();
             }
 
             if (input.LandingImpulse > 0f)
@@ -344,13 +357,18 @@ namespace Kordon.Core.Weapons
 
                 case ViewmodelState.ReloadOut:
                 case ViewmodelState.ReloadIn:
-                    targetX = 0.118f;
-                    targetY = -0.238f;
-                    targetZ = 0.392f;
-                    targetPitch = 26f;
-                    targetYaw = 6f;
-                    targetRoll = -32f;
-                    rate = 10f;
+                    // The weapon is rolled towards the player and pulled in close, so
+                    // the magazine well faces the camera and the support hand has
+                    // somewhere to work.  A reload that happens out of frame is a
+                    // reload the player cannot see, which is what makes it feel like
+                    // the magazine teleported.
+                    targetX = 0.104f;
+                    targetY = -0.176f;
+                    targetZ = 0.352f;
+                    targetPitch = 20f;
+                    targetYaw = 14f;
+                    targetRoll = -46f;
+                    rate = 14f;
                     break;
 
                 case ViewmodelState.Inspecting:
@@ -462,6 +480,16 @@ namespace Kordon.Core.Weapons
             Spring(ref _recoilPitch, ref _recoilPitchVelocity, 0f, 165f, 18f, dt);
             Spring(ref _landing, ref _landingVelocity, 0f, 120f, 15f, dt);
 
+            // ---- trigger: pulled in one frame, released in a beat ---------
+            if (_trigger > 0f)
+            {
+                _triggerTime += dt;
+                const float releaseSeconds = 0.055f;
+                _trigger = 1f - Clamp01(_triggerTime / releaseSeconds);
+            }
+
+            _pose.TriggerTravel = _trigger;
+
             // ---- magazine and bolt ----------------------------------------
             UpdateMagazine(dt);
             UpdateBolt(dt);
@@ -541,13 +569,16 @@ namespace Kordon.Core.Weapons
             {
                 case MagazineState.Dropping:
                 {
+                    // The empty magazine falls out of frame quickly: it is weightless
+                    // once it clears the well, and a slow drop reads as floating.
                     float t = Clamp01(_magazineTime / Math.Max(0.01f, _config.MagazineDropSeconds));
-                    float eased = t * t;
-                    _magazineX = 0.012f * eased;
+                    float eased = t * t * t;
+                    float spin = t * t;
+                    _magazineX = 0.020f * eased;
                     _magazineY = -_config.MagazineDrop * eased;
-                    _magazineZ = -0.01f * eased;
-                    _magazinePitch = -22f * eased;
-                    _magazineRoll = 9f * eased;
+                    _magazineZ = -0.026f * eased;
+                    _magazinePitch = -46f * spin;
+                    _magazineRoll = 22f * spin;
                     if (t >= 1f)
                     {
                         _magazine = MagazineState.Hidden;
@@ -565,14 +596,25 @@ namespace Kordon.Core.Weapons
 
                 case MagazineState.Inserting:
                 {
+                    // Up into the well fast, then a firm seat: the last 15% of the
+                    // travel is a single beat that ends with the weapon taking the
+                    // hit, which is the part that sells the change.
                     float t = Clamp01(_magazineTime / Math.Max(0.01f, _config.MagazineInsertSeconds));
-                    float eased = EaseOutCubic(t);
-                    float overshoot = (float)Math.Sin(t * Math.PI) * 0.012f;
-                    _magazineX = 0.012f * (1f - eased);
-                    _magazineY = -_config.MagazineDrop * (1f - eased) + overshoot;
-                    _magazineZ = -0.01f * (1f - eased);
-                    _magazinePitch = -22f * (1f - eased);
-                    _magazineRoll = 9f * (1f - eased);
+                    float eased = t < 0.72f
+                        ? EaseOutCubic(t / 0.72f) * 0.94f
+                        : 0.94f + 0.06f * ((t - 0.72f) / 0.28f);
+                    float seat = t < 0.80f ? 0f : (float)Math.Sin((t - 0.80f) / 0.20f * Math.PI);
+                    _magazineX = 0.020f * (1f - eased);
+                    _magazineY = -_config.MagazineDrop * (1f - eased) - seat * 0.004f;
+                    _magazineZ = -0.026f * (1f - eased);
+                    _magazinePitch = -46f * (1f - eased);
+                    _magazineRoll = 22f * (1f - eased);
+                    if (seat > 0f)
+                    {
+                        // the slap is felt by the whole weapon, not just the magazine
+                        _recoilVelocity += seat * 0.010f;
+                        _recoilPitchVelocity -= seat * 2.4f;
+                    }
                     if (t >= 1f)
                     {
                         _magazine = MagazineState.Seated;
