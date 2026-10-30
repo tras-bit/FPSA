@@ -75,6 +75,12 @@ namespace Kordon.Game.Weapons
         private float _handlingPenalty;
         public float HandlingPenalty => _handlingPenalty;
 
+        /// <summary>
+        /// Set while a mouse-driven overlay owns the screen (the demolition shop): the gun
+        /// must not fire or reload because the player clicked a price row.
+        /// </summary>
+        public bool InputLocked;
+
         public WeaponDefinition ActiveWeapon => Loadout != null ? Loadout.ActiveWeapon : null;
 
         public AmmoKit ActiveKit => Loadout != null ? Loadout.ActiveAmmoKit : null;
@@ -103,9 +109,12 @@ namespace Kordon.Game.Weapons
             Now = Time.time;
             float dt = Mathf.Clamp(Time.deltaTime, 0f, 0.1f);
 
-            UpdateSlotSwitch();
-            UpdateAim(dt);
-            UpdateReloadKey();
+            if (!InputLocked)
+            {
+                UpdateSlotSwitch();
+                UpdateAim(dt);
+                UpdateReloadKey();
+            }
 
             Loadout.Tick(Now);
             _events.Clear();
@@ -121,7 +130,11 @@ namespace Kordon.Game.Weapons
             _timeSinceShot += dt;
             _timeSinceSprint = Body.Sprinting ? 0f : _timeSinceSprint + dt;
 
-            UpdateFiring();
+            if (!InputLocked)
+            {
+                UpdateFiring();
+            }
+
             HudChanged?.Invoke(Loadout.BuildHudSnapshot(Now));
         }
 

@@ -42,6 +42,7 @@ namespace Kordon.Game.Match
         public WeaponController Weapons { get; private set; }
         public BodycamRig Rig { get; private set; }
         public HudScreen Hud { get; private set; }
+        public DemolitionBots Bots { get; private set; }
         public LoadoutSelection LocalLoadout { get; private set; }
         public string MapId { get; private set; } = "ffa_zavod7";
         public float Now => Time.time - _start;
@@ -145,6 +146,9 @@ namespace Kordon.Game.Match
             Match.StartMatch(0f);
             PlaceAtTeamSpawn(true);
 
+            Bots = parent.gameObject.AddComponent<DemolitionBots>();
+            Bots.Attach(this);
+
             Hud?.SetObjective(
                 "DEMOLITION - plant the charge at A or B. Buy in the shelter before the round.");
         }
@@ -160,6 +164,31 @@ namespace Kordon.Game.Match
             Hud = op.Hud;
             Player.NoiseEmitted += _ => { };
             Weapons.PlayerHit += OnLocalHit;
+        }
+
+        /// <summary>
+        /// A bot's round landed on the local player. The Core controller owns the kill, so
+        /// the body and the controller are told in that order: vitals for the ragdoll and
+        /// the camera, then RegisterKill for score, economy and the round's aliveness.
+        /// </summary>
+        public bool ReceiveBotHit(ulong shooterId, string shooterName, DamageResult result)
+        {
+            if (Player == null || Player.IsDead)
+            {
+                return false;
+            }
+
+            bool died = Player.Vitals.ApplyDamage(result, DeathCause.Gunfire);
+            Hud?.DamageFlash();
+            Hud?.SetHealth(Player.Vitals.Health / PlayerVitals.MaxHealth);
+
+            if (died)
+            {
+                Match.RegisterKill(shooterId, LocalClientId, Now);
+                Hud?.Toast(shooterName + " eliminated you");
+            }
+
+            return true;
         }
 
         private void OnLocalHit(PlayerController target, DamageResult result)
@@ -202,6 +231,11 @@ namespace Kordon.Game.Match
 
         private void HandleBuyInput(float now)
         {
+            if (Weapons != null)
+            {
+                Weapons.InputLocked = _buyMenuOpen;
+            }
+
             // B opens the shop, but only when the server would accept a purchase at all -
             // opening a menu that refuses every click is worse than not opening it.
             if (KordonInput.Pressed(InputAction.BuyMenu))

@@ -35,6 +35,13 @@ namespace Kordon.Game.Ai
         public float Accuracy01 = 0.55f;
         public string BulletId = "762x39_ps";
 
+        /// <summary>
+        /// Where this agent would rather be when it has nobody to shoot at.  Null keeps the
+        /// old behaviour (a random node), which is what the co-op operation wants.  The
+        /// demolition bots set it to a bomb site so the round has a shape.
+        /// </summary>
+        public Vector3? PatrolAnchor;
+
         public bool IsDead { get; private set; }
         public float Health { get; private set; } = 100f;
         public Vector3 Position => transform.position;
@@ -235,6 +242,17 @@ namespace Kordon.Game.Ai
             }
 
             List<NavNode> nodes = new List<NavNode>(Graph.Nodes);
+            if (PatrolAnchor.HasValue && Random.Range(0, 100) < 70)
+            {
+                // Walk toward the anchor's neighbourhood instead of anywhere on the map.
+                NavNode here = nodes[Random.Range(0, nodes.Count)];
+                if (Vector3.Distance(MapSpace.ToUnity(here.Position), PatrolAnchor.Value) <= 18f)
+                {
+                    _patrolGoal = MapSpace.ToUnity(here.Position);
+                    return;
+                }
+            }
+
             NavNode node = nodes[Random.Range(0, nodes.Count)];
             _patrolGoal = MapSpace.ToUnity(node.Position);
         }

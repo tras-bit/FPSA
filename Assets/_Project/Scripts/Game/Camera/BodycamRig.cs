@@ -92,7 +92,11 @@ namespace Kordon.Game.Camera
 
             float dt = Mathf.Clamp(Time.deltaTime, 0.0001f, 0.1f);
 
-            Vector2 look = Kordon.Game.Input.KordonInput.LookDelta() * Sensitivity;
+            // An unlocked cursor belongs to a menu or the shop, so the head must hold still
+            // instead of swinging with the pointer.
+            Vector2 look = Cursor.lockState == CursorLockMode.Locked
+                ? Kordon.Game.Input.KordonInput.LookDelta() * Sensitivity
+                : Vector2.zero;
             Yaw += look.x * 0.1f;
             Pitch = Mathf.Clamp(Pitch - look.y * 0.1f, -PitchLimitDegrees, PitchLimitDegrees);
 

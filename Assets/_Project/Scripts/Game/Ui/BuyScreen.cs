@@ -75,45 +75,35 @@ namespace Kordon.Game.Ui
 
         private void BuildShelves(Transform frame)
         {
-            // Two columns of four shelves: rifles and the big guns on the left, the rest on
-            // the right. Fixed layout, because a shop that re-orders itself between rounds
-            // makes the player re-read it every time.
-            BuyCategory[] left =
-            {
-                BuyCategory.Rifle, BuyCategory.Marksman, BuyCategory.Sniper,
-                BuyCategory.SubMachineGun
-            };
-            BuyCategory[] right =
-            {
-                BuyCategory.Shotgun, BuyCategory.Sidearm, BuyCategory.Armor,
-                BuyCategory.Utility
-            };
-
-            BuildColumn(frame, left, -300f);
-            BuildColumn(frame, right, 300f);
+            // The shelves come from the same model the clickability check uses, so a
+            // category can never be drawn from one list and validated from another.
+            List<BuyMenuSection> sections = BuyMenuModel.Build(_session.Match.Catalog, 0,
+                _session.LocalTeam, _session.LocalBuy);
+            int half = (sections.Count + 1) / 2;
+            BuildColumn(frame, sections.GetRange(0, half), -300f);
+            BuildColumn(frame, sections.GetRange(half, sections.Count - half), 300f);
         }
 
-        private void BuildColumn(Transform frame, BuyCategory[] categories, float offsetX)
+        private void BuildColumn(Transform frame, List<BuyMenuSection> sections, float offsetX)
         {
             float y = -130f;
-            foreach (BuyCategory category in categories)
+            foreach (BuyMenuSection section in sections)
             {
-                Text header = UiBuilder.LabelAt(frame, "Shelf" + category, category.ToString().ToUpperInvariant(),
+                Text header = UiBuilder.LabelAt(frame, "Shelf" + section.Category, section.Title,
                     15, UiBuilder.Accent, new Vector2(0.5f, 1f),
                     new Vector2(offsetX, y), new Vector2(520f, 20f), TextAnchor.MiddleLeft);
                 header.raycastTarget = false;
                 y -= 26f;
 
-                List<BuyItem> items = _session.Match.Catalog.ForCategory(category);
-                foreach (BuyItem item in items)
+                foreach (BuyMenuRow row in section.Rows)
                 {
-                    float rowY = y;
-                    Button button = UiBuilder.Button(frame, item.DisplayName + "   $" + item.Price,
-                        () => Purchase(item.Id), new Vector2(offsetX, rowY),
+                    BuyMenuRow captured = row;
+                    Button button = UiBuilder.Button(frame,
+                        row.DisplayName + "   $" + row.Price,
+                        () => Purchase(captured.ItemId), new Vector2(offsetX, y),
                         new Vector2(520f, 34f), 15);
-                    _rowButtons[item.Id] = button;
-                    Text label = button.GetComponentInChildren<Text>();
-                    _rowLabels[item.Id] = label;
+                    _rowButtons[row.ItemId] = button;
+                    _rowLabels[row.ItemId] = button.GetComponentInChildren<Text>();
                     y -= 38f;
                 }
 
@@ -128,8 +118,8 @@ namespace Kordon.Game.Ui
                 return;
             }
 
-            BuyResult result = _session.Buy(itemId);
-            Refresh(true);
+            _session.Buy(itemId);
+            Refresh();
         }
 
         private void Update()
@@ -157,11 +147,11 @@ namespace Kordon.Game.Ui
             }
 
             _refreshTimer = 0.25f;
-            Refresh(false);
+            Refresh();
         }
 
         /// <summary>Rebuild the flags: money, what is owned, what the wallet cannot reach.</summary>
-        private void Refresh(bool immediate)
+        private void Refresh()
         {
             if (_session == null || !_built)
             {
@@ -196,7 +186,7 @@ namespace Kordon.Game.Ui
                             : UiBuilder.Paper;
                         label.text = row.DisplayName + "   $" + row.Price
                                      + (row.Owned ? "   (carried)" : string.Empty)
-                                     + (row.BlockedByTeam ? "   (defenders only)" : string.Empty);
+                                     + (row.BlockedByTeam ? "   (other side only)" : string.Empty);
                     }
                 }
             }
