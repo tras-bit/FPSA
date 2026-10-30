@@ -40,3 +40,9 @@ Every spawn has at least 6 m of clear sight in one of 16 sampled directions. A s
 
 One walkable ground shell; every declared shell exists; the ground covers the playable bounds. `MapBuilder` gives it a collider because it is walkable.
 
+## Review images
+
+![coop_silent_kiln](../docs/art/coop_silent_kiln-iso.png)
+![coop_silent_kiln](../docs/art/coop_silent_kiln-top.png)
+![coop_silent_kiln](../docs/art/coop_silent_kiln-lanes.png)
+

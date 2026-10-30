@@ -33,6 +33,15 @@ The map had 27 firing lanes between spawns, and nothing was checking for them.
   is not available, so deleting a lane-break placement fails the build instead of
   quietly restoring a 79 m lane.
 
+### Added
+
+* **`<map>-lanes.png`:** the plan view with the sightlines drawn on it. The lanes are
+  not a 2D guess - the audit drops the four lane-break objects 500 m, repeats the same
+  eye-height ray casts, and draws the lines that come back, so the picture shows the
+  lines that actually existed and where they ran. 39 spawn pairs are drawn, the 27
+  genuine ones plus 12 that share a straight line through a strip; the four red boxes
+  are the objects that cut them, and every one of the 27 crosses one.
+
 ### Verification
 
 `docs/reports/map-audit-ffa_zavod7.md` and `map-audit-coop_silent_kiln.md` are regenerated

@@ -58,4 +58,5 @@ One walkable ground shell; every declared shell exists; the ground covers the pl
 
 ![ffa_zavod7](../docs/art/ffa_zavod7-iso.png)
 ![ffa_zavod7](../docs/art/ffa_zavod7-top.png)
+![ffa_zavod7](../docs/art/ffa_zavod7-lanes.png)
 

@@ -372,7 +372,214 @@ def render_review(map_id: str, data: dict) -> List[str]:
     render_view(top, (centre_x, centre_y, span * 1.6), (0.0, 0.0, 0.0),
                 ortho_scale=span * 1.02)
     written.append(top)
+
+    lanes = overlay_lanes(map_id, data, top)
+    written.append(lanes)
     return written
+
+
+def lane_break_boxes(data: dict) -> List[Tuple[float, float, float, float]]:
+    """Footprints of the placements that were put in to break firing lanes."""
+    boxes: List[Tuple[float, float, float, float]] = []
+    for placement in data["placements"]:
+        if placement.get("tag") != "lane_break":
+            continue
+        box = footprint_box(placement["module"], placement["position"],
+                            placement.get("yaw", 0.0))
+        if box is not None:
+            boxes.append(box)
+    return boxes
+
+
+def footprint_box(module: str, position: Sequence[float], yaw: float,
+                  pad: float = 0.0):
+    """Axis aligned extent of one placement, from the kit manifest's own sizes."""
+    global _KIT
+    if _KIT is None:
+        with open(os.path.join(art.DATA_DIR, "Art", "kit_manifest.json"),
+                  encoding="utf-8") as handle:
+            _KIT = json.load(handle)["modules"]
+    size = _KIT[module]["size"]
+    angle = math.radians(yaw)
+    ex = abs(math.cos(angle)) * size[0] * 0.5 + abs(math.sin(angle)) * size[1] * 0.5
+    ey = abs(math.sin(angle)) * size[0] * 0.5 + abs(math.cos(angle)) * size[1] * 0.5
+    if size[2] < 1.2:
+        return None          # knee-high clutter stops no shot
+    return (position[0] - ex - pad, position[1] - ey - pad,
+            position[0] + ex + pad, position[1] + ey + pad)
+
+
+_KIT: Dict[str, dict] | None = None
+
+
+def lanes_without_lane_breaks(data: dict) -> List[Tuple[str, str, float]]:
+    """The clear spawn-to-spawn lines the map would have without the lane-break props.
+
+    Used for the review overlay only.  The four hoppers are found in the scene, dropped
+    500 m, the same eye-height ray cast the audit runs is repeated, and they are put
+    back.  That way the picture shows the lines that actually existed and the objects
+    that actually cut them, instead of what a 2D footprint test guesses.
+    """
+    wanted = [placement for placement in data["placements"]
+              if placement.get("tag") == "lane_break"]
+    moved = []
+    for placement in wanted:
+        px, py = placement["position"][0], placement["position"][1]
+        for obj in bpy.data.objects:
+            if obj.type != "MESH":
+                continue
+            low, high = art.world_bounds(obj)
+            if high[2] - low[2] < 1.0:
+                continue
+            if abs((low[0] + high[0]) * 0.5 - px) > 0.6:
+                continue
+            if abs((low[1] + high[1]) * 0.5 - py) > 0.6:
+                continue
+            moved.append((obj, obj.location.z))
+            obj.location.z -= 500.0
+    bpy.context.view_layer.update()
+
+    spawns = data["spawns"]
+    points = [(spawn["id"], (spawn["position"][0], spawn["position"][1],
+                             spawn["position"][2] + EYE_HEIGHT)) for spawn in spawns]
+
+    parent = list(range(len(points)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    for first in range(len(points)):
+        for second in range(first + 1, len(points)):
+            if math.dist(points[first][1], points[second][1]) <= CLUSTER_RADIUS:
+                a, b = find(first), find(second)
+                if a != b:
+                    parent[b] = a
+
+    lanes: List[Tuple[str, str, float]] = []
+    for first in range(len(points)):
+        for second in range(first + 1, len(points)):
+            if find(first) == find(second):
+                continue
+            start, finish = points[first][1], points[second][1]
+            if ray_between(start, finish):
+                continue
+            lanes.append((points[first][0], points[second][0], math.dist(start, finish)))
+
+    for obj, original_z in moved:
+        obj.location.z = original_z
+    bpy.context.view_layer.update()
+    return lanes
+
+
+def overlay_lanes(map_id: str, data: dict, top_image: str) -> str:
+    """Draw the audited sightlines on the plan view.
+
+    A number in a markdown file says the lanes are gone; this shows which object takes
+    out which line, on the same plan view a level designer reads.  Green lines are
+    spawn pairs whose straight line crosses a lane-break footprint, red boxes are those
+    footprints, and the spawn clusters are circled.  Pairs inside one cluster are not
+    drawn, because they are not lanes.
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    bounds = data["bounds"]
+    min_x, min_y = bounds["min"][0], bounds["min"][1]
+    max_x, max_y = bounds["max"][0], bounds["max"][1]
+    centre_x = (min_x + max_x) * 0.5
+    centre_y = (min_y + max_y) * 0.5
+    span = max(max_x - min_x, max_y - min_y)
+
+    image = Image.open(top_image).convert("RGB")
+    width, height = image.size
+    scale = width / (span * 1.02)
+
+    def to_pixel(x: float, y: float) -> Tuple[float, float]:
+        return (width * 0.5 + (x - centre_x) * scale,
+                height * 0.5 - (y - centre_y) * scale)
+
+    draw = ImageDraw.Draw(image, "RGBA")
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    font = (ImageFont.truetype(font_path, 15) if os.path.exists(font_path) else None)
+
+    boxes = lane_break_boxes(data)
+    spawns = data["spawns"]
+    points = [(spawn["id"], spawn["position"][0], spawn["position"][1])
+              for spawn in spawns]
+
+    # clusters
+    parent = list(range(len(points)))
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+    for first in range(len(points)):
+        for second in range(first + 1, len(points)):
+            if math.dist(points[first][1:], points[second][1:]) <= CLUSTER_RADIUS:
+                a, b = find(first), find(second)
+                if a != b:
+                    parent[b] = a
+
+    measured = lanes_without_lane_breaks(data)
+    coordinates = {spawn["id"]: (spawn["position"][0], spawn["position"][1])
+                   for spawn in data["spawns"]}
+    for first_id, second_id, _gap in measured:
+        start = coordinates[first_id]
+        finish = coordinates[second_id]
+        draw.line([to_pixel(*start), to_pixel(*finish)], fill=(70, 220, 120, 115),
+                  width=2)
+
+    for box in boxes:
+        draw.rectangle([to_pixel(box[0], box[3]), to_pixel(box[2], box[1])],
+                       outline=(235, 80, 60, 235), width=3)
+
+    cluster_centres: Dict[int, List[Tuple[float, float]]] = {}
+    for index, (_sid, x, y) in enumerate(points):
+        cluster_centres.setdefault(find(index), []).append((x, y))
+    for members in cluster_centres.values():
+        cx = sum(point[0] for point in members) / len(members)
+        cy = sum(point[1] for point in members) / len(members)
+        radius = max(14.0, CLUSTER_RADIUS * scale * 0.5)
+        px, py = to_pixel(cx, cy)
+        draw.ellipse([px - radius, py - radius, px + radius, py + radius],
+                     outline=(250, 210, 60, 220), width=3)
+        for x, y in members:
+            sx, sy = to_pixel(x, y)
+            draw.ellipse([sx - 3, sy - 3, sx + 3, sy + 3], fill=(250, 210, 60, 255))
+
+    label = (f"{len(measured)} lane(s) before the fix, all cut by {len(boxes)} "
+             f"lane-break object(s)  |  eye height {EYE_HEIGHT:.2f} m  |  clear now: 0")
+    draw.rectangle([0, height - 30, width, height], fill=(12, 14, 18, 210))
+    draw.text((14, height - 23), label, fill=(240, 240, 240, 255), font=font)
+
+    out = os.path.join(PREVIEW_DIR, f"{map_id}-lanes.png")
+    image.save(out)
+    return out
+
+
+def segment_crosses(start: Sequence[float], finish: Sequence[float],
+                    box: Tuple[float, float, float, float]) -> bool:
+    """Does the 2D segment cross the axis aligned rectangle? (slab test)"""
+    t_min, t_max = 0.0, 1.0
+    for axis in range(2):
+        origin, delta = start[axis], finish[axis] - start[axis]
+        low, high = box[axis], box[axis + 2]
+        if abs(delta) < 1e-9:
+            if origin < low or origin > high:
+                return False
+            continue
+        a = (low - origin) / delta
+        b = (high - origin) / delta
+        if a > b:
+            a, b = b, a
+        t_min = max(t_min, a)
+        t_max = min(t_max, b)
+        if t_min > t_max:
+            return False
+    return True
 
 
 def write_report(map_id: str, data: dict, result: Dict[str, object],
