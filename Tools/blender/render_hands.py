@@ -88,7 +88,9 @@ def render_weapon_hands(weapon_id: str, directory: str) -> list:
     rw.studio_floor()
     rw.lights()
     tiles = []
-    shots = (("HandRight", 38.0, 16.0), ("HandLeft", -148.0, 12.0))
+    # The support hand is shot from the front-left: from behind it was only a pair of
+    # forearms and the grip, which told the reviewer nothing about the fingers.
+    shots = (("HandRight", 38.0, 16.0), ("HandLeft", -118.0, 22.0))
     for index, (name, azimuth, elevation) in enumerate(shots):
         path = os.path.join(directory, f"{weapon_id}_{index}.png")
         shoot_hand(name, path, azimuth, elevation)
