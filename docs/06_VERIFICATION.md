@@ -7,7 +7,7 @@ not be executed in this environment, without softening either.
 
 | Gate | Tool | Last result |
 |---|---|---|
-| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (289 tests) | **289 passed, 0 failed** |
+| Core rules unit tests | `dotnet test Tests/Kordon.Core.Tests` (308 tests) | **308 passed, 0 failed** |
 | Project structure / syntax | `Tests/Kordon.SyntaxCheck` (Roslyn, C# 9) | **111 scripts, 0 errors** |
 | Unity side type check | `Tests/Kordon.Game.CompileCheck` (Roslyn + hand written UnityEngine/UnityEditor/NGO stubs) | **0 errors** |
 | Design rule verification | `Tools/verify/policy_check.py` | **PASS** (8 structural rules) |
@@ -68,11 +68,22 @@ were found and both are fixed; this is what was executed to prove it.
   `Kordon.Core.Ui.HudLayout` and unit tested against six screen sizes from
   1280x720 to 3440x1440: no row overlaps, the column stays out of the centred
   interaction hint, and the whole column fits in the bottom 235 px.
-* **Map data contract.** `Tests/Kordon.Core.Tests/MapContentTests.cs` (14 tests)
+* **Sightlines.** The same audit casts every spawn pair at 1.62 m eye height - 150
+  pairs on Zavod-7, with slots inside one shelter exempt - and requires that no pair
+  sees another. That check exists because the map failed it: **27 clear lines, 53 to
+  79 m**, along the three open service strips. Four scrap hoppers now cut all of them
+  (0 lines, 0 findings). The opposite failure is audited too: each spawn must have at
+  least 6 m of clear sight in one of sixteen directions, so the fix cannot wall a
+  player in. `docs/art/ffa_zavod7-lanes.png` draws the lines that the audit measured
+  (the four lane-break objects are moved out of the scene, the ray casts repeated)
+  with the objects that cut them marked; the full list is in the map audit report.
+* **Map data contract.** `Tests/Kordon.Core.Tests/MapContentTests.cs` (7 test methods)
   asserts exactly one walkable ground shell per map, that it is `ground`, that every
   spawn is inside the bounds at floor height with a zone, that every kit placement
-  resolves to a module the kit manifest exports and carries a tag, and the 20-slot
-  four-zone / fifty-elimination free-for-all layout.
+  resolves to a module the kit manifest exports and carries a tag, the 20-slot
+  four-zone / fifty-elimination free-for-all layout, and that no two spawn clusters
+  are joined by a clear line (the same rule as the Blender audit, run on the JSON so
+  CI catches a removed lane break without Blender).
 
 What this does **not** prove: that the collider fix feels right in a live game.
 That needs the Unity editor and a Windows build, neither of which exists here. The
@@ -138,7 +149,7 @@ the verification this environment cannot perform.
 The previous viewmodel smoothed a single position toward a single target. That is
 why the weapon slid between poses, the magazine teleported and the muzzle never
 settled. The behaviour now lives in `Kordon.Core.Weapons.ViewmodelAnimator`, an
-engine free class, and is covered by 16 tests (273 -> 289 in the suite):
+engine free class, and is covered by 16 tests of its own:
 
 | Behaviour | What the test pins |
 |---|---|
@@ -235,7 +246,7 @@ problem they were built to solve.
 ## What was verified by generation (executed here)
 
 * Kit: 60 modules, 203k triangles, FBX exported, both `.blend` files saved.
-* Maps: Zavod-7 (732 kit instances, 190 nav nodes / 738 links, 20 spawns) and
+* Maps: Zavod-7 (720 kit instances, 190 nav nodes / 803 links, 20 spawns) and
   Silent Kiln (480 instances, 188 nodes / 1270 links, 6 spawns), both validated
   for connectivity by the nav generator.
 * Textures: 24 surfaces -> 66 texture sets (albedo, normal, metallic/smoothness) and
@@ -331,7 +342,7 @@ licence** and no access to Unity's package CDN from the sandbox shell. Therefore
 | Real networked FFA, 20 slots, server score, 50-kill win | implemented (NGO 2.2.0, server authority); rules unit tested; transport unverified here |
 | Co-op mission completable to evacuation | implemented; mission chain unit tested; AI and networking unverified here |
 | Menus, settings, scoreboard, match end | implemented in code; compile checked |
-| Automated checks pass | **yes** — 289 tests, 0 syntax errors, 0 compile errors, policy PASS |
+| Automated checks pass | **yes** — 308 tests, 0 syntax errors, 0 compile errors, policy PASS |
 | Runnable build + instructions, or an exact limitation | **exact limitation documented above** (no Unity/Windows in this environment) |
 
 ## Next step for a human with Unity
