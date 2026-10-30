@@ -59,6 +59,13 @@ namespace Kordon.Core.Rules
         CoOpOperation = 2,
 
         /// <summary>Offline training range with clearly labelled AI targets.</summary>
-        PracticeRange = 3
+        PracticeRange = 3,
+
+        /// <summary>
+        /// Two teams, one charge, round based scoring and a cash economy between rounds.
+        /// It has its own controller (BombMatchController) and its own rules (BombRules);
+        /// the free-for-all controller is untouched by it.
+        /// </summary>
+        Demolition = 4
     }
 }
