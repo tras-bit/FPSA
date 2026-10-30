@@ -315,6 +315,30 @@ namespace Kordon.Core.Tests
         }
 
         [Fact]
+        public void HipCarryPutsTheWeaponLowRightAndCantedIn()
+        {
+            ViewmodelAnimator animator = Animator();
+            Run(animator, Input(), 120);
+            ViewmodelPose pose = animator.Pose;
+
+            // carried to the right of the eye, below it, and out in front
+            Assert.InRange(pose.X, 0.12f, 0.24f);
+            Assert.InRange(pose.Y, -0.28f, -0.12f);
+            Assert.InRange(pose.Z, 0.30f, 0.60f);
+
+            // a slight inward cant: the muzzle points a few degrees across the view
+            Assert.InRange(pose.Yaw, 1f, 8f);
+            Assert.InRange(pose.Pitch, 0f, 6f);
+            Assert.InRange(pose.Roll, -6f, 0f);
+
+            // aiming still puts the sights on the camera axis
+            Run(animator, Input(aiming: true), 120);
+            Assert.InRange(animator.Pose.X, -0.01f, 0.01f);
+            Assert.InRange(animator.Pose.Yaw, -0.5f, 0.5f);
+            Assert.InRange(animator.Pose.Roll, -0.5f, 0.5f);
+        }
+
+        [Fact]
         public void TriggerSnapsBackAndReleases()
         {
             ViewmodelAnimator animator = Animator();

@@ -337,11 +337,18 @@ namespace Kordon.Core.Weapons
             float targetPitch = 0f, targetYaw = 0f, targetRoll = 0f;
             float rate = 12f;
 
+            // Hip carry.  The weapon sits low and to the right with the muzzle just
+            // inside the frame and a slight cant inwards, which is what makes a first
+            // person weapon read as held rather than mounted on the camera.  The numbers
+            // are in metres from the eye: 0.19 m right, 0.20 m down, 0.40 m out.
             float lengthT = Clamp01(_config.Length / 0.95f);
-            float hipX = Lerp(0.128f, 0.168f, lengthT);
-            float hipY = Lerp(-0.132f, -0.198f, lengthT);
-            float hipZ = Lerp(0.300f, 0.455f, lengthT);
+            float hipX = Lerp(0.166f, 0.196f, lengthT);
+            float hipY = Lerp(-0.180f, -0.232f, lengthT);
+            float hipZ = Lerp(0.352f, 0.492f, lengthT);
             float aimZ = Lerp(0.215f, 0.335f, lengthT);
+            float hipYaw = Lerp(5.0f, 3.5f, lengthT);
+            float hipPitch = Lerp(1.5f, 2.5f, lengthT);
+            float hipRoll = Lerp(-2.0f, -3.0f, lengthT);
 
             switch (_poseState)
             {
@@ -392,8 +399,9 @@ namespace Kordon.Core.Weapons
                     targetX = hipX;
                     targetY = hipY - 0.006f;
                     targetZ = hipZ - 0.02f;
-                    targetPitch = 7f;
-                    targetRoll = -9f;
+                    targetPitch = hipPitch + 5f;
+                    targetYaw = hipYaw;
+                    targetRoll = hipRoll - 6f;
                     rate = 13f;
                     break;
 
@@ -411,8 +419,9 @@ namespace Kordon.Core.Weapons
                     targetX = hipX;
                     targetY = hipY - 0.004f;
                     targetZ = hipZ;
-                    targetPitch = 3f;
-                    targetRoll = -4f;
+                    targetPitch = hipPitch + 2f;
+                    targetYaw = hipYaw;
+                    targetRoll = hipRoll - 2f;
                     rate = 10f;
                     break;
 
@@ -420,6 +429,9 @@ namespace Kordon.Core.Weapons
                     targetX = hipX;
                     targetY = hipY;
                     targetZ = hipZ;
+                    targetPitch = hipPitch;
+                    targetYaw = hipYaw;
+                    targetRoll = hipRoll;
                     rate = 12f;
                     break;
             }
